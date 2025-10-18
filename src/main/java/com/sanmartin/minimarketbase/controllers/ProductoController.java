@@ -1,9 +1,8 @@
-package com.sanmartin.minimarketbase;
-
 package com.sanmartin.minimarketbase.controllers;
 
-import com.supermercado.model.Producto;
-import com.supermercado.service.ProductoService;
+
+import com.sanmartin.minimarketbase.ProductoService;
+import com.sanmartin.minimarketbase.entities.Producto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
