@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Optional;
 
 @RestController
@@ -50,5 +51,11 @@ public class ProductoController {
     public ResponseEntity<Void> eliminar(@PathVariable Integer id) {
         service.eliminar(id);
         return ResponseEntity.noContent().build();
+    }
+    
+    @GetMapping("/buscar")
+    public ResponseEntity<List<Producto>> buscarPorDescripcion(@RequestParam String descripcion) {
+        List<Producto> productos = service.buscarPorDescripcion(descripcion);
+        return ResponseEntity.ok(productos);
     }
 }

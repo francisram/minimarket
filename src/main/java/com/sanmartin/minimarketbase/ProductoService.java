@@ -6,7 +6,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class ProductoService {
@@ -34,5 +37,15 @@ public class ProductoService {
 
     public void eliminar(Integer id) {
         repository.deleteById(id);
+    }
+    
+    public List<Producto> buscarPorDescripcion(String descripcion) {
+        List<Producto> todosProductos = repository.findAll();
+        
+        return todosProductos.stream()
+            .filter(producto -> producto.getDescripcion() != null &&
+                              producto.getDescripcion().toLowerCase()
+                                    .contains(descripcion.toLowerCase()))
+            .collect(Collectors.toList());
     }
 }
