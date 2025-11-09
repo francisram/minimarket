@@ -1,0 +1,100 @@
+
+spring.datasource.generate-unique-name=false
+#spring.datasource.hikari.idle-timeout=40000
+
+# Configuracion para AS400
+app.datasource.as400.url=jdbc:as400://dev-ibmi.bepsa.com.py/IASP1
+app.datasource.as400.username=
+app.datasource.as400.password=
+app.datasource.as400.driver-class-name=com.ibm.as400.access.AS400JDBCDriver
+#app.datasource.as400.hibernate.dialect=org.hibernate.dialect.H2Dialect
+app.datasource.as400.hibernate.dialect=org.hibernate.dialect.DB2400Dialect
+app.datasource.as400.hikari.minimum-idle=20
+app.datasource.as400.hikari.maximum-pool-size=80
+app.datasource.as400.hikari.idle-timeout=300000
+app.datasource.as400.hikari.connection-timeout=60000
+app.datasource.as400.hikari.max-lifetime=1800000
+app.datasource.as400.hikari.keepalive-time=30000
+
+
+
+# Configuracion para PostgreSQLDestino
+app.datasource.postgres2.url=jdbc:postgresql://10.254.102.48:5432/pocodi_db
+app.datasource.postgres2.username=
+app.datasource.postgres2.password=
+app.datasource.postgres2.driver-class-name=org.postgresql.Driver
+app.datasource.postgres2.hikari.maximum-pool-size=10
+app.datasource.postgres2.hikari.idle-timeout=40000
+app.datasource.postgres2.hikari.connection-timeout=60000
+app.datasource.postgres2.hikari.max-lifetime=60000
+
+
+
+##  log de trace, luego de usar deshabilitar
+#spring.datasource.hikari.configuration.log-level=debug
+#logging.level.org.springframework.jdbc.core=DEBUG
+#logging.level.org.springframework.jdbc.core.JdbcTemplate=DEBUG
+#logging.level.org.springframework.jdbc.datasource=DEBUG
+#logging.level.com.zaxxer.hikari=TRACE
+
+
+app.name = busDatosV2
+
+#configuracion
+#confi.cantidad_registros=300
+confi.sleep=5000
+maxRetries = 4
+maxThreads = 10
+retryDelayMillis = 5000
+
+#Conexion AMQ
+spring.activemq.broker-url=tcp://10.254.102.54:61616
+spring.activemq.user=
+spring.activemq.password=
+spring.activemq.pool.enabled=true
+spring.activemq.pool.max-connections=80
+#consumerdestination=Consumer.RIO
+envio.modo1=AMQ
+envio.modo2=PUSH-API
+
+spring.data.jpa.repositories.bootstrap-mode=default
+spring.jpa.properties.hibernate.format_sql=true
+
+management.endpoints.web.exposure.include=health
+management.endpoint.health.show-details=always
+management.endpoints.web.base-path=/v1
+
+server.port=8181
+
+#correos
+email=frlopez@bepsa.com.py
+emailFrom =frlopez@bepsa.com.py
+email.username=
+email.password=
+email.host=MAIL2.BEPSA.COM.PY
+email.port=25
+email.conf.from.file=true
+
+
+#logger
+log.level.detailed = false
+logging.level.root=INFO
+logging.file.name=logs/app.log
+SEQ_URL=https://dev-seq-k3s.bepsa.com.py/
+seq.enabled = true
+
+
+#modulo
+ptcomerciosincronizzer=false
+ptcomercioqueue=PTCOM
+ptcomerciosincronizzer.method = AMQ
+#ptcomerciosincronizzer.url = http://10.10.100.25/bepsa/api/transaccion
+
+#reprocess
+reprocess.enabled = true
+reprocess.method = AMQ
+reprocess.queue = REPROCESS
+client.queue.name=BEPSA.BUS.TRX.REPROCESS
+reprocess.waittime = 30
+reprocess.failedreprocess.waittime = 45
+

@@ -1,0 +1,58 @@
+
+spring.datasource.generate-unique-name=false
+#spring.datasource.hikari.idle-timeout=40000
+
+
+# Configuracion para PostgreSQLDestino
+app.datasource.postgres2.url=jdbc:postgresql://10.254.102.48:5432/pocodi_db
+app.datasource.postgres2.username=pnNLGUiPEDdut1/qeMqsOw==
+app.datasource.postgres2.password=CDFYlAviaiH5SvM2EvSfKw==
+app.datasource.postgres2.driver-class-name=org.postgresql.Driver
+app.datasource.postgres2.hikari.maximum-pool-size=100
+app.datasource.postgres2.hikari.idle-timeout=40000
+app.datasource.postgres2.hikari.connection-timeout=60000
+app.datasource.postgres2.hikari.max-lifetime=60000
+
+
+
+##  log de trace, luego de usar deshabilitar
+#spring.datasource.hikari.configuration.log-level=debug
+#logging.level.org.springframework.jdbc.core=DEBUG
+#logging.level.org.springframework.jdbc.core.JdbcTemplate=DEBUG
+#logging.level.org.springframework.jdbc.datasource=DEBUG
+#logging.level.com.zaxxer.hikari=TRACE
+
+
+app.name = busDatosV2
+
+#configuracion
+#confi.cantidad_registros=300
+confi.sleep=5000
+maxRetries = 4
+maxThreads = 10
+retryDelayMillis = 5000
+
+spring.data.jpa.repositories.bootstrap-mode=default
+spring.jpa.properties.hibernate.format_sql=true
+
+management.endpoints.web.exposure.include=health
+management.endpoint.health.show-details=always
+management.endpoints.web.base-path=/v1
+
+server.port=8181
+
+#correos
+email=frlopez@bepsa.com.py,alexis.gimenez@bepsa.com.py
+emailFrom =clearing@bepsa.com.py
+email.username=/saWxsZqpoYq16JcjWqJYg==
+email.password=/Xu+sqvV9Jc5UQztts+2DQ==
+email.host=MAIL2.BEPSA.COM.PY
+email.port=25
+email.conf.from.file=false
+
+
+#logger
+log.level.detailed = false
+
+
+
