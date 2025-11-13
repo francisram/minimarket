@@ -20,11 +20,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-
 import javax.sql.DataSource;
-
 import org.springframework.stereotype.Service;
-
 import py.com.base.dto.TBDAUVDto;
 import py.com.base.utils.AppConfig;
 import py.com.base.utils.GeneradorDeSecuencia;
@@ -43,16 +40,10 @@ import py.com.base.utils.LoggerUtil;
 @Service
 public class DataQueueProcessor {
 
-	private DataSource as400DataSource;
-
 	private DataSource postgresDataSourceDestino;
-
 	private EmailService emailService;
-
 	private static final DateTimeFormatter FORMATO_FECHA_HORA = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
 	private final int maxRetries = AppConfig.MAXRETRIES;
-
 	int reintentos = 0;
 
 	/**
@@ -64,8 +55,7 @@ public class DataQueueProcessor {
 	 * @param postgresDataSourceDestino DataSource para la base de datos PostgreSQL
 	 *                                  (destino).
 	 */
-	public DataQueueProcessor(DataSource as400DataSource, DataSource postgresDataSourceDestino) {
-		this.as400DataSource = as400DataSource;
+	public DataQueueProcessor(DataSource postgresDataSourceDestino) {
 		this.postgresDataSourceDestino = postgresDataSourceDestino;
 
 	}
@@ -77,16 +67,13 @@ public class DataQueueProcessor {
 	 */
 	public void procesarDatosDelQueue() throws InterruptedException {
 		while (true) {
-			try (Connection connection = as400DataSource.getConnection()) {
+			try (Connection connection = postgresDataSourceDestino.getConnection()) {
 				String parmDataqueue = obtenerParmDataqueue();
 				if (Objects.nonNull(parmDataqueue) && !parmDataqueue.isEmpty()) {
 					LocalDateTime fechaYHoraActual = LocalDateTime.now();
 					String fechaYHoraFormateada = fechaYHoraActual.format(FORMATO_FECHA_HORA);
 					int secuencia = GeneradorDeSecuencia.obtenerSiguiente();
 					LoggerUtil.importante("queue a procesar: " + parmDataqueue + "| secuencia : " + secuencia + "|"	+ fechaYHoraFormateada);
-					LoggerUtil.publicarAlSeq(parmDataqueue,
-							"queue a procesar: " + parmDataqueue + "| secuencia : " + secuencia + "|" + fechaYHoraFormateada,
-							false,"inicio sincronizarEntidadEmisora ");
 					
 					String[] dividir = parmDataqueue.split("\\|");
 					String audrnbParm = dividir[0].trim();
@@ -110,7 +97,7 @@ public class DataQueueProcessor {
 									for (Object dt : results) {
 
 										if (AppConfig.PTCOMERCIO) {
-											PtComercioSynchronizer ptc = new PtComercioSynchronizer(postgresDataSourceDestino, as400DataSource);
+											PtComercioSynchronizer ptc = new PtComercioSynchronizer(postgresDataSourceDestino);
 
 											CompletableFuture<Void> ptcFuture = ptc
 													.sincronizarPtComercio(dt, parmDataqueue,"| secuencia : " + secuencia)
@@ -125,7 +112,7 @@ public class DataQueueProcessor {
 										}
 
 										EntidadEmisoraSynchronizer ees = new EntidadEmisoraSynchronizer(
-												as400DataSource);
+												postgresDataSourceDestino);
 										CompletableFuture<Void> eesFuture = ees
 												.sincronizarEntidadEmisora(dt, parmDataqueue,"| secuencia : " + secuencia)
 												.thenRun(() -> LoggerUtil.detalle("Sincronizacion Entidad Emisora completada con exito"))
@@ -166,7 +153,7 @@ public class DataQueueProcessor {
 					String body = "Se alcanzo el numero maximo de reintentos. Esperando 30s antes de continuar...";
 					LogUtil.error(body);
 				//	py.com.bepsa.logs.LogUtil.crearSeq(AppConfig.SEQ_URL);
-					LoggerUtil.publicarAlSeq("Obtener Queue","Se alcanzo el numero maximo("+maxRetries+") de reintentos de conexion con la base de datos AS400. Esperando 30s antes de continuar..." ,true, "Lectura de queue en db2");
+					LoggerUtil.detalle(body);
 					this.enviarCorreo(head, body);
 			//		py.com.bepsa.logs.LogUtil.closeAndFlush();
 					Thread.sleep(30000);
@@ -190,7 +177,7 @@ public class DataQueueProcessor {
 	 */
 	private String obtenerParmDataqueue() {
 		String parmDataqueue = "";
-		try (Connection connection = as400DataSource.getConnection();
+		try (Connection connection = postgresDataSourceDestino.getConnection();
 				CallableStatement callableStatement = connection.prepareCall("{CALL GXFINPGM.SPFIN002(?)}")) {
 			callableStatement.setString(1, parmDataqueue);
 			callableStatement.registerOutParameter(1, java.sql.Types.VARCHAR);
@@ -254,17 +241,17 @@ public class DataQueueProcessor {
 			int rowsUpdated = preparedStatement.executeUpdate();
 
 			if (rowsUpdated > 0) {
-				LoggerUtil.publicarAlSeq(queueParam,"Registro actualizado exitosamente a  estado 'C' " + queueParam	+ "| secuencia : " + secuencia,	false,"actualizarTbdaudConEstadoC");
+				LoggerUtil.importante("Registro actualizado exitosamente a  estado 'C' ");
 				return;
 			} else {
-				LoggerUtil.publicarAlSeq(queueParam, "No se encontro ningun registro para actualizar a C en inicial: "	+ queueParam + " enviado a reproceso", true,"actualizarTbdaudConEstadoC");
+				LoggerUtil.importante( "No se encontro ningun registro para actualizar ");
 				ReProcess.enviarAReproceso(AppConfig.REPROCESAR, queueParam, secuencia, "C","inicial");
 				return;
 			}
 
 		} catch (SQLException e) {
 			String body = "Se produjo un error: " + e.getMessage() + "\nDetalles:\n"+ Arrays.toString(e.getStackTrace());
-			LoggerUtil.publicarAlSeq(queueParam, "Se produjo un error: "	+ queueParam + " enviado a reproceso", true,"actualizarTbdaudConEstadoC");
+			LoggerUtil.detalle(body);
 			ReProcess.enviarAReproceso(AppConfig.REPROCESAR, queueParam, secuencia, "C","inicial");
 			LogUtil.error(String.format("Error QUEUE PROCESSOR  QUEUE: " + audrnb + "|" + audtrxfchc + "|" + audfcht,
 					"Conexion a la base de datos para actualizar a estado C no disponible. " + queueParam + " |"
@@ -292,11 +279,9 @@ public class DataQueueProcessor {
 
 			if (rowsUpdated > 0) {
 				LoggerUtil.importante("Registro actualizado exitosamente a  estado 'E' " + queueParam + secuencia);
-				LoggerUtil.publicarAlSeq(queueParam,"Registro actualizado exitosamente a  estado 'E' " + queueParam	+ "| secuencia : " + secuencia,	false,"actualizarTbdaudConEstadoE");
 				return;
 			} else {
 				LogUtil.info(String.format("Error QUEUE PROCESSOR  QUEUE: " + audrnb + "|" + audtrxfchc + "|" + audfcht,"No se encontro ningun registro para actualizar a E en inicial: " + queueParam));
-				LoggerUtil.publicarAlSeq(queueParam, "No se encontro ningun registro para actualizar a E en inicial: "	+ queueParam + " enviado a reproceso", true,"actualizarTbdaudConEstadoE");
 				ReProcess.enviarAReproceso(AppConfig.REPROCESAR, queueParam, secuencia, "E","inicial");
 				return;
 			}
@@ -304,7 +289,6 @@ public class DataQueueProcessor {
 		} catch (SQLException e) {
 			LoggerUtil.importante("Conexion a la base de datos para actualizar a estado E no disponible."	+ Arrays.toString(e.getStackTrace()));
 			String body = "Se produjo un error: " + e.getMessage() + "\nDetalles:\n" + Arrays.toString(e.getStackTrace());
-			LoggerUtil.publicarAlSeq(queueParam, "Conexion a la base de datos para actualizar a estado E no disponible "	+ queueParam + " enviado a reproceso", true,"actualizarTbdaudConEstadoE");
 			ReProcess.enviarAReproceso(AppConfig.REPROCESAR, queueParam, secuencia, "E","inicial");
 			LogUtil.error(String.format("Error QUEUE PROCESSOR  QUEUE: " + audrnb + "|" + audtrxfchc + "|" + audfcht,"Conexion a la base de datos para actualizar a estado E no disponible. " + body));
 
@@ -323,7 +307,7 @@ public class DataQueueProcessor {
 		List<Object> results = new ArrayList<>();
 		String queryString = "SELECT * FROM GXFINDTA.view_bus_datos e WHERE e.RRNBOLETA = ? AND SUBSTR(e.FECHATRANSACCION, 1, 8) = ? AND RTRIM(e.op_audfcht) = ?";
 
-		try (Connection connection = as400DataSource.getConnection();
+		try (Connection connection = postgresDataSourceDestino.getConnection();
 				PreparedStatement preparedStatement = connection.prepareStatement(queryString)) {
 
 			preparedStatement.setString(1, rrnb);
@@ -449,7 +433,7 @@ public class DataQueueProcessor {
 			if (AppConfig.CONFFROMPROP) {
 				emailService = new EmailService();
 			} else {
-				emailService = new EmailService(as400DataSource);
+				emailService = new EmailService(postgresDataSourceDestino);
 			}
 			emailService.sendEmail(header, body);
 		} catch (Exception e) {

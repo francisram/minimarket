@@ -104,7 +104,6 @@ public class AppConfig {
 			TIEMPODEESPERAREPROCESOFALLIDO = Long.parseLong(properties.getProperty("reprocess.failedreprocess.waittime"));
 			NIVEL_LOG = properties.getProperty("seq.level");
 			LoggerUtil.setDetallesHabilitados(Boolean.parseBoolean(properties.getProperty("log.level.detailed")));
-			LoggerUtil.habilitarSeq(Boolean.parseBoolean(properties.getProperty("seq_loggin")));
 			if(Boolean.parseBoolean(properties.getProperty("seq_loggin"))) {
 				LoggerUtil.importante("Registro en SEQ HABILITADO");
 			}else {

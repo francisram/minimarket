@@ -23,15 +23,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
 import javax.sql.DataSource;
-
 import org.springframework.stereotype.Service;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-
 import py.com.base.dao.ConfiguracionEntidadEmiadqDao;
 import py.com.base.dto.configuracion_entidad_emiadqDto;
 import py.com.base.utils.AppConfig;
@@ -281,7 +277,7 @@ public class EntidadEmisoraSynchronizer {
 			if (rowsUpdated > 0) {
 				LoggerUtil.detalle("Registro actualizado exitosamente a estado 'X' en Entidad QUEUE:  " + audrnb + "|"
 						+ audtrxfchc + "|" + audfcht + secuencia);
-				LoggerUtil.publicarAlSeq(paramQueue,"Registro actualizado a estado 'X' en Entidad QUEUE:  " + paramQueue	+ "| secuencia : " + secuencia,	false,"setearTbdaudComoNoEnviadoEntidadEmisora");
+				LoggerUtil.importante("Registro actualizado a estado 'X' en Entidad QUEUE");
 
 				return;
 			} else {

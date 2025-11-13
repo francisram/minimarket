@@ -6,15 +6,11 @@ import java.io.StringWriter;
 public class LoggerUtil {
 
 	private static boolean detallesHabilitados = false;
-	private static boolean seqHabilitado = false;
 
 	public static void setDetallesHabilitados(boolean habilitar) {
 		detallesHabilitados = habilitar;
 	}
 
-	public static void habilitarSeq(boolean habilitar) {
-		seqHabilitado = habilitar;
-	}
 
 	public static void detalle(String mensaje) {
 		if (detallesHabilitados) {

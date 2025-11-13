@@ -3,7 +3,9 @@ package py.com.base.services;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
+
 import javax.sql.DataSource;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -45,7 +47,7 @@ public class BackDatos implements CommandLineRunner {
 	@Override
 	public void run(String... args) throws Exception {
 		//py.com.bepsa.logs.LogUtil.crearSeq(AppConfig.SEQ_URL);
-		LoggerUtil.publicarAlSeq("", "Inicio de la aplicacion", false, "inicio de .RUN");
+		LoggerUtil.importante( "Inicio de la aplicacion");
 	//	py.com.bepsa.logs.LogUtil.closeAndFlush();
 		crearCarpeta();
 		DataSource as400DataSource = context.getBean("as400DataSource", DataSource.class);
@@ -74,9 +76,9 @@ public class BackDatos implements CommandLineRunner {
 	}
 	
 	  private void procesarDatosDelQueue() {
-	        DataSource as400DataSource = context.getBean("as400DataSource", DataSource.class);
+	      
 	        DataSource postgresDataSourceDestino = context.getBean("postgresDataSource2", DataSource.class);
-	        DataQueueProcessor dq = new DataQueueProcessor(as400DataSource, postgresDataSourceDestino);
+	        DataQueueProcessor dq = new DataQueueProcessor(postgresDataSourceDestino);
 	        try {
 	        	dq.procesarDatosDelQueue();				
 			} catch (Exception e) {
