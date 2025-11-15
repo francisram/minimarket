@@ -222,11 +222,11 @@ public class EntidadEmisoraSynchronizer {
 				int rowsUpdated = preparedStatement.executeUpdate();
 				if (rowsUpdated > 0) {
 					LoggerUtil.detalle("Registro actualizado exitosamente a estado 'S' en Entidad QUEUE:  " + paramQueue	+ secuencia);
-					LoggerUtil.publicarAlSeq(paramQueue,"Registro actualizado exitosamente a estado 'S' en Entidad QUEUE:  " + paramQueue	+ "| secuencia : " + secuencia,	false,"setearTbdaudComoEnviadoEntidadEmisora");
+					//LoggerUtil.publicarAlSeq(paramQueue,"Registro actualizado exitosamente a estado 'S' en Entidad QUEUE:  " + paramQueue	+ "| secuencia : " + secuencia,	false,"setearTbdaudComoEnviadoEntidadEmisora");
 					return;
 				} else {
 					LoggerUtil.detalle("No se encontro ningun registro para actualizar a S : " + paramQueue	+ " en Entidad" + secuencia);
-					LoggerUtil.publicarAlSeq(paramQueue, "No se encontro ningun registro para actualizar a S : "+ paramQueue + " en Entidad" + secuencia + " enviado a reproceso", true,"setearTbdaudComoEnviadoEntidadEmisora");
+					//LoggerUtil.publicarAlSeq(paramQueue, "No se encontro ningun registro para actualizar a S : "+ paramQueue + " en Entidad" + secuencia + " enviado a reproceso", true,"setearTbdaudComoEnviadoEntidadEmisora");
 					ReProcess.enviarAReproceso(AppConfig.REPROCESAR, paramQueue, secuencia, "S", "amq");
 					return;
 				}
@@ -240,7 +240,7 @@ public class EntidadEmisoraSynchronizer {
 							"Conexion a la base de datos para actualizar a estado S no disponible QUEUE: " + audrnb
 									+ "|" + audtrxfchc + "|" + audfcht + "|" + body));
 					ReProcess.enviarAReproceso(AppConfig.REPROCESAR, paramQueue, secuencia, "S", "amq");
-					LoggerUtil.publicarAlSeq(paramQueue,	"Conexion a la base de datos para actualizar a estado S no disponible QUEUE:  " + paramQueue+ "| secuencia : " + secuencia + "enviado a reproceso",	true,"setearTbdaudComoEnviadoEntidadEmisora");
+					//LoggerUtil.publicarAlSeq(paramQueue,	"Conexion a la base de datos para actualizar a estado S no disponible QUEUE:  " + paramQueue+ "| secuencia : " + secuencia + "enviado a reproceso",	true,"setearTbdaudComoEnviadoEntidadEmisora");
 					e.printStackTrace();
 				}
 				try {
@@ -282,7 +282,7 @@ public class EntidadEmisoraSynchronizer {
 				return;
 			} else {
 				LoggerUtil.detalle(	"No se encontro ningun registro para actualizar a X : " + audrnb + " en Entidad" + secuencia,	null);
-				LoggerUtil.publicarAlSeq(paramQueue,	"No se encontro ningun registro para actualizar a X : " + paramQueue+ "| secuencia : " + secuencia + "enviado a reproceso",	true,"setearTbdaudComoNoEnviadoEntidadEmisora");
+				//LoggerUtil.publicarAlSeq(paramQueue,	"No se encontro ningun registro para actualizar a X : " + paramQueue+ "| secuencia : " + secuencia + "enviado a reproceso",	true,"setearTbdaudComoNoEnviadoEntidadEmisora");
 				ReProcess.enviarAReproceso(AppConfig.REPROCESAR, paramQueue, secuencia, "X", "amq");
 				return;
 			}
@@ -295,7 +295,7 @@ public class EntidadEmisoraSynchronizer {
 			LogUtil.error(
 					String.format(header, "Conexion a la base de datos para actualizar a estado X no disponible QUEUE: "
 							+ audrnb + "|" + audtrxfchc + "|" + audfcht + "|" + body));
-			LoggerUtil.publicarAlSeq(paramQueue,	"Conexion a la base de datos para actualizar a estado X no disponible QUEUE:" + paramQueue+ "| secuencia : " + secuencia + "enviado a reproceso",	true,"setearTbdaudComoNoEnviadoEntidadEmisora");
+			//LoggerUtil.publicarAlSeq(paramQueue,	"Conexion a la base de datos para actualizar a estado X no disponible QUEUE:" + paramQueue+ "| secuencia : " + secuencia + "enviado a reproceso",	true,"setearTbdaudComoNoEnviadoEntidadEmisora");
 			ReProcess.enviarAReproceso(AppConfig.REPROCESAR, paramQueue, secuencia, "X", "amq");
 			e.getMessage();
 		}
@@ -355,9 +355,7 @@ public class EntidadEmisoraSynchronizer {
 						if (enviado) {
 							LoggerUtil.importante("sincronizado en Entidad " + ceamq.getConfiguracion_modo() + " "
 									+ paramQ + secuencia);
-							LoggerUtil.publicarAlSeq(paramQ,
-									"Sincronizado en Entidad " + ceamq.getConfiguracion_modo() + " " + secuencia,
-									false ,ceamq.getConfiguracion_modo());
+							//LoggerUtil.publicarAlSeq(paramQ,"Sincronizado en Entidad " + ceamq.getConfiguracion_modo() + " " + secuencia,false ,ceamq.getConfiguracion_modo());
 							setearTbdaudComoEnviadoEntidadEmisora(connection,
 									ReflectionUtils.getStringValue(dto, t, "getRrnboleta"),
 									ReflectionUtils.getStringValue(dto, t, "getFechaproceso"),
@@ -368,7 +366,7 @@ public class EntidadEmisoraSynchronizer {
 						intentos++;
 						if (intentos < maxRetries) {
 							try {
-								LoggerUtil.publicarAlSeq(paramQ, "Reintentando envio " + " " + secuencia, true,ceamq.getConfiguracion_modo());
+								//LoggerUtil.publicarAlSeq(paramQ, "Reintentando envio " + " " + secuencia, true,ceamq.getConfiguracion_modo());
 								Thread.sleep(3000);
 							} catch (InterruptedException e) {
 								Thread.currentThread().interrupt();
@@ -381,8 +379,7 @@ public class EntidadEmisoraSynchronizer {
 								ReflectionUtils.getStringValue(dto, t, "getRrnboleta"),
 								ReflectionUtils.getStringValue(dto, t, "getFechaproceso"),
 								ReflectionUtils.getStringValue(dto, t, "getOp_audfcht"), secuencia, paramQ);
-						LoggerUtil.publicarAlSeq(paramQ,
-								"No sincronizado en Entidad " + ceamq.getConfiguracion_modo() + " " + secuencia, true,ceamq.getConfiguracion_modo());
+						//LoggerUtil.publicarAlSeq(paramQ,"No sincronizado en Entidad " + ceamq.getConfiguracion_modo() + " " + secuencia, true,ceamq.getConfiguracion_modo());
 					}
 
 				}
@@ -396,7 +393,7 @@ public class EntidadEmisoraSynchronizer {
 					"error de mapeo/envio de trx a amq QUEUE: " + ReflectionUtils.getStringValue(dto, t, "getRrnboleta")
 							+ "|" + ReflectionUtils.getStringValue(dto, t, "getFechatransaccion") + "|"
 							+ ReflectionUtils.getStringValue(dto, t, "getOp_audfcht") + "|" + body));
-			LoggerUtil.publicarAlSeq(paramQ, body, true,"AMQ/PUSH-API GENERAL de la trx");
+			//LoggerUtil.publicarAlSeq(paramQ, body, true,"AMQ/PUSH-API GENERAL de la trx");
 			this.enviarCorreo("ERROR AMQ/ENTIDAD EMISOR SINCRONIZER",
 					"error de mapeo/envio de trx a amq QUEUE: " + ReflectionUtils.getStringValue(dto, t, "getRrnboleta")
 							+ "|" + ReflectionUtils.getStringValue(dto, t, "getFechatransaccion") + "|"
@@ -495,7 +492,7 @@ public class EntidadEmisoraSynchronizer {
 					"error de mapeo/envio de trx a amq QUEUE: " + ReflectionUtils.getStringValue(dto, t, "getRrnboleta")
 							+ "|" + ReflectionUtils.getStringValue(dto, t, "getFechatransaccion") + "|"
 							+ ReflectionUtils.getStringValue(dto, t, "getOp_audfcht") + "|" + body);
-			LoggerUtil.publicarAlSeq(paramQ, "Falla en enviado a AMQ Portal de Comercio " + paramQ + secuencia, true,"PTC"+ AppConfig.PTCOMERCIOMETHOD);
+			//LoggerUtil.publicarAlSeq(paramQ, "Falla en enviado a AMQ Portal de Comercio " + paramQ + secuencia, true,"PTC"+ AppConfig.PTCOMERCIOMETHOD);
 			e.printStackTrace();
 		}
 	}
@@ -626,14 +623,12 @@ public class EntidadEmisoraSynchronizer {
 				if (rowsUpdated > 0) {
 					LoggerUtil.detalle("Registro actualizado exitosamente a estado 'S' en AUDENVIAPORTAL QUEUE:  "
 							+ paramQueue + secuencia);
-					LoggerUtil.publicarAlSeq(paramQueue,"Registro actualizado exitosamente a estado 'S' en AUDENVIAPORTAL QUEUE:  " + paramQueue+ "| secuencia : " + secuencia,	false,"setearTbdaudComoEnviadoPortalComercioAMQ");
+					//LoggerUtil.publicarAlSeq(paramQueue,"Registro actualizado exitosamente a estado 'S' en AUDENVIAPORTAL QUEUE:  " + paramQueue+ "| secuencia : " + secuencia,	false,"setearTbdaudComoEnviadoPortalComercioAMQ");
 					return;
 				} else {
 					LoggerUtil.detalle("No se encontro ningun registro para actualizar a S : " + paramQueue
 							+ " en AUDENVIAPORTAL" + secuencia);
-					LoggerUtil.publicarAlSeq(paramQueue, "No se encontro ningun registro para actualizar a S : "
-							+ paramQueue + " en AUDENVIAPORTAL" + secuencia + " enviado a reproceso", false,"setearTbdaudComoEnviadoPortalComercioAMQ");
-					ReProcess.enviarAReproceso(AppConfig.REPROCESAR, paramQueue, secuencia, "S", "ptc");
+					//LoggerUtil.publicarAlSeq(paramQueue, "No se encontro ningun registro para actualizar a S : "+ paramQueue + " en AUDENVIAPORTAL" + secuencia + " enviado a reproceso", false,"setearTbdaudComoEnviadoPortalComercioAMQ");
 					return;
 				}
 

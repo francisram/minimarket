@@ -96,21 +96,6 @@ public class DataQueueProcessor {
 											parmDataqueue, "| secuencia : " + secuencia + "|" + fechaYHoraFormateada);
 									for (Object dt : results) {
 
-										if (AppConfig.PTCOMERCIO) {
-											PtComercioSynchronizer ptc = new PtComercioSynchronizer(postgresDataSourceDestino);
-
-											CompletableFuture<Void> ptcFuture = ptc
-													.sincronizarPtComercio(dt, parmDataqueue,"| secuencia : " + secuencia)
-													.thenAccept(dto -> LoggerUtil.detalle("Sincronizacion Portal Comercio Completada para operacion id: " + dto.getOperacion_id()))
-													.exceptionally(ex -> {
-														String body = "Se produjo un error: " + ex.getMessage()
-																+ "\nDetalles:\n" + Arrays.toString(ex.getStackTrace());
-														ex.printStackTrace();
-														return null;
-													});
-
-										}
-
 										EntidadEmisoraSynchronizer ees = new EntidadEmisoraSynchronizer(
 												postgresDataSourceDestino);
 										CompletableFuture<Void> eesFuture = ees
@@ -245,14 +230,14 @@ public class DataQueueProcessor {
 				return;
 			} else {
 				LoggerUtil.importante( "No se encontro ningun registro para actualizar ");
-				ReProcess.enviarAReproceso(AppConfig.REPROCESAR, queueParam, secuencia, "C","inicial");
+				
 				return;
 			}
 
 		} catch (SQLException e) {
 			String body = "Se produjo un error: " + e.getMessage() + "\nDetalles:\n"+ Arrays.toString(e.getStackTrace());
 			LoggerUtil.detalle(body);
-			ReProcess.enviarAReproceso(AppConfig.REPROCESAR, queueParam, secuencia, "C","inicial");
+
 			LogUtil.error(String.format("Error QUEUE PROCESSOR  QUEUE: " + audrnb + "|" + audtrxfchc + "|" + audfcht,
 					"Conexion a la base de datos para actualizar a estado C no disponible. " + queueParam + " |"
 							+ body));
@@ -282,14 +267,14 @@ public class DataQueueProcessor {
 				return;
 			} else {
 				LogUtil.info(String.format("Error QUEUE PROCESSOR  QUEUE: " + audrnb + "|" + audtrxfchc + "|" + audfcht,"No se encontro ningun registro para actualizar a E en inicial: " + queueParam));
-				ReProcess.enviarAReproceso(AppConfig.REPROCESAR, queueParam, secuencia, "E","inicial");
+				
 				return;
 			}
 
 		} catch (SQLException e) {
 			LoggerUtil.importante("Conexion a la base de datos para actualizar a estado E no disponible."	+ Arrays.toString(e.getStackTrace()));
 			String body = "Se produjo un error: " + e.getMessage() + "\nDetalles:\n" + Arrays.toString(e.getStackTrace());
-			ReProcess.enviarAReproceso(AppConfig.REPROCESAR, queueParam, secuencia, "E","inicial");
+			
 			LogUtil.error(String.format("Error QUEUE PROCESSOR  QUEUE: " + audrnb + "|" + audtrxfchc + "|" + audfcht,"Conexion a la base de datos para actualizar a estado E no disponible. " + body));
 
 		}

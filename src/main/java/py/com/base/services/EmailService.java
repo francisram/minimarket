@@ -1,17 +1,12 @@
 package py.com.base.services;
 
 import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Array;
+import java.net.PasswordAuthentication;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import javax.sql.DataSource;
-import ch.qos.logback.classic.Logger;
-import jakarta.mail.Message;
 import jakarta.mail.MessagingException;
-import jakarta.mail.PasswordAuthentication;
-import jakarta.mail.Session;
-import jakarta.mail.Transport;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import py.com.base.clases.EmailConfig;
@@ -20,6 +15,9 @@ import py.com.base.interfaces.EmailConfigRepository;
 import py.com.base.utils.AppConfig;
 import py.com.base.utils.LogUtil;
 import py.com.base.utils.LoggerUtil;
+import jakarta.mail.Session;
+import jakarta.mail.Message;
+import jakarta.mail.Transport;
 
 /**
  * Servicio para el envío de correos electrónicos.
