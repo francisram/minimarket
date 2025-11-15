@@ -646,10 +646,8 @@ public class EntidadEmisoraSynchronizer {
 							"Conexion a la base de datos para actualizar a estado S en AUDENVIAPORTAL no disponible QUEUE: "
 									+ audrnb + "|" + audtrxfchc + "|" + audfcht + "|" + body));
 					ReProcess.enviarAReproceso(AppConfig.REPROCESAR, paramQueue, secuencia, "S", "ptc");
-					LoggerUtil.publicarAlSeq(paramQueue,
-							"Conexion a la base de datos para actualizar a estado S en AUDENVIAPORTAL no disponible QUEUE:  "
-									+ paramQueue + "| secuencia : " + secuencia + "enviado a reproceso",
-							true,"setearTbdaudComoEnviadoPortalComercioAMQ");
+					LoggerUtil.importante("Conexion a la base de datos para actualizar a estado S en AUDENVIAPORTAL no disponible QUEUE:  "
+									+ paramQueue + "| secuencia : " + secuencia + "enviado a reproceso");
 					e.printStackTrace();
 				}
 				try {
