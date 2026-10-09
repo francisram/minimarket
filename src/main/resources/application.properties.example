@@ -1,0 +1,32 @@
+spring.application.name=heladeria-api
+
+# Servidor
+server.port=8080
+
+# Base de datos: PostgreSQL (ejemplo producción o docker)
+spring.datasource.url=jdbc:postgresql://localhost:5432/heladeriadb
+spring.datasource.username=postgres
+spring.datasource.password=postgres
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+# JPA / Hibernate
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=false
+spring.jpa.properties.hibernate.format_sql=false
+
+# Swagger OpenAPI
+springdoc.api-docs.path=/api-docs
+springdoc.swagger-ui.path=/swagger-ui.html
+springdoc.swagger-ui.operations-sorter=method
+
+# Seguridad y JWT
+# Clave HMAC-SHA256 (mínimo 256 bits / 32 bytes)
+app.jwt.secret=CAMBIAR_POR_UNA_CLAVE_SECRETA_LARGA_Y_SEGURA_DE_AL_MENOS_32_BYTES_HEX_O_BASE64
+app.jwt.expiration-ms=86400000
+
+# CORS (orígenes permitidos separados por coma)
+app.cors.allowed-origins=http://localhost:3000,http://localhost:5173
+
+# Contraseñas iniciales para seeders
+app.security.default-admin-password=CambiarEstaPasswordAdmin123!
+app.security.default-owner-password=CambiarEstaPasswordOwner123!
