@@ -14,7 +14,7 @@ public class Presentacion {
     @Column(nullable = false, unique = true, length = 100)
     private String nombre;
 
-    @Column(nullable = false, precision = 12, scale = 2)
+    @Column(nullable = false, precision = 12, scale = 0)
     private BigDecimal precio;
 
     @Column(nullable = false)
@@ -35,7 +35,7 @@ public class Presentacion {
     public Presentacion(Long id, String nombre, BigDecimal precio, Integer maxSabores, Integer pesoGramosAprox, Boolean activo, Integer stock, Integer stockMinimo) {
         this.id = id;
         this.nombre = nombre;
-        this.precio = precio;
+        this.precio = precio != null ? precio.setScale(0, java.math.RoundingMode.HALF_UP) : null;
         this.maxSabores = maxSabores;
         this.pesoGramosAprox = pesoGramosAprox;
         this.activo = activo != null ? activo : true;
@@ -54,7 +54,9 @@ public class Presentacion {
     public void setNombre(String nombre) { this.nombre = nombre; }
 
     public BigDecimal getPrecio() { return precio; }
-    public void setPrecio(BigDecimal precio) { this.precio = precio; }
+    public void setPrecio(BigDecimal precio) {
+        this.precio = precio != null ? precio.setScale(0, java.math.RoundingMode.HALF_UP) : null;
+    }
 
     public Integer getMaxSabores() { return maxSabores; }
     public void setMaxSabores(Integer maxSabores) { this.maxSabores = maxSabores; }

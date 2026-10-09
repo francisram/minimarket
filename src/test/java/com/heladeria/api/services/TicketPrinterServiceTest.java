@@ -1,10 +1,8 @@
 package com.heladeria.api.services;
 
 import com.heladeria.api.dto.TicketEmitidoDTO;
-import com.heladeria.api.entities.Impresora;
-import com.heladeria.api.entities.Institucion;
-import com.heladeria.api.entities.Ticketera;
-import com.heladeria.api.entities.TipoConexion;
+import com.heladeria.api.entities.*;
+import com.heladeria.api.entities.enums.*;
 import com.heladeria.api.repositories.ImpresoraRepository;
 import com.heladeria.api.repositories.InstitucionRepository;
 import com.heladeria.api.repositories.TicketeraRepository;
@@ -18,6 +16,9 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
@@ -27,8 +28,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 @DisplayName("Pruebas del servicio de emisión e impresión de tickets TicketPrinterService")
@@ -197,5 +197,75 @@ class TicketPrinterServiceTest {
         ticketPrinterService.imprimirEnSegundoPlano(id,
                 new TicketEmitidoDTO("HEL-1", "Mostrador 1", "1234567", false, false, OffsetDateTime.now()));
         Thread.sleep(300);
+    }
+
+    @Test
+    @DisplayName("construirTicketPedido genera ticket ESC/POS con moneda Gs. sin decimales, desglose IVA y sin símbolo unicode ₲")
+    void testConstruirTicketPedido() {
+        Presentacion pres = Presentacion.builder()
+                .id(1L)
+                .nombre("Cucurucho 1 Bocha")
+                .precio(new BigDecimal("12000"))
+                .maxSabores(1)
+                .build();
+
+        Sabor ddl = Sabor.builder()
+                .id(1L)
+                .nombre("Dulce de Leche")
+                .build();
+
+        Topping banio = Topping.builder()
+                .id(1L)
+                .nombre("Baño de Chocolate")
+                .precioExtra(new BigDecimal("3000"))
+                .build();
+
+        DetallePedido detalle = DetallePedido.builder()
+                .tipoItem(TipoItemPedido.HELADO)
+                .presentacion(pres)
+                .sabores(List.of(ddl))
+                .toppings(List.of(banio))
+                .cantidad(2)
+                .precioUnitario(new BigDecimal("15000"))
+                .subtotal(new BigDecimal("30000"))
+                .build();
+
+        Pedido pedido = Pedido.builder()
+                .id(101L)
+                .clienteNombre("Juan Pérez")
+                .metodoPago(MetodoPago.EFECTIVO)
+                .tipoEntrega(TipoEntrega.MOSTRADOR)
+                .estado(EstadoPedido.PENDIENTE)
+                .fechaCreacion(LocalDateTime.now())
+                .total(new BigDecimal("30000"))
+                .detalles(List.of(detalle))
+                .notas("Servir rápido")
+                .build();
+
+        byte[] ticketBytes = ticketPrinterService.construirTicketPedido(pedido);
+        assertNotNull(ticketBytes);
+        assertTrue(ticketBytes.length > 0);
+
+        String texto = new String(ticketBytes, StandardCharsets.ISO_8859_1);
+
+        // Validaciones clave de moneda y formato
+        assertTrue(texto.contains("PEDIDO #101"));
+        assertTrue(texto.contains("Cliente: Juan Pérez"));
+        assertTrue(texto.contains("Pago: EFECTIVO"));
+        assertTrue(texto.contains("Cucurucho 1 Bocha"));
+        assertTrue(texto.contains("Dulce de Leche"));
+        assertTrue(texto.contains("Baño de Chocolate"));
+        assertTrue(texto.contains("Gs. 30.000"));
+        assertTrue(texto.contains("TOTAL:"));
+
+        // IVA 10% de 30.000 = 2.727, Gravadas = 27.273
+        assertTrue(texto.contains("LIQUIDACION DE IVA"));
+        assertTrue(texto.contains("Gravadas 10%:"));
+        assertTrue(texto.contains("Gs. 27.273"));
+        assertTrue(texto.contains("IVA 10%:"));
+        assertTrue(texto.contains("Gs. 2.727"));
+
+        // Asegurar que NO contenga el carácter unicode ₲
+        assertFalse(texto.contains("\u20B2"), "El ticket térmico ESC/POS nunca debe contener el carácter unicode ₲");
     }
 }

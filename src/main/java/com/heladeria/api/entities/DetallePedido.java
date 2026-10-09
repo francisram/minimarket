@@ -52,10 +52,10 @@ public class DetallePedido {
     @Column(nullable = false)
     private Integer cantidad;
 
-    @Column(nullable = false, precision = 12, scale = 2)
+    @Column(nullable = false, precision = 12, scale = 0)
     private BigDecimal precioUnitario;
 
-    @Column(nullable = false, precision = 12, scale = 2)
+    @Column(nullable = false, precision = 12, scale = 0)
     private BigDecimal subtotal;
 
     public DetallePedido() {
@@ -72,8 +72,8 @@ public class DetallePedido {
         this.toppings = toppings != null ? toppings : new ArrayList<>();
         this.productoSimple = productoSimple;
         this.cantidad = cantidad;
-        this.precioUnitario = precioUnitario;
-        this.subtotal = subtotal;
+        this.precioUnitario = precioUnitario != null ? precioUnitario.setScale(0, java.math.RoundingMode.HALF_UP) : null;
+        this.subtotal = subtotal != null ? subtotal.setScale(0, java.math.RoundingMode.HALF_UP) : null;
     }
 
     public static DetallePedidoBuilder builder() {
@@ -105,10 +105,14 @@ public class DetallePedido {
     public void setCantidad(Integer cantidad) { this.cantidad = cantidad; }
 
     public BigDecimal getPrecioUnitario() { return precioUnitario; }
-    public void setPrecioUnitario(BigDecimal precioUnitario) { this.precioUnitario = precioUnitario; }
+    public void setPrecioUnitario(BigDecimal precioUnitario) {
+        this.precioUnitario = precioUnitario != null ? precioUnitario.setScale(0, java.math.RoundingMode.HALF_UP) : null;
+    }
 
     public BigDecimal getSubtotal() { return subtotal; }
-    public void setSubtotal(BigDecimal subtotal) { this.subtotal = subtotal; }
+    public void setSubtotal(BigDecimal subtotal) {
+        this.subtotal = subtotal != null ? subtotal.setScale(0, java.math.RoundingMode.HALF_UP) : null;
+    }
 
     public static class DetallePedidoBuilder {
         private Long id;

@@ -25,6 +25,8 @@ public class PedidoRequestDTO {
     @Valid
     private List<DetallePedidoRequestDTO> items = new ArrayList<>();
 
+    private Long impresoraId;
+
     public PedidoRequestDTO() {
     }
 
@@ -42,4 +44,7 @@ public class PedidoRequestDTO {
 
     public List<DetallePedidoRequestDTO> getItems() { return items; }
     public void setItems(List<DetallePedidoRequestDTO> items) { this.items = items; }
+
+    public Long getImpresoraId() { return impresoraId; }
+    public void setImpresoraId(Long impresoraId) { this.impresoraId = impresoraId; }
 }

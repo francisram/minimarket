@@ -8,6 +8,7 @@ import com.heladeria.api.entities.enums.TipoItemPedido;
 import com.heladeria.api.exceptions.RecursoNoEncontradoException;
 import com.heladeria.api.exceptions.ReglaDeNegocioException;
 import com.heladeria.api.repositories.*;
+import com.heladeria.api.util.MonedaPyUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,17 +27,20 @@ public class PedidoService {
     private final SaborRepository saborRepository;
     private final ToppingRepository toppingRepository;
     private final ProductoSimpleRepository productoSimpleRepository;
+    private final TicketPrinterService ticketPrinterService;
 
     public PedidoService(PedidoRepository pedidoRepository,
                          PresentacionRepository presentacionRepository,
                          SaborRepository saborRepository,
                          ToppingRepository toppingRepository,
-                         ProductoSimpleRepository productoSimpleRepository) {
+                         ProductoSimpleRepository productoSimpleRepository,
+                         TicketPrinterService ticketPrinterService) {
         this.pedidoRepository = pedidoRepository;
         this.presentacionRepository = presentacionRepository;
         this.saborRepository = saborRepository;
         this.toppingRepository = toppingRepository;
         this.productoSimpleRepository = productoSimpleRepository;
+        this.ticketPrinterService = ticketPrinterService;
     }
 
     @Transactional
@@ -188,16 +192,22 @@ public class PedidoService {
                 precioUnitario = prod.getPrecio();
             }
 
-            BigDecimal subtotal = precioUnitario.multiply(BigDecimal.valueOf(itemDto.getCantidad()));
-            detalle.setPrecioUnitario(precioUnitario);
+            BigDecimal subtotal = MonedaPyUtils.redondearGs(precioUnitario.multiply(BigDecimal.valueOf(itemDto.getCantidad())));
+            detalle.setPrecioUnitario(MonedaPyUtils.redondearGs(precioUnitario));
             detalle.setSubtotal(subtotal);
 
             pedido.getDetalles().add(detalle);
-            granTotal = granTotal.add(subtotal);
+            granTotal = MonedaPyUtils.redondearGs(granTotal.add(subtotal));
         }
 
         pedido.setTotal(granTotal);
-        return pedidoRepository.save(pedido);
+        Pedido guardado = pedidoRepository.save(pedido);
+
+        if (request.getImpresoraId() != null) {
+            ticketPrinterService.imprimirPedidoEnSegundoPlano(request.getImpresoraId(), guardado);
+        }
+
+        return guardado;
     }
 
     @Transactional(readOnly = true)
@@ -275,5 +285,11 @@ public class PedidoService {
 
         pedido.setEstado(EstadoPedido.CANCELADO);
         return pedidoRepository.save(pedido);
+    }
+
+    @Transactional(readOnly = true)
+    public void imprimirTicket(Long pedidoId, Long impresoraId) {
+        Pedido pedido = obtenerPorId(pedidoId);
+        ticketPrinterService.imprimirPedidoEnSegundoPlano(impresoraId, pedido);
     }
 }

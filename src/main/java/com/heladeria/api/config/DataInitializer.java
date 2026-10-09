@@ -54,32 +54,32 @@ public class DataInitializer implements CommandLineRunner {
         if (presentacionRepository.count() == 0) {
             log.info("Precargando formatos y presentaciones de helado...");
             presentacionRepository.saveAll(List.of(
-                    Presentacion.builder().nombre("Cucurucho 1 Bocha").precio(new BigDecimal("12000.00")).maxSabores(1).pesoGramosAprox(100).stock(50).stockMinimo(10).activo(true).build(),
-                    Presentacion.builder().nombre("Cucurucho 2 Bochas").precio(new BigDecimal("18000.00")).maxSabores(2).pesoGramosAprox(180).stock(50).stockMinimo(10).activo(true).build(),
-                    Presentacion.builder().nombre("Vaso Mediano").precio(new BigDecimal("16000.00")).maxSabores(2).pesoGramosAprox(150).stock(40).stockMinimo(10).activo(true).build(),
-                    Presentacion.builder().nombre("Pote 1/4 Kg").precio(new BigDecimal("22000.00")).maxSabores(3).pesoGramosAprox(250).stock(30).stockMinimo(10).activo(true).build(),
-                    Presentacion.builder().nombre("Pote 1/2 Kg").precio(new BigDecimal("38000.00")).maxSabores(3).pesoGramosAprox(500).stock(30).stockMinimo(10).activo(true).build(),
-                    Presentacion.builder().nombre("Pote 1 Kg").precio(new BigDecimal("68000.00")).maxSabores(4).pesoGramosAprox(1000).stock(30).stockMinimo(10).activo(true).build()
+                    Presentacion.builder().nombre("Cucurucho 1 Bocha").precio(new BigDecimal("12000")).maxSabores(1).pesoGramosAprox(100).stock(50).stockMinimo(10).activo(true).build(),
+                    Presentacion.builder().nombre("Cucurucho 2 Bochas").precio(new BigDecimal("18000")).maxSabores(2).pesoGramosAprox(180).stock(50).stockMinimo(10).activo(true).build(),
+                    Presentacion.builder().nombre("Vaso Mediano").precio(new BigDecimal("18000")).maxSabores(2).pesoGramosAprox(150).stock(40).stockMinimo(10).activo(true).build(),
+                    Presentacion.builder().nombre("Pote 1/4 Kg").precio(new BigDecimal("25000")).maxSabores(3).pesoGramosAprox(250).stock(30).stockMinimo(10).activo(true).build(),
+                    Presentacion.builder().nombre("Pote 1/2 Kg").precio(new BigDecimal("45000")).maxSabores(3).pesoGramosAprox(500).stock(30).stockMinimo(10).activo(true).build(),
+                    Presentacion.builder().nombre("Pote 1 Kg").precio(new BigDecimal("80000")).maxSabores(4).pesoGramosAprox(1000).stock(30).stockMinimo(10).activo(true).build()
             ));
         }
 
         if (toppingRepository.count() == 0) {
             log.info("Precargando toppings y salsas...");
             toppingRepository.saveAll(List.of(
-                    Topping.builder().nombre("Baño de Chocolate").precioExtra(new BigDecimal("3000.00")).disponible(true).build(),
-                    Topping.builder().nombre("Salsa de Caramelo").precioExtra(new BigDecimal("2500.00")).disponible(true).build(),
-                    Topping.builder().nombre("Almendras Tostadas").precioExtra(new BigDecimal("4000.00")).disponible(true).build(),
-                    Topping.builder().nombre("Cucurucho Extra").precioExtra(new BigDecimal("2000.00")).disponible(true).build()
+                    Topping.builder().nombre("Baño de Chocolate").precioExtra(new BigDecimal("3000")).disponible(true).build(),
+                    Topping.builder().nombre("Salsa de Caramelo").precioExtra(new BigDecimal("3000")).disponible(true).build(),
+                    Topping.builder().nombre("Almendras Tostadas").precioExtra(new BigDecimal("3000")).disponible(true).build(),
+                    Topping.builder().nombre("Cucurucho Extra").precioExtra(new BigDecimal("3000")).disponible(true).build()
             ));
         }
 
         if (productoSimpleRepository.count() == 0) {
             log.info("Precargando productos simples (bebidas y envasados)...");
             productoSimpleRepository.saveAll(List.of(
-                    ProductoSimple.builder().nombre("Agua Mineral con gas 500ml").precio(new BigDecimal("5000.00")).categoria("BEBIDAS").stock(40).stockMinimo(5).activo(true).build(),
-                    ProductoSimple.builder().nombre("Agua Mineral sin gas 500ml").precio(new BigDecimal("5000.00")).categoria("BEBIDAS").stock(50).stockMinimo(5).activo(true).build(),
-                    ProductoSimple.builder().nombre("Alfajor Helado").precio(new BigDecimal("15000.00")).categoria("ENVASADOS").stock(25).stockMinimo(5).activo(true).build(),
-                    ProductoSimple.builder().nombre("Paleta Bombón Artesanal").precio(new BigDecimal("14000.00")).categoria("ENVASADOS").stock(30).stockMinimo(5).activo(true).build()
+                    ProductoSimple.builder().nombre("Agua Mineral con gas 500ml").precio(new BigDecimal("10000")).categoria("BEBIDAS").stock(40).stockMinimo(5).activo(true).build(),
+                    ProductoSimple.builder().nombre("Agua Mineral sin gas 500ml").precio(new BigDecimal("10000")).categoria("BEBIDAS").stock(50).stockMinimo(5).activo(true).build(),
+                    ProductoSimple.builder().nombre("Alfajor Helado").precio(new BigDecimal("15000")).categoria("ENVASADOS").stock(25).stockMinimo(5).activo(true).build(),
+                    ProductoSimple.builder().nombre("Paleta Bombón Artesanal").precio(new BigDecimal("12000")).categoria("ENVASADOS").stock(30).stockMinimo(5).activo(true).build()
             ));
         }
         log.info("Catálogo inicial precargado exitosamente.");

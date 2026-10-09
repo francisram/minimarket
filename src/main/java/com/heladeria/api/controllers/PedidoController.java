@@ -63,4 +63,13 @@ public class PedidoController {
     public ResponseEntity<Pedido> cancelar(@PathVariable Long id) {
         return ResponseEntity.ok(pedidoService.cancelarPedido(id));
     }
+
+    @PostMapping("/{id}/imprimir")
+    @Operation(summary = "Imprimir ticket térmico ESC/POS del pedido")
+    public ResponseEntity<Void> imprimir(
+            @PathVariable Long id,
+            @RequestParam(required = false) Long impresoraId) {
+        pedidoService.imprimirTicket(id, impresoraId);
+        return ResponseEntity.ok().build();
+    }
 }

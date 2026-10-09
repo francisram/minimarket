@@ -40,7 +40,7 @@ public class Pedido {
     @Column(length = 255)
     private String notas;
 
-    @Column(nullable = false, precision = 12, scale = 2)
+    @Column(nullable = false, precision = 12, scale = 0)
     private BigDecimal total;
 
     @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -59,7 +59,7 @@ public class Pedido {
         this.tipoEntrega = tipoEntrega;
         this.estado = estado != null ? estado : EstadoPedido.PENDIENTE;
         this.notas = notas;
-        this.total = total != null ? total : BigDecimal.ZERO;
+        this.total = total != null ? total.setScale(0, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO;
         this.detalles = detalles != null ? detalles : new ArrayList<>();
     }
 
@@ -99,7 +99,9 @@ public class Pedido {
     public void setNotas(String notas) { this.notas = notas; }
 
     public BigDecimal getTotal() { return total; }
-    public void setTotal(BigDecimal total) { this.total = total; }
+    public void setTotal(BigDecimal total) {
+        this.total = total != null ? total.setScale(0, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO;
+    }
 
     public List<DetallePedido> getDetalles() { return detalles; }
     public void setDetalles(List<DetallePedido> detalles) { this.detalles = detalles; }

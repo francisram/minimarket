@@ -14,7 +14,7 @@ public class Topping {
     @Column(nullable = false, unique = true, length = 100)
     private String nombre;
 
-    @Column(nullable = false, precision = 12, scale = 2)
+    @Column(nullable = false, precision = 12, scale = 0)
     private BigDecimal precioExtra;
 
     @Column(nullable = false)
@@ -26,7 +26,7 @@ public class Topping {
     public Topping(Long id, String nombre, BigDecimal precioExtra, Boolean disponible) {
         this.id = id;
         this.nombre = nombre;
-        this.precioExtra = precioExtra;
+        this.precioExtra = precioExtra != null ? precioExtra.setScale(0, java.math.RoundingMode.HALF_UP) : null;
         this.disponible = disponible != null ? disponible : true;
     }
 
@@ -41,7 +41,9 @@ public class Topping {
     public void setNombre(String nombre) { this.nombre = nombre; }
 
     public BigDecimal getPrecioExtra() { return precioExtra; }
-    public void setPrecioExtra(BigDecimal precioExtra) { this.precioExtra = precioExtra; }
+    public void setPrecioExtra(BigDecimal precioExtra) {
+        this.precioExtra = precioExtra != null ? precioExtra.setScale(0, java.math.RoundingMode.HALF_UP) : null;
+    }
 
     public Boolean getDisponible() { return disponible; }
     public void setDisponible(Boolean disponible) { this.disponible = disponible; }

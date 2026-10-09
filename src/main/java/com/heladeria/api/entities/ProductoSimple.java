@@ -14,7 +14,7 @@ public class ProductoSimple {
     @Column(nullable = false, unique = true, length = 100)
     private String nombre;
 
-    @Column(nullable = false, precision = 12, scale = 2)
+    @Column(nullable = false, precision = 12, scale = 0)
     private BigDecimal precio;
 
     @Column(length = 50)
@@ -35,7 +35,7 @@ public class ProductoSimple {
     public ProductoSimple(Long id, String nombre, BigDecimal precio, String categoria, Integer stock, Integer stockMinimo, Boolean activo) {
         this.id = id;
         this.nombre = nombre;
-        this.precio = precio;
+        this.precio = precio != null ? precio.setScale(0, java.math.RoundingMode.HALF_UP) : null;
         this.categoria = categoria;
         this.stock = stock != null ? stock : 0;
         this.stockMinimo = stockMinimo != null ? stockMinimo : 5;
@@ -53,7 +53,9 @@ public class ProductoSimple {
     public void setNombre(String nombre) { this.nombre = nombre; }
 
     public BigDecimal getPrecio() { return precio; }
-    public void setPrecio(BigDecimal precio) { this.precio = precio; }
+    public void setPrecio(BigDecimal precio) {
+        this.precio = precio != null ? precio.setScale(0, java.math.RoundingMode.HALF_UP) : null;
+    }
 
     public String getCategoria() { return categoria; }
     public void setCategoria(String categoria) { this.categoria = categoria; }
