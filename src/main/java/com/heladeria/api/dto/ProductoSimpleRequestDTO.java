@@ -17,6 +17,7 @@ public class ProductoSimpleRequestDTO {
 
     private String categoria;
     private Integer stock = 0;
+    private Integer stockMinimo = 5;
     private Boolean activo = true;
 
     public ProductoSimpleRequestDTO() {
@@ -33,6 +34,9 @@ public class ProductoSimpleRequestDTO {
 
     public Integer getStock() { return stock; }
     public void setStock(Integer stock) { this.stock = stock; }
+
+    public Integer getStockMinimo() { return stockMinimo; }
+    public void setStockMinimo(Integer stockMinimo) { this.stockMinimo = stockMinimo; }
 
     public Boolean getActivo() { return activo; }
     public void setActivo(Boolean activo) { this.activo = activo; }

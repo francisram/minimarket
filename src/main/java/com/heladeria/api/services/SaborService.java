@@ -55,6 +55,7 @@ public class SaborService {
                 .sinAzucar(dto.getSinAzucar() != null && dto.getSinAzucar())
                 .disponible(dto.getDisponible() == null || dto.getDisponible())
                 .stockKilos(dto.getStockKilos())
+                .stockMinimoKilos(dto.getStockMinimoKilos() != null ? dto.getStockMinimoKilos() : 2.0)
                 .build();
 
         return saborRepository.save(sabor);
@@ -80,6 +81,9 @@ public class SaborService {
         }
         if (dto.getStockKilos() != null) {
             sabor.setStockKilos(dto.getStockKilos());
+        }
+        if (dto.getStockMinimoKilos() != null) {
+            sabor.setStockMinimoKilos(dto.getStockMinimoKilos());
         }
 
         return saborRepository.save(sabor);

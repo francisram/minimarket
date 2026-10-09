@@ -19,6 +19,7 @@ public class SaborRequestDTO {
     private Boolean sinAzucar = false;
     private Boolean disponible = true;
     private Double stockKilos;
+    private Double stockMinimoKilos = 2.0;
 
     public SaborRequestDTO() {
     }
@@ -46,4 +47,7 @@ public class SaborRequestDTO {
 
     public Double getStockKilos() { return stockKilos; }
     public void setStockKilos(Double stockKilos) { this.stockKilos = stockKilos; }
+
+    public Double getStockMinimoKilos() { return stockMinimoKilos; }
+    public void setStockMinimoKilos(Double stockMinimoKilos) { this.stockMinimoKilos = stockMinimoKilos; }
 }

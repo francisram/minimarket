@@ -174,4 +174,16 @@ class SecurityAndLicensingIntegrationTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error").value("Conflicto de estado o licenciamiento"));
     }
+
+    @Test
+    @DisplayName("Endpoint /api/stock/alertas accesible para ADMIN y devuelve estructura correcta")
+    void testVerificarAccesoEndpointStockAlertas() throws Exception {
+        mockMvc.perform(get("/api/stock/alertas")
+                        .header("Authorization", "Bearer " + tokenAdmin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.productosBajoStock").isArray())
+                .andExpect(jsonPath("$.saboresBajoStock").isArray())
+                .andExpect(jsonPath("$.presentacionesBajoStock").isArray())
+                .andExpect(jsonPath("$.totalAlertas").isNumber());
+    }
 }

@@ -36,11 +36,14 @@ public class Sabor {
     @Column(precision = 6)
     private Double stockKilos;
 
+    @Column(precision = 6)
+    private Double stockMinimoKilos = 2.0;
+
     public Sabor() {
     }
 
     public Sabor(Long id, String nombre, String descripcion, CategoriaSabor categoria,
-                 Boolean aptoCeliaco, Boolean esVegano, Boolean sinAzucar, Boolean disponible, Double stockKilos) {
+                 Boolean aptoCeliaco, Boolean esVegano, Boolean sinAzucar, Boolean disponible, Double stockKilos, Double stockMinimoKilos) {
         this.id = id;
         this.nombre = nombre;
         this.descripcion = descripcion;
@@ -50,6 +53,7 @@ public class Sabor {
         this.sinAzucar = sinAzucar != null ? sinAzucar : false;
         this.disponible = disponible != null ? disponible : true;
         this.stockKilos = stockKilos;
+        this.stockMinimoKilos = stockMinimoKilos != null ? stockMinimoKilos : 2.0;
     }
 
     public static SaborBuilder builder() {
@@ -83,6 +87,9 @@ public class Sabor {
     public Double getStockKilos() { return stockKilos; }
     public void setStockKilos(Double stockKilos) { this.stockKilos = stockKilos; }
 
+    public Double getStockMinimoKilos() { return stockMinimoKilos; }
+    public void setStockMinimoKilos(Double stockMinimoKilos) { this.stockMinimoKilos = stockMinimoKilos; }
+
     public static class SaborBuilder {
         private Long id;
         private String nombre;
@@ -93,6 +100,7 @@ public class Sabor {
         private Boolean sinAzucar = false;
         private Boolean disponible = true;
         private Double stockKilos;
+        private Double stockMinimoKilos = 2.0;
 
         public SaborBuilder id(Long id) { this.id = id; return this; }
         public SaborBuilder nombre(String nombre) { this.nombre = nombre; return this; }
@@ -103,9 +111,10 @@ public class Sabor {
         public SaborBuilder sinAzucar(Boolean sinAzucar) { this.sinAzucar = sinAzucar; return this; }
         public SaborBuilder disponible(Boolean disponible) { this.disponible = disponible; return this; }
         public SaborBuilder stockKilos(Double stockKilos) { this.stockKilos = stockKilos; return this; }
+        public SaborBuilder stockMinimoKilos(Double stockMinimoKilos) { this.stockMinimoKilos = stockMinimoKilos; return this; }
 
         public Sabor build() {
-            return new Sabor(id, nombre, descripcion, categoria, aptoCeliaco, esVegano, sinAzucar, disponible, stockKilos);
+            return new Sabor(id, nombre, descripcion, categoria, aptoCeliaco, esVegano, sinAzucar, disponible, stockKilos, stockMinimoKilos);
         }
     }
 }

@@ -25,16 +25,22 @@ public class Presentacion {
     @Column(nullable = false)
     private Boolean activo = true;
 
+    private Integer stock;
+
+    private Integer stockMinimo = 10;
+
     public Presentacion() {
     }
 
-    public Presentacion(Long id, String nombre, BigDecimal precio, Integer maxSabores, Integer pesoGramosAprox, Boolean activo) {
+    public Presentacion(Long id, String nombre, BigDecimal precio, Integer maxSabores, Integer pesoGramosAprox, Boolean activo, Integer stock, Integer stockMinimo) {
         this.id = id;
         this.nombre = nombre;
         this.precio = precio;
         this.maxSabores = maxSabores;
         this.pesoGramosAprox = pesoGramosAprox;
         this.activo = activo != null ? activo : true;
+        this.stock = stock;
+        this.stockMinimo = stockMinimo != null ? stockMinimo : 10;
     }
 
     public static PresentacionBuilder builder() {
@@ -59,6 +65,12 @@ public class Presentacion {
     public Boolean getActivo() { return activo; }
     public void setActivo(Boolean activo) { this.activo = activo; }
 
+    public Integer getStock() { return stock; }
+    public void setStock(Integer stock) { this.stock = stock; }
+
+    public Integer getStockMinimo() { return stockMinimo; }
+    public void setStockMinimo(Integer stockMinimo) { this.stockMinimo = stockMinimo; }
+
     public static class PresentacionBuilder {
         private Long id;
         private String nombre;
@@ -66,6 +78,8 @@ public class Presentacion {
         private Integer maxSabores;
         private Integer pesoGramosAprox;
         private Boolean activo = true;
+        private Integer stock;
+        private Integer stockMinimo = 10;
 
         public PresentacionBuilder id(Long id) { this.id = id; return this; }
         public PresentacionBuilder nombre(String nombre) { this.nombre = nombre; return this; }
@@ -73,9 +87,11 @@ public class Presentacion {
         public PresentacionBuilder maxSabores(Integer maxSabores) { this.maxSabores = maxSabores; return this; }
         public PresentacionBuilder pesoGramosAprox(Integer pesoGramosAprox) { this.pesoGramosAprox = pesoGramosAprox; return this; }
         public PresentacionBuilder activo(Boolean activo) { this.activo = activo; return this; }
+        public PresentacionBuilder stock(Integer stock) { this.stock = stock; return this; }
+        public PresentacionBuilder stockMinimo(Integer stockMinimo) { this.stockMinimo = stockMinimo; return this; }
 
         public Presentacion build() {
-            return new Presentacion(id, nombre, precio, maxSabores, pesoGramosAprox, activo);
+            return new Presentacion(id, nombre, precio, maxSabores, pesoGramosAprox, activo, stock, stockMinimo);
         }
     }
 }

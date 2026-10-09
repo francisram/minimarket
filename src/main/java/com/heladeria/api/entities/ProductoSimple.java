@@ -23,18 +23,22 @@ public class ProductoSimple {
     @Column(nullable = false)
     private Integer stock = 0;
 
+    @Column(columnDefinition = "integer default 5")
+    private Integer stockMinimo = 5;
+
     @Column(nullable = false)
     private Boolean activo = true;
 
     public ProductoSimple() {
     }
 
-    public ProductoSimple(Long id, String nombre, BigDecimal precio, String categoria, Integer stock, Boolean activo) {
+    public ProductoSimple(Long id, String nombre, BigDecimal precio, String categoria, Integer stock, Integer stockMinimo, Boolean activo) {
         this.id = id;
         this.nombre = nombre;
         this.precio = precio;
         this.categoria = categoria;
         this.stock = stock != null ? stock : 0;
+        this.stockMinimo = stockMinimo != null ? stockMinimo : 5;
         this.activo = activo != null ? activo : true;
     }
 
@@ -57,6 +61,9 @@ public class ProductoSimple {
     public Integer getStock() { return stock; }
     public void setStock(Integer stock) { this.stock = stock; }
 
+    public Integer getStockMinimo() { return stockMinimo; }
+    public void setStockMinimo(Integer stockMinimo) { this.stockMinimo = stockMinimo; }
+
     public Boolean getActivo() { return activo; }
     public void setActivo(Boolean activo) { this.activo = activo; }
 
@@ -66,6 +73,7 @@ public class ProductoSimple {
         private BigDecimal precio;
         private String categoria;
         private Integer stock = 0;
+        private Integer stockMinimo = 5;
         private Boolean activo = true;
 
         public ProductoSimpleBuilder id(Long id) { this.id = id; return this; }
@@ -73,10 +81,11 @@ public class ProductoSimple {
         public ProductoSimpleBuilder precio(BigDecimal precio) { this.precio = precio; return this; }
         public ProductoSimpleBuilder categoria(String categoria) { this.categoria = categoria; return this; }
         public ProductoSimpleBuilder stock(Integer stock) { this.stock = stock; return this; }
+        public ProductoSimpleBuilder stockMinimo(Integer stockMinimo) { this.stockMinimo = stockMinimo; return this; }
         public ProductoSimpleBuilder activo(Boolean activo) { this.activo = activo; return this; }
 
         public ProductoSimple build() {
-            return new ProductoSimple(id, nombre, precio, categoria, stock, activo);
+            return new ProductoSimple(id, nombre, precio, categoria, stock, stockMinimo, activo);
         }
     }
 }

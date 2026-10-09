@@ -23,6 +23,12 @@ public class PresentacionRequestDTO {
     private Integer pesoGramosAprox;
     private Boolean activo = true;
 
+    @Min(value = 0, message = "El stock no puede ser negativo")
+    private Integer stock;
+
+    @Min(value = 0, message = "El stock mínimo no puede ser negativo")
+    private Integer stockMinimo = 10;
+
     public PresentacionRequestDTO() {
     }
 
@@ -40,4 +46,10 @@ public class PresentacionRequestDTO {
 
     public Boolean getActivo() { return activo; }
     public void setActivo(Boolean activo) { this.activo = activo; }
+
+    public Integer getStock() { return stock; }
+    public void setStock(Integer stock) { this.stock = stock; }
+
+    public Integer getStockMinimo() { return stockMinimo; }
+    public void setStockMinimo(Integer stockMinimo) { this.stockMinimo = stockMinimo; }
 }

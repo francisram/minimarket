@@ -71,6 +71,7 @@ public class DataSeeder implements CommandLineRunner {
                 new Pagina(null, "presentaciones", "Presentaciones", "/presentaciones", null, "format_shapes", 20),
                 new Pagina(null, "toppings", "Toppings y Agregados", "/toppings", null, "cookie", 30),
                 new Pagina(null, "productos", "Productos y Bebidas", "/productos", null, "inventory_2", 40),
+                new Pagina(null, "stock", "Control de Stock", "/stock", null, "warehouse", 45),
                 new Pagina(null, "pedidos", "Punto de Venta / Pedidos", "/pedidos", null, "point_of_sale", 50),
                 new Pagina(null, "usuarios", "Usuarios", "/usuarios", null, "people", 60),
                 new Pagina(null, "roles", "Roles y Permisos", "/roles", null, "security", 70),
@@ -98,7 +99,7 @@ public class DataSeeder implements CommandLineRunner {
         planLicenciaRepository.findByNombre("Estandar").orElseGet(() -> {
             PlanLicencia p = new PlanLicencia();
             p.setNombre("Estandar");
-            p.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "pedidos", "impresoras"));
+            p.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "stock", "pedidos", "impresoras"));
             return planLicenciaRepository.save(p);
         });
 
@@ -106,7 +107,7 @@ public class DataSeeder implements CommandLineRunner {
         PlanLicencia premium = planLicenciaRepository.findByNombre("Premium").orElseGet(() -> {
             PlanLicencia p = new PlanLicencia();
             p.setNombre("Premium");
-            p.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "pedidos", "usuarios", "roles", "licencia", "impresoras"));
+            p.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "stock", "pedidos", "usuarios", "roles", "licencia", "impresoras"));
             return planLicenciaRepository.save(p);
         });
 

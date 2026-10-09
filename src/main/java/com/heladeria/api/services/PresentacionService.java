@@ -45,6 +45,8 @@ public class PresentacionService {
                 .maxSabores(dto.getMaxSabores())
                 .pesoGramosAprox(dto.getPesoGramosAprox())
                 .activo(dto.getActivo() == null || dto.getActivo())
+                .stock(dto.getStock())
+                .stockMinimo(dto.getStockMinimo() != null ? dto.getStockMinimo() : 10)
                 .build();
 
         return presentacionRepository.save(presentacion);
@@ -65,6 +67,12 @@ public class PresentacionService {
         presentacion.setPesoGramosAprox(dto.getPesoGramosAprox());
         if (dto.getActivo() != null) {
             presentacion.setActivo(dto.getActivo());
+        }
+        if (dto.getStock() != null) {
+            presentacion.setStock(dto.getStock());
+        }
+        if (dto.getStockMinimo() != null) {
+            presentacion.setStockMinimo(dto.getStockMinimo());
         }
 
         return presentacionRepository.save(presentacion);

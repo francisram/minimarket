@@ -82,6 +82,16 @@ public class PedidoService {
                 detalle.setPresentacion(presentacion);
                 precioUnitario = presentacion.getPrecio();
 
+                // Control de stock de envases/cucuruchos
+                if (presentacion.getStock() != null) {
+                    if (presentacion.getStock() < itemDto.getCantidad()) {
+                        throw new ReglaDeNegocioException("Stock insuficiente de envases para '" + presentacion.getNombre() +
+                                "'. Disponible: " + presentacion.getStock() + ", Solicitado: " + itemDto.getCantidad());
+                    }
+                    presentacion.setStock(presentacion.getStock() - itemDto.getCantidad());
+                    presentacionRepository.save(presentacion);
+                }
+
                 // Validar sabores
                 List<Long> saborIds = itemDto.getSaborIds();
                 if (saborIds == null || saborIds.isEmpty()) {
@@ -104,6 +114,34 @@ public class PedidoService {
                     }
                     sabores.add(sabor);
                 }
+
+                // Control y descuento de stock en kilos para los sabores seleccionados
+                if (presentacion.getPesoGramosAprox() != null && presentacion.getPesoGramosAprox() > 0 && !sabores.isEmpty()) {
+                    double kilosPorSabor = Math.round((((double) presentacion.getPesoGramosAprox() * itemDto.getCantidad())
+                            / (1000.0 * sabores.size())) * 1000.0) / 1000.0;
+
+                    // Validación previa de stock de cada sabor
+                    for (Sabor sabor : sabores) {
+                        if (sabor.getStockKilos() != null && sabor.getStockKilos() < kilosPorSabor) {
+                            throw new ReglaDeNegocioException(String.format(java.util.Locale.US,
+                                    "Stock insuficiente de helado para el sabor '%s'. Disponible: %.2f kg, Solicitado: %.2f kg",
+                                    sabor.getNombre(), sabor.getStockKilos(), kilosPorSabor));
+                        }
+                    }
+
+                    // Descuento atómico
+                    for (Sabor sabor : sabores) {
+                        if (sabor.getStockKilos() != null) {
+                            double nuevoStock = Math.max(0.0, Math.round((sabor.getStockKilos() - kilosPorSabor) * 1000.0) / 1000.0);
+                            sabor.setStockKilos(nuevoStock);
+                            if (nuevoStock <= 0.001) {
+                                sabor.setDisponible(false);
+                            }
+                            saborRepository.save(sabor);
+                        }
+                    }
+                }
+
                 detalle.setSabores(sabores);
 
                 // Validar y sumar toppings si existen
@@ -198,13 +236,39 @@ public class PedidoService {
             throw new ReglaDeNegocioException("El pedido ya se encuentra cancelado.");
         }
 
-        // Reintegrar stock de productos simples si se cancela
+        // Reintegrar stock de productos simples, envases y sabores si se cancela
         for (DetallePedido detalle : pedido.getDetalles()) {
             if (detalle.getTipoItem() == TipoItemPedido.PRODUCTO_SIMPLE && detalle.getProductoSimple() != null) {
                 ProductoSimple prod = detalle.getProductoSimple();
                 if (prod.getStock() != null) {
                     prod.setStock(prod.getStock() + detalle.getCantidad());
                     productoSimpleRepository.save(prod);
+                }
+            } else if (detalle.getTipoItem() == TipoItemPedido.HELADO) {
+                // Reintegrar envases/cucuruchos
+                if (detalle.getPresentacion() != null && detalle.getPresentacion().getStock() != null) {
+                    Presentacion pres = detalle.getPresentacion();
+                    pres.setStock(pres.getStock() + detalle.getCantidad());
+                    presentacionRepository.save(pres);
+                }
+
+                // Reintegrar kilos de sabores
+                if (detalle.getPresentacion() != null && detalle.getPresentacion().getPesoGramosAprox() != null
+                        && detalle.getPresentacion().getPesoGramosAprox() > 0
+                        && detalle.getSabores() != null && !detalle.getSabores().isEmpty()) {
+                    double kilosPorSabor = Math.round((((double) detalle.getPresentacion().getPesoGramosAprox() * detalle.getCantidad())
+                            / (1000.0 * detalle.getSabores().size())) * 1000.0) / 1000.0;
+
+                    for (Sabor sabor : detalle.getSabores()) {
+                        if (sabor.getStockKilos() != null) {
+                            double nuevoStock = Math.round((sabor.getStockKilos() + kilosPorSabor) * 1000.0) / 1000.0;
+                            sabor.setStockKilos(nuevoStock);
+                            if (nuevoStock > 0.001 && !Boolean.TRUE.equals(sabor.getDisponible())) {
+                                sabor.setDisponible(true);
+                            }
+                            saborRepository.save(sabor);
+                        }
+                    }
                 }
             }
         }

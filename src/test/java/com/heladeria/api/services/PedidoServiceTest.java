@@ -184,4 +184,164 @@ class PedidoServiceTest {
         ProductoSimple aguaActualizada = productoSimpleRepository.findById(agua.getId()).orElseThrow();
         assertEquals(7, aguaActualizada.getStock());
     }
+
+    @Test
+    @DisplayName("Debe descontar stock de envase/cucurucho y kilos de helado equitativamente entre los sabores")
+    void testVentaHeladoConDescuentoDeStockEnvaseYKilos() {
+        Presentacion pote500 = presentacionRepository.save(Presentacion.builder()
+                .nombre("Pote Stock 500g")
+                .precio(new BigDecimal("35000.00"))
+                .maxSabores(2)
+                .pesoGramosAprox(500)
+                .stock(10)
+                .stockMinimo(2)
+                .activo(true)
+                .build());
+
+        Sabor sab1 = saborRepository.save(Sabor.builder()
+                .nombre("Sabor Stock 1")
+                .categoria(CategoriaSabor.CREMA)
+                .disponible(true)
+                .stockKilos(5.0)
+                .stockMinimoKilos(1.0)
+                .build());
+
+        Sabor sab2 = saborRepository.save(Sabor.builder()
+                .nombre("Sabor Stock 2")
+                .categoria(CategoriaSabor.FRUTAL)
+                .disponible(true)
+                .stockKilos(3.0)
+                .stockMinimoKilos(1.0)
+                .build());
+
+        DetallePedidoRequestDTO itemHelado = new DetallePedidoRequestDTO();
+        itemHelado.setTipoItem(TipoItemPedido.HELADO);
+        itemHelado.setPresentacionId(pote500.getId());
+        itemHelado.setSaborIds(List.of(sab1.getId(), sab2.getId()));
+        itemHelado.setCantidad(1);
+
+        PedidoRequestDTO request = new PedidoRequestDTO();
+        request.setMetodoPago(MetodoPago.EFECTIVO);
+        request.setTipoEntrega(TipoEntrega.MOSTRADOR);
+        request.setItems(List.of(itemHelado));
+
+        Pedido pedido = pedidoService.crearPedido(request);
+        assertNotNull(pedido.getId());
+
+        // Verificar descuento de envase: de 10 a 9
+        Presentacion presActualizada = presentacionRepository.findById(pote500.getId()).orElseThrow();
+        assertEquals(9, presActualizada.getStock());
+
+        // 500g entre 2 sabores = 250g (0.25 kg) por sabor
+        Sabor sab1Act = saborRepository.findById(sab1.getId()).orElseThrow();
+        assertEquals(4.75, sab1Act.getStockKilos(), 0.001);
+
+        Sabor sab2Act = saborRepository.findById(sab2.getId()).orElseThrow();
+        assertEquals(2.75, sab2Act.getStockKilos(), 0.001);
+    }
+
+    @Test
+    @DisplayName("Debe fallar si no hay suficiente stock del envase seleccionado")
+    void testVentaHeladoFallaPorStockInsuficienteDeEnvase() {
+        Presentacion cucurucho = presentacionRepository.save(Presentacion.builder()
+                .nombre("Cucurucho Sin Stock")
+                .precio(new BigDecimal("12000.00"))
+                .maxSabores(1)
+                .pesoGramosAprox(100)
+                .stock(1) // Solo queda 1
+                .activo(true)
+                .build());
+
+        DetallePedidoRequestDTO item = new DetallePedidoRequestDTO();
+        item.setTipoItem(TipoItemPedido.HELADO);
+        item.setPresentacionId(cucurucho.getId());
+        item.setSaborIds(List.of(dulceDeLeche.getId()));
+        item.setCantidad(2); // Se piden 2
+
+        PedidoRequestDTO request = new PedidoRequestDTO();
+        request.setMetodoPago(MetodoPago.EFECTIVO);
+        request.setTipoEntrega(TipoEntrega.MOSTRADOR);
+        request.setItems(List.of(item));
+
+        ReglaDeNegocioException ex = assertThrows(ReglaDeNegocioException.class, () -> pedidoService.crearPedido(request));
+        assertTrue(ex.getMessage().contains("Stock insuficiente de envases"));
+    }
+
+    @Test
+    @DisplayName("Debe fallar si no hay suficientes kilos del sabor seleccionado")
+    void testVentaHeladoFallaPorStockInsuficienteDeSabor() {
+        Presentacion pote1Kg = presentacionRepository.save(Presentacion.builder()
+                .nombre("Pote 1 Kg Test")
+                .precio(new BigDecimal("60000.00"))
+                .maxSabores(1)
+                .pesoGramosAprox(1000)
+                .stock(20)
+                .activo(true)
+                .build());
+
+        Sabor saborPocoStock = saborRepository.save(Sabor.builder()
+                .nombre("Sabor Escaso")
+                .categoria(CategoriaSabor.ESPECIAL)
+                .disponible(true)
+                .stockKilos(0.4) // Solo 400g disponibles
+                .build());
+
+        DetallePedidoRequestDTO item = new DetallePedidoRequestDTO();
+        item.setTipoItem(TipoItemPedido.HELADO);
+        item.setPresentacionId(pote1Kg.getId());
+        item.setSaborIds(List.of(saborPocoStock.getId())); // Requiere 1000g (1.0 kg)
+        item.setCantidad(1);
+
+        PedidoRequestDTO request = new PedidoRequestDTO();
+        request.setMetodoPago(MetodoPago.EFECTIVO);
+        request.setTipoEntrega(TipoEntrega.MOSTRADOR);
+        request.setItems(List.of(item));
+
+        ReglaDeNegocioException ex = assertThrows(ReglaDeNegocioException.class, () -> pedidoService.crearPedido(request));
+        assertTrue(ex.getMessage().contains("Stock insuficiente de helado para el sabor"));
+    }
+
+    @Test
+    @DisplayName("Debe restaurar stock de envases y kilos de sabores al cancelar pedido de helado")
+    void testCancelarPedidoRestauraStockEnvaseYSabores() {
+        Presentacion vaso = presentacionRepository.save(Presentacion.builder()
+                .nombre("Vaso Test Stock")
+                .precio(new BigDecimal("15000.00"))
+                .maxSabores(1)
+                .pesoGramosAprox(200)
+                .stock(15)
+                .activo(true)
+                .build());
+
+        Sabor menta = saborRepository.save(Sabor.builder()
+                .nombre("Menta Test Stock")
+                .categoria(CategoriaSabor.CREMA)
+                .disponible(true)
+                .stockKilos(2.0)
+                .build());
+
+        DetallePedidoRequestDTO item = new DetallePedidoRequestDTO();
+        item.setTipoItem(TipoItemPedido.HELADO);
+        item.setPresentacionId(vaso.getId());
+        item.setSaborIds(List.of(menta.getId()));
+        item.setCantidad(1);
+
+        PedidoRequestDTO request = new PedidoRequestDTO();
+        request.setMetodoPago(MetodoPago.EFECTIVO);
+        request.setTipoEntrega(TipoEntrega.MOSTRADOR);
+        request.setItems(List.of(item));
+
+        Pedido pedido = pedidoService.crearPedido(request);
+
+        // Verificar que se descontaron
+        assertEquals(14, presentacionRepository.findById(vaso.getId()).orElseThrow().getStock());
+        assertEquals(1.8, saborRepository.findById(menta.getId()).orElseThrow().getStockKilos(), 0.001);
+
+        // Cancelar pedido
+        pedidoService.cancelarPedido(pedido.getId());
+
+        // Verificar restitución
+        assertEquals(15, presentacionRepository.findById(vaso.getId()).orElseThrow().getStock());
+        assertEquals(2.0, saborRepository.findById(menta.getId()).orElseThrow().getStockKilos(), 0.001);
+    }
 }
