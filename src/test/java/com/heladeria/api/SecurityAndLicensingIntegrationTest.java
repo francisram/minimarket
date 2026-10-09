@@ -203,4 +203,12 @@ class SecurityAndLicensingIntegrationTest {
                 .andExpect(jsonPath("$.paginas", hasItem("stock")))
                 .andExpect(jsonPath("$.paginas", hasItem("impresoras")));
     }
+
+    @Test
+    @DisplayName("Usuario con rol CAJERO tiene acceso autorizado a /api/caja/estado")
+    void testCajeroTieneAccesoAEndpointCaja() throws Exception {
+        mockMvc.perform(get("/api/caja/estado")
+                        .header("Authorization", "Bearer " + tokenCajero))
+                .andExpect(status().isOk());
+    }
 }

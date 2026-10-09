@@ -40,6 +40,12 @@ class PedidoServiceTest {
     @Autowired
     private ProductoSimpleRepository productoSimpleRepository;
 
+    @Autowired
+    private SesionCajaRepository sesionCajaRepository;
+
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
     private Presentacion poteMedioKg;
     private Sabor dulceDeLeche;
     private Sabor frutilla;
@@ -49,6 +55,20 @@ class PedidoServiceTest {
 
     @BeforeEach
     void setUp() {
+        Usuario usuarioTest = usuarioRepository.findByUsername("admin").orElseGet(() -> {
+            Usuario u = new Usuario();
+            u.setUsername("admin_test");
+            u.setPasswordHash("hash");
+            return usuarioRepository.save(u);
+        });
+
+        sesionCajaRepository.save(SesionCaja.builder()
+                .usuarioApertura(usuarioTest)
+                .fechaApertura(java.time.LocalDateTime.now())
+                .montoInicial(new BigDecimal("50000"))
+                .estado(com.heladeria.api.entities.enums.EstadoSesionCaja.ABIERTA)
+                .build());
+
         poteMedioKg = presentacionRepository.save(Presentacion.builder()
                 .nombre("Pote Test 1/2 Kg")
                 .precio(new BigDecimal("35000.00"))
@@ -343,5 +363,28 @@ class PedidoServiceTest {
         // Verificar restitución
         assertEquals(15, presentacionRepository.findById(vaso.getId()).orElseThrow().getStock());
         assertEquals(2.0, saborRepository.findById(menta.getId()).orElseThrow().getStockKilos(), 0.001);
+    }
+
+    @Test
+    @DisplayName("Debe fallar al crear un pedido si no existe una sesión de caja abierta")
+    void testCrearPedidoSinCajaAbiertaFalla() {
+        sesionCajaRepository.deleteAll();
+
+        DetallePedidoRequestDTO itemHelado = new DetallePedidoRequestDTO();
+        itemHelado.setTipoItem(TipoItemPedido.HELADO);
+        itemHelado.setPresentacionId(poteMedioKg.getId());
+        itemHelado.setSaborIds(List.of(dulceDeLeche.getId()));
+        itemHelado.setCantidad(1);
+
+        PedidoRequestDTO request = new PedidoRequestDTO();
+        request.setMetodoPago(MetodoPago.EFECTIVO);
+        request.setTipoEntrega(TipoEntrega.MOSTRADOR);
+        request.setItems(List.of(itemHelado));
+
+        ReglaDeNegocioException exception = assertThrows(ReglaDeNegocioException.class, () -> {
+            pedidoService.crearPedido(request);
+        });
+
+        assertEquals("No se pueden registrar ventas: no existe una sesión de caja abierta.", exception.getMessage());
     }
 }

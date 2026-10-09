@@ -4,6 +4,7 @@ import com.heladeria.api.dto.DetallePedidoRequestDTO;
 import com.heladeria.api.dto.PedidoRequestDTO;
 import com.heladeria.api.entities.*;
 import com.heladeria.api.entities.enums.EstadoPedido;
+import com.heladeria.api.entities.enums.EstadoSesionCaja;
 import com.heladeria.api.entities.enums.TipoItemPedido;
 import com.heladeria.api.exceptions.RecursoNoEncontradoException;
 import com.heladeria.api.exceptions.ReglaDeNegocioException;
@@ -28,28 +29,35 @@ public class PedidoService {
     private final ToppingRepository toppingRepository;
     private final ProductoSimpleRepository productoSimpleRepository;
     private final TicketPrinterService ticketPrinterService;
+    private final SesionCajaRepository sesionCajaRepository;
 
     public PedidoService(PedidoRepository pedidoRepository,
                          PresentacionRepository presentacionRepository,
                          SaborRepository saborRepository,
                          ToppingRepository toppingRepository,
                          ProductoSimpleRepository productoSimpleRepository,
-                         TicketPrinterService ticketPrinterService) {
+                         TicketPrinterService ticketPrinterService,
+                         SesionCajaRepository sesionCajaRepository) {
         this.pedidoRepository = pedidoRepository;
         this.presentacionRepository = presentacionRepository;
         this.saborRepository = saborRepository;
         this.toppingRepository = toppingRepository;
         this.productoSimpleRepository = productoSimpleRepository;
         this.ticketPrinterService = ticketPrinterService;
+        this.sesionCajaRepository = sesionCajaRepository;
     }
 
     @Transactional
     public Pedido crearPedido(PedidoRequestDTO request) {
+        SesionCaja sesionActiva = sesionCajaRepository.findFirstByEstadoOrderByFechaAperturaDesc(EstadoSesionCaja.ABIERTA)
+                .orElseThrow(() -> new ReglaDeNegocioException("No se pueden registrar ventas: no existe una sesión de caja abierta."));
+
         if (request.getItems() == null || request.getItems().isEmpty()) {
             throw new ReglaDeNegocioException("El pedido debe contener al menos un ítem.");
         }
 
         Pedido pedido = Pedido.builder()
+                .sesionCaja(sesionActiva)
                 .clienteNombre(request.getClienteNombre())
                 .metodoPago(request.getMetodoPago())
                 .tipoEntrega(request.getTipoEntrega())

@@ -71,6 +71,7 @@ public class DataSeeder implements CommandLineRunner {
                 new Pagina(null, "presentaciones", "Presentaciones", "/presentaciones", null, "format_shapes", 20),
                 new Pagina(null, "toppings", "Toppings y Agregados", "/toppings", null, "cookie", 30),
                 new Pagina(null, "productos", "Productos y Bebidas", "/productos", null, "inventory_2", 40),
+                new Pagina(null, "caja", "Control de Caja", "/caja", null, "payments", 45),
                 new Pagina(null, "pedidos", "Punto de Venta / Pedidos", "/pedidos", null, "point_of_sale", 50),
                 new Pagina(null, "stock", "Control de Stock", "/stock", null, "warehouse", 55),
                 new Pagina(null, "usuarios", "Usuarios", "/usuarios", null, "people", 60),
@@ -101,7 +102,7 @@ public class DataSeeder implements CommandLineRunner {
             p.setNombre("Basico");
             return planLicenciaRepository.save(p);
         });
-        basico.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "pedidos"));
+        basico.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "pedidos", "caja"));
         planLicenciaRepository.save(basico);
 
         // Plan Estandar
@@ -110,7 +111,7 @@ public class DataSeeder implements CommandLineRunner {
             p.setNombre("Estandar");
             return planLicenciaRepository.save(p);
         });
-        estandar.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "stock", "pedidos", "impresoras"));
+        estandar.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "stock", "pedidos", "impresoras", "caja"));
         planLicenciaRepository.save(estandar);
 
         // Plan Premium
@@ -119,7 +120,7 @@ public class DataSeeder implements CommandLineRunner {
             p.setNombre("Premium");
             return planLicenciaRepository.save(p);
         });
-        premium.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "stock", "pedidos", "usuarios", "roles", "impresoras", "licencia"));
+        premium.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "stock", "pedidos", "usuarios", "roles", "impresoras", "licencia", "caja"));
         planLicenciaRepository.save(premium);
 
         // Licencia activa de esta instalacion (id=1)
@@ -155,10 +156,8 @@ public class DataSeeder implements CommandLineRunner {
             r.setNombreRol("CAJERO");
             return rolRepository.save(r);
         });
-        if (cajero.getPaginas() == null || cajero.getPaginas().isEmpty()) {
-            cajero.setPaginas(obtenerPaginasPorClaves("dashboard", "pedidos"));
-            rolRepository.save(cajero);
-        }
+        cajero.setPaginas(obtenerPaginasPorClaves("dashboard", "pedidos", "caja"));
+        rolRepository.save(cajero);
 
         // Usuarios iniciales
         if (usuarioRepository.findByUsername("admin").isEmpty()) {

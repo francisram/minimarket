@@ -43,6 +43,10 @@ public class Pedido {
     @Column(nullable = false, precision = 12, scale = 0)
     private BigDecimal total;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sesion_caja_id")
+    private SesionCaja sesionCaja;
+
     @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<DetallePedido> detalles = new ArrayList<>();
@@ -52,6 +56,12 @@ public class Pedido {
 
     public Pedido(Long id, LocalDateTime fechaCreacion, String clienteNombre, MetodoPago metodoPago,
                   TipoEntrega tipoEntrega, EstadoPedido estado, String notas, BigDecimal total, List<DetallePedido> detalles) {
+        this(id, fechaCreacion, clienteNombre, metodoPago, tipoEntrega, estado, notas, total, detalles, null);
+    }
+
+    public Pedido(Long id, LocalDateTime fechaCreacion, String clienteNombre, MetodoPago metodoPago,
+                  TipoEntrega tipoEntrega, EstadoPedido estado, String notas, BigDecimal total, List<DetallePedido> detalles,
+                  SesionCaja sesionCaja) {
         this.id = id;
         this.fechaCreacion = fechaCreacion != null ? fechaCreacion : LocalDateTime.now();
         this.clienteNombre = clienteNombre;
@@ -61,6 +71,7 @@ public class Pedido {
         this.notas = notas;
         this.total = total != null ? total.setScale(0, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO;
         this.detalles = detalles != null ? detalles : new ArrayList<>();
+        this.sesionCaja = sesionCaja;
     }
 
     public static PedidoBuilder builder() {
@@ -106,6 +117,9 @@ public class Pedido {
     public List<DetallePedido> getDetalles() { return detalles; }
     public void setDetalles(List<DetallePedido> detalles) { this.detalles = detalles; }
 
+    public SesionCaja getSesionCaja() { return sesionCaja; }
+    public void setSesionCaja(SesionCaja sesionCaja) { this.sesionCaja = sesionCaja; }
+
     public static class PedidoBuilder {
         private Long id;
         private LocalDateTime fechaCreacion;
@@ -116,6 +130,7 @@ public class Pedido {
         private String notas;
         private BigDecimal total = BigDecimal.ZERO;
         private List<DetallePedido> detalles = new ArrayList<>();
+        private SesionCaja sesionCaja;
 
         public PedidoBuilder id(Long id) { this.id = id; return this; }
         public PedidoBuilder fechaCreacion(LocalDateTime fechaCreacion) { this.fechaCreacion = fechaCreacion; return this; }
@@ -126,9 +141,10 @@ public class Pedido {
         public PedidoBuilder notas(String notas) { this.notas = notas; return this; }
         public PedidoBuilder total(BigDecimal total) { this.total = total; return this; }
         public PedidoBuilder detalles(List<DetallePedido> detalles) { this.detalles = detalles; return this; }
+        public PedidoBuilder sesionCaja(SesionCaja sesionCaja) { this.sesionCaja = sesionCaja; return this; }
 
         public Pedido build() {
-            return new Pedido(id, fechaCreacion, clienteNombre, metodoPago, tipoEntrega, estado, notas, total, detalles);
+            return new Pedido(id, fechaCreacion, clienteNombre, metodoPago, tipoEntrega, estado, notas, total, detalles, sesionCaja);
         }
     }
 }
