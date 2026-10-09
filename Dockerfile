@@ -2,12 +2,10 @@
 FROM maven:3.9-eclipse-temurin-21-alpine AS build
 WORKDIR /app
 
-# Cachear dependencias
 COPY pom.xml .
-RUN mvn dependency:go-offline -B
-
-# Compilar código y generar JAR ejecutable
 COPY src ./src
+
+# Compilar código y generar JAR ejecutable saltando tests para agilizar el build
 RUN mvn clean package -DskipTests
 
 # Etapa 2: Imagen liviana de ejecución con JRE 21
@@ -21,7 +19,7 @@ USER appuser
 # Copiar el artefacto compilado
 COPY --from=build /app/target/*.jar app.jar
 
-# Exponer el puerto de la API
+# Exponer el puerto interno de la API
 EXPOSE 8080
 
 # Comando de arranque
