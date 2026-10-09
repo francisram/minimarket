@@ -28,6 +28,7 @@ public class DataSeeder implements CommandLineRunner {
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
     private final LicenciaService licenciaService;
+    private final InstitucionRepository institucionRepository;
 
     private final String defaultAdminPassword;
     private final String defaultOwnerPassword;
@@ -39,6 +40,7 @@ public class DataSeeder implements CommandLineRunner {
                       UsuarioRepository usuarioRepository,
                       PasswordEncoder passwordEncoder,
                       LicenciaService licenciaService,
+                      InstitucionRepository institucionRepository,
                       @Value("${app.security.default-admin-password:admin123}") String defaultAdminPassword,
                       @Value("${app.security.default-owner-password:owner123}") String defaultOwnerPassword) {
         this.paginaRepository = paginaRepository;
@@ -48,6 +50,7 @@ public class DataSeeder implements CommandLineRunner {
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
         this.licenciaService = licenciaService;
+        this.institucionRepository = institucionRepository;
         this.defaultAdminPassword = defaultAdminPassword;
         this.defaultOwnerPassword = defaultOwnerPassword;
     }
@@ -58,6 +61,7 @@ public class DataSeeder implements CommandLineRunner {
         sembrarPaginas();
         sembrarPlanesYLicencia();
         sembrarRolesYUsuarios();
+        sembrarInstitucion();
     }
 
     private void sembrarPaginas() {
@@ -70,7 +74,8 @@ public class DataSeeder implements CommandLineRunner {
                 new Pagina(null, "pedidos", "Punto de Venta / Pedidos", "/pedidos", null, "point_of_sale", 50),
                 new Pagina(null, "usuarios", "Usuarios", "/usuarios", null, "people", 60),
                 new Pagina(null, "roles", "Roles y Permisos", "/roles", null, "security", 70),
-                new Pagina(null, "licencia", "Licenciamiento", "/licencia", null, "verified", 80)
+                new Pagina(null, "licencia", "Licenciamiento", "/licencia", null, "verified", 80),
+                new Pagina(null, "impresoras", "Impresoras", "/impresoras", null, "print", 90)
         );
 
         for (Pagina p : paginasCatalogo) {
@@ -93,7 +98,7 @@ public class DataSeeder implements CommandLineRunner {
         planLicenciaRepository.findByNombre("Estandar").orElseGet(() -> {
             PlanLicencia p = new PlanLicencia();
             p.setNombre("Estandar");
-            p.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "pedidos"));
+            p.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "pedidos", "impresoras"));
             return planLicenciaRepository.save(p);
         });
 
@@ -101,7 +106,7 @@ public class DataSeeder implements CommandLineRunner {
         PlanLicencia premium = planLicenciaRepository.findByNombre("Premium").orElseGet(() -> {
             PlanLicencia p = new PlanLicencia();
             p.setNombre("Premium");
-            p.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "pedidos", "usuarios", "roles", "licencia"));
+            p.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "pedidos", "usuarios", "roles", "licencia", "impresoras"));
             return planLicenciaRepository.save(p);
         });
 
@@ -170,5 +175,13 @@ public class DataSeeder implements CommandLineRunner {
             paginaRepository.findByClave(c).ifPresent(set::add);
         }
         return set;
+    }
+
+    private void sembrarInstitucion() {
+        if (institucionRepository.findById(1L).isEmpty()) {
+            Institucion inst = new Institucion(1L, "Heladería Artesanal", null);
+            institucionRepository.save(inst);
+            log.info("[SEED] Institución inicial sembrada.");
+        }
     }
 }

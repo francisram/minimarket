@@ -12,6 +12,9 @@ RUN mvn clean package -DskipTests
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
+# Instalar cliente CUPS para habilitar el binario 'lp'
+RUN apk add --no-cache cups-client
+
 # Crear usuario sin privilegios por seguridad
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 USER appuser

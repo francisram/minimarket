@@ -113,10 +113,10 @@ class SecurityAndLicensingIntegrationTest {
     }
 
     @Test
-    @DisplayName("Petición sin token a endpoint protegido devuelve 403 Forbidden")
+    @DisplayName("Petición sin token a endpoint protegido devuelve 401 Unauthorized")
     void testAccesoProtegidoSinToken() throws Exception {
         mockMvc.perform(get("/api/sabores"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

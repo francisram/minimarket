@@ -58,8 +58,20 @@ public class SecurityConfig {
                     .requestMatchers("/api/auth/**").permitAll()
                     .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/api-docs/**", "/v3/api-docs/**").permitAll()
                     .requestMatchers("/h2-console/**").permitAll()
-                    .requestMatchers("/api/**").authenticated()
+                    .requestMatchers(org.springframework.http.HttpMethod.GET, "/institucion", "/api/institucion").permitAll()
+                    .requestMatchers("/api/**", "/impresoras/**", "/institucion/**").authenticated()
                     .anyRequest().permitAll())
+            .exceptionHandling(eh -> eh
+                    .authenticationEntryPoint((request, response, ex) -> {
+                        response.setStatus(401);
+                        response.setContentType("application/json");
+                        response.getWriter().write("{\"status\":401,\"error\":\"No autorizado\",\"mensaje\":\"Token no proporcionado o inválido\"}");
+                    })
+                    .accessDeniedHandler((request, response, ex) -> {
+                        response.setStatus(403);
+                        response.setContentType("application/json");
+                        response.getWriter().write("{\"status\":403,\"error\":\"Acceso denegado\",\"mensaje\":\"No posee los permisos necesarios para realizar esta acción\"}");
+                    }))
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
