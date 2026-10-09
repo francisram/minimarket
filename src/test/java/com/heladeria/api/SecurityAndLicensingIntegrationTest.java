@@ -186,4 +186,21 @@ class SecurityAndLicensingIntegrationTest {
                 .andExpect(jsonPath("$.presentacionesBajoStock").isArray())
                 .andExpect(jsonPath("$.totalAlertas").isNumber());
     }
+
+    @Test
+    @DisplayName("Crear rol asignando páginas 'stock' e 'impresoras' en plan Premium es exitoso")
+    void testCrearRolConStockEImpresorasExitoso() throws Exception {
+        RolDTO nuevoRol = new RolDTO();
+        nuevoRol.setNombre("SUPERVISOR_STOCK");
+        nuevoRol.setPaginas(java.util.Set.of("stock", "impresoras", "dashboard"));
+
+        mockMvc.perform(post("/api/roles")
+                        .header("Authorization", "Bearer " + tokenAdmin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(nuevoRol)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.nombre").value("SUPERVISOR_STOCK"))
+                .andExpect(jsonPath("$.paginas", hasItem("stock")))
+                .andExpect(jsonPath("$.paginas", hasItem("impresoras")));
+    }
 }

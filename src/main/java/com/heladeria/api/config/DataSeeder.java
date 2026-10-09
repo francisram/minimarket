@@ -71,17 +71,25 @@ public class DataSeeder implements CommandLineRunner {
                 new Pagina(null, "presentaciones", "Presentaciones", "/presentaciones", null, "format_shapes", 20),
                 new Pagina(null, "toppings", "Toppings y Agregados", "/toppings", null, "cookie", 30),
                 new Pagina(null, "productos", "Productos y Bebidas", "/productos", null, "inventory_2", 40),
-                new Pagina(null, "stock", "Control de Stock", "/stock", null, "warehouse", 45),
                 new Pagina(null, "pedidos", "Punto de Venta / Pedidos", "/pedidos", null, "point_of_sale", 50),
+                new Pagina(null, "stock", "Control de Stock", "/stock", null, "warehouse", 55),
                 new Pagina(null, "usuarios", "Usuarios", "/usuarios", null, "people", 60),
                 new Pagina(null, "roles", "Roles y Permisos", "/roles", null, "security", 70),
-                new Pagina(null, "licencia", "Licenciamiento", "/licencia", null, "verified", 80),
-                new Pagina(null, "impresoras", "Impresoras", "/impresoras", null, "print", 90)
+                new Pagina(null, "impresoras", "Impresoras ESC/POS", "/impresoras", null, "printer", 75),
+                new Pagina(null, "licencia", "Licenciamiento", "/licencia", null, "verified", 80)
         );
 
         for (Pagina p : paginasCatalogo) {
-            if (paginaRepository.findByClave(p.getClave()).isEmpty()) {
+            Optional<Pagina> existente = paginaRepository.findByClave(p.getClave());
+            if (existente.isEmpty()) {
                 paginaRepository.save(p);
+            } else {
+                Pagina guardada = existente.get();
+                guardada.setNombre(p.getNombre());
+                guardada.setUrl(p.getUrl());
+                guardada.setIcono(p.getIcono());
+                guardada.setOrden(p.getOrden());
+                paginaRepository.save(guardada);
             }
         }
     }
@@ -91,25 +99,28 @@ public class DataSeeder implements CommandLineRunner {
         PlanLicencia basico = planLicenciaRepository.findByNombre("Basico").orElseGet(() -> {
             PlanLicencia p = new PlanLicencia();
             p.setNombre("Basico");
-            p.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "pedidos"));
             return planLicenciaRepository.save(p);
         });
+        basico.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "pedidos"));
+        planLicenciaRepository.save(basico);
 
         // Plan Estandar
-        planLicenciaRepository.findByNombre("Estandar").orElseGet(() -> {
+        PlanLicencia estandar = planLicenciaRepository.findByNombre("Estandar").orElseGet(() -> {
             PlanLicencia p = new PlanLicencia();
             p.setNombre("Estandar");
-            p.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "stock", "pedidos", "impresoras"));
             return planLicenciaRepository.save(p);
         });
+        estandar.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "stock", "pedidos", "impresoras"));
+        planLicenciaRepository.save(estandar);
 
         // Plan Premium
         PlanLicencia premium = planLicenciaRepository.findByNombre("Premium").orElseGet(() -> {
             PlanLicencia p = new PlanLicencia();
             p.setNombre("Premium");
-            p.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "stock", "pedidos", "usuarios", "roles", "licencia", "impresoras"));
             return planLicenciaRepository.save(p);
         });
+        premium.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "stock", "pedidos", "usuarios", "roles", "impresoras", "licencia"));
+        planLicenciaRepository.save(premium);
 
         // Licencia activa de esta instalacion (id=1)
         if (licenciaRepository.findById(1L).isEmpty()) {
@@ -124,25 +135,30 @@ public class DataSeeder implements CommandLineRunner {
         Rol admin = rolRepository.findByNombreRol("ADMIN").orElseGet(() -> {
             Rol r = new Rol();
             r.setNombreRol("ADMIN");
-            r.setPaginas(licenciaService.obtenerPaginasLicenciadas());
             return rolRepository.save(r);
         });
+        admin.setPaginas(licenciaService.obtenerPaginasLicenciadas());
+        rolRepository.save(admin);
 
         // OWNER recibe todas las paginas licenciadas
         Rol owner = rolRepository.findByNombreRol("OWNER").orElseGet(() -> {
             Rol r = new Rol();
             r.setNombreRol("OWNER");
-            r.setPaginas(licenciaService.obtenerPaginasLicenciadas());
             return rolRepository.save(r);
         });
+        owner.setPaginas(licenciaService.obtenerPaginasLicenciadas());
+        rolRepository.save(owner);
 
         // CAJERO para operacion de mostrador
-        rolRepository.findByNombreRol("CAJERO").orElseGet(() -> {
+        Rol cajero = rolRepository.findByNombreRol("CAJERO").orElseGet(() -> {
             Rol r = new Rol();
             r.setNombreRol("CAJERO");
-            r.setPaginas(obtenerPaginasPorClaves("dashboard", "pedidos"));
             return rolRepository.save(r);
         });
+        if (cajero.getPaginas() == null || cajero.getPaginas().isEmpty()) {
+            cajero.setPaginas(obtenerPaginasPorClaves("dashboard", "pedidos"));
+            rolRepository.save(cajero);
+        }
 
         // Usuarios iniciales
         if (usuarioRepository.findByUsername("admin").isEmpty()) {
