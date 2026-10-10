@@ -71,4 +71,13 @@ class MonedaPyUtilsTest {
         // 21.000 / 21 = 1.000
         assertEquals(new BigDecimal("1000"), MonedaPyUtils.calcularIva5(new BigDecimal("21000")));
     }
+
+    @Test
+    @DisplayName("calcularGravada5 calcula base gravada (Total - IVA 5%)")
+    void testCalcularGravada5() {
+        assertEquals(BigDecimal.ZERO, MonedaPyUtils.calcularGravada5(null));
+
+        // Para 21.000: IVA 5% = 1.000, Gravada 5% = 20.000
+        assertEquals(new BigDecimal("20000"), MonedaPyUtils.calcularGravada5(new BigDecimal("21000")));
+    }
 }

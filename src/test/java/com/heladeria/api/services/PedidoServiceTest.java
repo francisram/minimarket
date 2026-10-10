@@ -9,6 +9,7 @@ import com.heladeria.api.entities.enums.MetodoPago;
 import com.heladeria.api.entities.enums.TipoComprobante;
 import com.heladeria.api.entities.enums.TipoEntrega;
 import com.heladeria.api.entities.enums.TipoItemPedido;
+import com.heladeria.api.entities.enums.TipoIva;
 import com.heladeria.api.exceptions.ReglaDeNegocioException;
 import com.heladeria.api.repositories.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -512,5 +513,91 @@ class PedidoServiceTest {
         Cliente cliente = clienteRepository.findByRucIgnoreCase("7777777-7").orElseThrow();
         assertEquals("Cliente Desde Pos", cliente.getRazonSocial());
         assertEquals("Barrio Las Mercedes", cliente.getDireccion());
+    }
+
+    @Test
+    @DisplayName("Crear pedido con productos a 10%, 5% y Exentas calcula y almacena correctamente la liquidación fiscal SET/DNIT")
+    void testCrearPedidoConIvaConfigurableCalculaLiquidacionFiscalCorrectamente() {
+        // 1. Helado al 10% (30.000 Gs.)
+        poteMedioKg.setPrecio(new BigDecimal("30000"));
+        poteMedioKg.setTipoIva(TipoIva.IVA_10);
+        presentacionRepository.save(poteMedioKg);
+
+        DetallePedidoRequestDTO itemHelado = new DetallePedidoRequestDTO();
+        itemHelado.setTipoItem(TipoItemPedido.HELADO);
+        itemHelado.setPresentacionId(poteMedioKg.getId());
+        itemHelado.setSaborIds(List.of(dulceDeLeche.getId()));
+        itemHelado.setCantidad(1);
+
+        // 2. Producto Simple al 5% (21.000 Gs.)
+        ProductoSimple prodIva5 = ProductoSimple.builder()
+                .nombre("Yogur Artesanal")
+                .precio(new BigDecimal("21000"))
+                .tipoIva(TipoIva.IVA_5)
+                .stock(10)
+                .activo(true)
+                .build();
+        prodIva5 = productoSimpleRepository.save(prodIva5);
+
+        DetallePedidoRequestDTO itemProd5 = new DetallePedidoRequestDTO();
+        itemProd5.setTipoItem(TipoItemPedido.PRODUCTO_SIMPLE);
+        itemProd5.setProductoSimpleId(prodIva5.getId());
+        itemProd5.setCantidad(1);
+
+        // 3. Producto Simple Exento (15.000 Gs.)
+        ProductoSimple prodExento = ProductoSimple.builder()
+                .nombre("Libro Recetario Heladería")
+                .precio(new BigDecimal("15000"))
+                .tipoIva(TipoIva.EXENTA)
+                .stock(10)
+                .activo(true)
+                .build();
+        prodExento = productoSimpleRepository.save(prodExento);
+
+        DetallePedidoRequestDTO itemProdExento = new DetallePedidoRequestDTO();
+        itemProdExento.setTipoItem(TipoItemPedido.PRODUCTO_SIMPLE);
+        itemProdExento.setProductoSimpleId(prodExento.getId());
+        itemProdExento.setCantidad(1);
+
+        // Armar pedido
+        PedidoRequestDTO request = new PedidoRequestDTO();
+        request.setClienteNombre("Contribuyente Mixto");
+        request.setMetodoPago(MetodoPago.EFECTIVO);
+        request.setTipoEntrega(TipoEntrega.MOSTRADOR);
+        request.setItems(List.of(itemHelado, itemProd5, itemProdExento));
+
+        Pedido pedido = pedidoService.crearPedido(request);
+
+        assertNotNull(pedido.getId());
+        assertEquals(new BigDecimal("66000"), pedido.getTotal());
+
+        // Verificación de detalles y congelamiento de tipoIva
+        assertEquals(3, pedido.getDetalles().size());
+        assertEquals(TipoIva.IVA_10, pedido.getDetalles().get(0).getTipoIva());
+        assertEquals(TipoIva.IVA_5, pedido.getDetalles().get(1).getTipoIva());
+        assertEquals(TipoIva.EXENTA, pedido.getDetalles().get(2).getTipoIva());
+
+        // Liquidación fiscal:
+        // Exentas: 15.000
+        assertEquals(new BigDecimal("15000"), pedido.getTotalExentas());
+
+        // IVA 5%: 21.000 / 21 = 1.000; Gravada 5%: 20.000
+        assertEquals(new BigDecimal("1000"), pedido.getTotalIva5());
+        assertEquals(new BigDecimal("20000"), pedido.getTotalGravada5());
+
+        // IVA 10%: 30.000 / 11 = 2.727; Gravada 10%: 27.273
+        assertEquals(new BigDecimal("2727"), pedido.getTotalIva10());
+        assertEquals(new BigDecimal("27273"), pedido.getTotalGravada10());
+
+        // Total IVA: 1.000 + 2.727 = 3.727
+        assertEquals(new BigDecimal("3727"), pedido.getTotalIva());
+
+        // Cuadratura total: Exentas + Gravadas + IVA == Total
+        BigDecimal sumaTotal = pedido.getTotalExentas()
+                .add(pedido.getTotalGravada5())
+                .add(pedido.getTotalIva5())
+                .add(pedido.getTotalGravada10())
+                .add(pedido.getTotalIva10());
+        assertEquals(pedido.getTotal(), sumaTotal);
     }
 }

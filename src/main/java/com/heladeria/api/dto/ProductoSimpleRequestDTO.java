@@ -1,5 +1,6 @@
 package com.heladeria.api.dto;
 
+import com.heladeria.api.entities.enums.TipoIva;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -19,6 +20,7 @@ public class ProductoSimpleRequestDTO {
     private Integer stock = 0;
     private Integer stockMinimo = 5;
     private Boolean activo = true;
+    private TipoIva tipoIva = TipoIva.IVA_10;
 
     public ProductoSimpleRequestDTO() {
     }
@@ -40,4 +42,7 @@ public class ProductoSimpleRequestDTO {
 
     public Boolean getActivo() { return activo; }
     public void setActivo(Boolean activo) { this.activo = activo; }
+
+    public TipoIva getTipoIva() { return tipoIva; }
+    public void setTipoIva(TipoIva tipoIva) { this.tipoIva = tipoIva; }
 }

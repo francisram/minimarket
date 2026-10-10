@@ -258,13 +258,34 @@ public class TicketPrinterService {
         escribirLinea(out, "--------------------------------");
 
         BigDecimal total = pedido.getTotal() != null ? pedido.getTotal() : BigDecimal.ZERO;
-        BigDecimal gravada10 = MonedaPyUtils.calcularGravada10(total);
-        BigDecimal iva10 = MonedaPyUtils.calcularIva10(total);
+        BigDecimal gravada10 = pedido.getTotalGravada10();
+        BigDecimal iva10 = pedido.getTotalIva10();
+        BigDecimal gravada5 = pedido.getTotalGravada5() != null ? pedido.getTotalGravada5() : BigDecimal.ZERO;
+        BigDecimal iva5 = pedido.getTotalIva5() != null ? pedido.getTotalIva5() : BigDecimal.ZERO;
+        BigDecimal exentas = pedido.getTotalExentas() != null ? pedido.getTotalExentas() : BigDecimal.ZERO;
+        BigDecimal totalIva = pedido.getTotalIva();
+
+        // Fallback si el pedido no tiene desglose explícito (pedidos legados o pruebas unitarias)
+        if (total.compareTo(BigDecimal.ZERO) > 0 &&
+                (gravada10 == null || gravada10.compareTo(BigDecimal.ZERO) == 0) &&
+                gravada5.compareTo(BigDecimal.ZERO) == 0 &&
+                exentas.compareTo(BigDecimal.ZERO) == 0) {
+            gravada10 = MonedaPyUtils.calcularGravada10(total);
+            iva10 = MonedaPyUtils.calcularIva10(total);
+            totalIva = iva10;
+        } else {
+            if (gravada10 == null) gravada10 = BigDecimal.ZERO;
+            if (iva10 == null) iva10 = BigDecimal.ZERO;
+            if (totalIva == null) totalIva = MonedaPyUtils.redondearGs(iva10.add(iva5));
+        }
 
         escribirLinea(out, "LIQUIDACION DE IVA");
         escribirLinea(out, alinearDosColumnas("Gravadas 10%:", MonedaPyUtils.formatearGs(gravada10)));
         escribirLinea(out, alinearDosColumnas("IVA 10%:", MonedaPyUtils.formatearGs(iva10)));
-        escribirLinea(out, alinearDosColumnas("Total IVA:", MonedaPyUtils.formatearGs(iva10)));
+        escribirLinea(out, alinearDosColumnas("Gravadas 5%:", MonedaPyUtils.formatearGs(gravada5)));
+        escribirLinea(out, alinearDosColumnas("IVA 5%:", MonedaPyUtils.formatearGs(iva5)));
+        escribirLinea(out, alinearDosColumnas("Exentas:", MonedaPyUtils.formatearGs(exentas)));
+        escribirLinea(out, alinearDosColumnas("Total IVA:", MonedaPyUtils.formatearGs(totalIva)));
         escribirLinea(out, "--------------------------------");
 
         if (pedido.getNotas() != null && !pedido.getNotas().isBlank()) {

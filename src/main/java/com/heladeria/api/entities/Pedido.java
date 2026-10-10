@@ -71,6 +71,24 @@ public class Pedido {
     @Column(length = 30)
     private String numeroFactura;
 
+    @Column(name = "total_exentas", nullable = false, precision = 12, scale = 0, columnDefinition = "numeric(12,0) default 0")
+    private BigDecimal totalExentas = BigDecimal.ZERO;
+
+    @Column(name = "total_gravada5", nullable = false, precision = 12, scale = 0, columnDefinition = "numeric(12,0) default 0")
+    private BigDecimal totalGravada5 = BigDecimal.ZERO;
+
+    @Column(name = "total_gravada10", nullable = false, precision = 12, scale = 0, columnDefinition = "numeric(12,0) default 0")
+    private BigDecimal totalGravada10 = BigDecimal.ZERO;
+
+    @Column(name = "total_iva5", nullable = false, precision = 12, scale = 0, columnDefinition = "numeric(12,0) default 0")
+    private BigDecimal totalIva5 = BigDecimal.ZERO;
+
+    @Column(name = "total_iva10", nullable = false, precision = 12, scale = 0, columnDefinition = "numeric(12,0) default 0")
+    private BigDecimal totalIva10 = BigDecimal.ZERO;
+
+    @Column(name = "total_iva", nullable = false, precision = 12, scale = 0, columnDefinition = "numeric(12,0) default 0")
+    private BigDecimal totalIva = BigDecimal.ZERO;
+
     @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<DetallePedido> detalles = new ArrayList<>();
@@ -94,6 +112,17 @@ public class Pedido {
                   TipoEntrega tipoEntrega, EstadoPedido estado, String notas, BigDecimal total, List<DetallePedido> detalles,
                   SesionCaja sesionCaja, TipoComprobante tipoComprobante, CondicionVenta condicionVenta,
                   String clienteRuc, String clienteDireccion, String numeroFactura) {
+        this(id, fechaCreacion, clienteNombre, metodoPago, tipoEntrega, estado, notas, total, detalles,
+                sesionCaja, tipoComprobante, condicionVenta, clienteRuc, clienteDireccion, numeroFactura,
+                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+    }
+
+    public Pedido(Long id, LocalDateTime fechaCreacion, String clienteNombre, MetodoPago metodoPago,
+                  TipoEntrega tipoEntrega, EstadoPedido estado, String notas, BigDecimal total, List<DetallePedido> detalles,
+                  SesionCaja sesionCaja, TipoComprobante tipoComprobante, CondicionVenta condicionVenta,
+                  String clienteRuc, String clienteDireccion, String numeroFactura,
+                  BigDecimal totalExentas, BigDecimal totalGravada5, BigDecimal totalGravada10,
+                  BigDecimal totalIva5, BigDecimal totalIva10, BigDecimal totalIva) {
         this.id = id;
         this.fechaCreacion = fechaCreacion != null ? fechaCreacion : LocalDateTime.now();
         this.clienteNombre = clienteNombre;
@@ -109,6 +138,12 @@ public class Pedido {
         this.clienteRuc = clienteRuc;
         this.clienteDireccion = clienteDireccion;
         this.numeroFactura = numeroFactura;
+        this.totalExentas = totalExentas != null ? totalExentas.setScale(0, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO;
+        this.totalGravada5 = totalGravada5 != null ? totalGravada5.setScale(0, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO;
+        this.totalGravada10 = totalGravada10 != null ? totalGravada10.setScale(0, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO;
+        this.totalIva5 = totalIva5 != null ? totalIva5.setScale(0, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO;
+        this.totalIva10 = totalIva10 != null ? totalIva10.setScale(0, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO;
+        this.totalIva = totalIva != null ? totalIva.setScale(0, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO;
     }
 
     public static PedidoBuilder builder() {
@@ -128,6 +163,24 @@ public class Pedido {
         }
         if (this.condicionVenta == null) {
             this.condicionVenta = CondicionVenta.CONTADO;
+        }
+        if (this.totalExentas == null) {
+            this.totalExentas = BigDecimal.ZERO;
+        }
+        if (this.totalGravada5 == null) {
+            this.totalGravada5 = BigDecimal.ZERO;
+        }
+        if (this.totalGravada10 == null) {
+            this.totalGravada10 = BigDecimal.ZERO;
+        }
+        if (this.totalIva5 == null) {
+            this.totalIva5 = BigDecimal.ZERO;
+        }
+        if (this.totalIva10 == null) {
+            this.totalIva10 = BigDecimal.ZERO;
+        }
+        if (this.totalIva == null) {
+            this.totalIva = BigDecimal.ZERO;
         }
     }
 
@@ -184,6 +237,36 @@ public class Pedido {
     public String getNumeroFactura() { return numeroFactura; }
     public void setNumeroFactura(String numeroFactura) { this.numeroFactura = numeroFactura; }
 
+    public BigDecimal getTotalExentas() { return totalExentas; }
+    public void setTotalExentas(BigDecimal totalExentas) {
+        this.totalExentas = totalExentas != null ? totalExentas.setScale(0, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO;
+    }
+
+    public BigDecimal getTotalGravada5() { return totalGravada5; }
+    public void setTotalGravada5(BigDecimal totalGravada5) {
+        this.totalGravada5 = totalGravada5 != null ? totalGravada5.setScale(0, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO;
+    }
+
+    public BigDecimal getTotalGravada10() { return totalGravada10; }
+    public void setTotalGravada10(BigDecimal totalGravada10) {
+        this.totalGravada10 = totalGravada10 != null ? totalGravada10.setScale(0, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO;
+    }
+
+    public BigDecimal getTotalIva5() { return totalIva5; }
+    public void setTotalIva5(BigDecimal totalIva5) {
+        this.totalIva5 = totalIva5 != null ? totalIva5.setScale(0, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO;
+    }
+
+    public BigDecimal getTotalIva10() { return totalIva10; }
+    public void setTotalIva10(BigDecimal totalIva10) {
+        this.totalIva10 = totalIva10 != null ? totalIva10.setScale(0, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO;
+    }
+
+    public BigDecimal getTotalIva() { return totalIva; }
+    public void setTotalIva(BigDecimal totalIva) {
+        this.totalIva = totalIva != null ? totalIva.setScale(0, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO;
+    }
+
     public static class PedidoBuilder {
         private Long id;
         private LocalDateTime fechaCreacion;
@@ -200,6 +283,12 @@ public class Pedido {
         private String clienteRuc;
         private String clienteDireccion;
         private String numeroFactura;
+        private BigDecimal totalExentas = BigDecimal.ZERO;
+        private BigDecimal totalGravada5 = BigDecimal.ZERO;
+        private BigDecimal totalGravada10 = BigDecimal.ZERO;
+        private BigDecimal totalIva5 = BigDecimal.ZERO;
+        private BigDecimal totalIva10 = BigDecimal.ZERO;
+        private BigDecimal totalIva = BigDecimal.ZERO;
 
         public PedidoBuilder id(Long id) { this.id = id; return this; }
         public PedidoBuilder fechaCreacion(LocalDateTime fechaCreacion) { this.fechaCreacion = fechaCreacion; return this; }
@@ -216,10 +305,17 @@ public class Pedido {
         public PedidoBuilder clienteRuc(String clienteRuc) { this.clienteRuc = clienteRuc; return this; }
         public PedidoBuilder clienteDireccion(String clienteDireccion) { this.clienteDireccion = clienteDireccion; return this; }
         public PedidoBuilder numeroFactura(String numeroFactura) { this.numeroFactura = numeroFactura; return this; }
+        public PedidoBuilder totalExentas(BigDecimal totalExentas) { this.totalExentas = totalExentas; return this; }
+        public PedidoBuilder totalGravada5(BigDecimal totalGravada5) { this.totalGravada5 = totalGravada5; return this; }
+        public PedidoBuilder totalGravada10(BigDecimal totalGravada10) { this.totalGravada10 = totalGravada10; return this; }
+        public PedidoBuilder totalIva5(BigDecimal totalIva5) { this.totalIva5 = totalIva5; return this; }
+        public PedidoBuilder totalIva10(BigDecimal totalIva10) { this.totalIva10 = totalIva10; return this; }
+        public PedidoBuilder totalIva(BigDecimal totalIva) { this.totalIva = totalIva; return this; }
 
         public Pedido build() {
             return new Pedido(id, fechaCreacion, clienteNombre, metodoPago, tipoEntrega, estado, notas, total, detalles,
-                    sesionCaja, tipoComprobante, condicionVenta, clienteRuc, clienteDireccion, numeroFactura);
+                    sesionCaja, tipoComprobante, condicionVenta, clienteRuc, clienteDireccion, numeroFactura,
+                    totalExentas, totalGravada5, totalGravada10, totalIva5, totalIva10, totalIva);
         }
     }
 }

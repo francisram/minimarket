@@ -84,4 +84,14 @@ public final class MonedaPyUtils {
         }
         return total.divide(BigDecimal.valueOf(21), 0, RoundingMode.HALF_UP);
     }
+
+    /**
+     * Calcula la base gravada 5% (Total - IVA 5%).
+     */
+    public static BigDecimal calcularGravada5(BigDecimal total) {
+        if (total == null) {
+            return BigDecimal.ZERO;
+        }
+        return redondearGs(total).subtract(calcularIva5(total));
+    }
 }

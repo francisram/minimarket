@@ -1,5 +1,6 @@
 package com.heladeria.api.dto;
 
+import com.heladeria.api.entities.enums.TipoIva;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -29,6 +30,8 @@ public class PresentacionRequestDTO {
     @Min(value = 0, message = "El stock mínimo no puede ser negativo")
     private Integer stockMinimo = 10;
 
+    private TipoIva tipoIva = TipoIva.IVA_10;
+
     public PresentacionRequestDTO() {
     }
 
@@ -52,4 +55,7 @@ public class PresentacionRequestDTO {
 
     public Integer getStockMinimo() { return stockMinimo; }
     public void setStockMinimo(Integer stockMinimo) { this.stockMinimo = stockMinimo; }
+
+    public TipoIva getTipoIva() { return tipoIva; }
+    public void setTipoIva(TipoIva tipoIva) { this.tipoIva = tipoIva; }
 }

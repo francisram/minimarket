@@ -1,6 +1,7 @@
 package com.heladeria.api.entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.heladeria.api.entities.enums.TipoIva;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 
@@ -31,10 +32,18 @@ public class Presentacion {
 
     private Integer stockMinimo = 10;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo_iva", nullable = false, length = 20, columnDefinition = "varchar(20) default 'IVA_10'")
+    private TipoIva tipoIva = TipoIva.IVA_10;
+
     public Presentacion() {
     }
 
     public Presentacion(Long id, String nombre, BigDecimal precio, Integer maxSabores, Integer pesoGramosAprox, Boolean activo, Integer stock, Integer stockMinimo) {
+        this(id, nombre, precio, maxSabores, pesoGramosAprox, activo, stock, stockMinimo, TipoIva.IVA_10);
+    }
+
+    public Presentacion(Long id, String nombre, BigDecimal precio, Integer maxSabores, Integer pesoGramosAprox, Boolean activo, Integer stock, Integer stockMinimo, TipoIva tipoIva) {
         this.id = id;
         this.nombre = nombre;
         this.precio = precio != null ? precio.setScale(0, java.math.RoundingMode.HALF_UP) : null;
@@ -43,6 +52,7 @@ public class Presentacion {
         this.activo = activo != null ? activo : true;
         this.stock = stock;
         this.stockMinimo = stockMinimo != null ? stockMinimo : 10;
+        this.tipoIva = tipoIva != null ? tipoIva : TipoIva.IVA_10;
     }
 
     public static PresentacionBuilder builder() {
@@ -75,6 +85,11 @@ public class Presentacion {
     public Integer getStockMinimo() { return stockMinimo; }
     public void setStockMinimo(Integer stockMinimo) { this.stockMinimo = stockMinimo; }
 
+    public TipoIva getTipoIva() { return tipoIva; }
+    public void setTipoIva(TipoIva tipoIva) {
+        this.tipoIva = tipoIva != null ? tipoIva : TipoIva.IVA_10;
+    }
+
     public static class PresentacionBuilder {
         private Long id;
         private String nombre;
@@ -84,6 +99,7 @@ public class Presentacion {
         private Boolean activo = true;
         private Integer stock;
         private Integer stockMinimo = 10;
+        private TipoIva tipoIva = TipoIva.IVA_10;
 
         public PresentacionBuilder id(Long id) { this.id = id; return this; }
         public PresentacionBuilder nombre(String nombre) { this.nombre = nombre; return this; }
@@ -93,9 +109,10 @@ public class Presentacion {
         public PresentacionBuilder activo(Boolean activo) { this.activo = activo; return this; }
         public PresentacionBuilder stock(Integer stock) { this.stock = stock; return this; }
         public PresentacionBuilder stockMinimo(Integer stockMinimo) { this.stockMinimo = stockMinimo; return this; }
+        public PresentacionBuilder tipoIva(TipoIva tipoIva) { this.tipoIva = tipoIva; return this; }
 
         public Presentacion build() {
-            return new Presentacion(id, nombre, precio, maxSabores, pesoGramosAprox, activo, stock, stockMinimo);
+            return new Presentacion(id, nombre, precio, maxSabores, pesoGramosAprox, activo, stock, stockMinimo, tipoIva);
         }
     }
 }

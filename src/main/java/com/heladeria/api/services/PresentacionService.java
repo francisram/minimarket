@@ -2,6 +2,7 @@ package com.heladeria.api.services;
 
 import com.heladeria.api.dto.PresentacionRequestDTO;
 import com.heladeria.api.entities.Presentacion;
+import com.heladeria.api.entities.enums.TipoIva;
 import com.heladeria.api.exceptions.RecursoNoEncontradoException;
 import com.heladeria.api.exceptions.ReglaDeNegocioException;
 import com.heladeria.api.repositories.PresentacionRepository;
@@ -47,6 +48,7 @@ public class PresentacionService {
                 .activo(dto.getActivo() == null || dto.getActivo())
                 .stock(dto.getStock())
                 .stockMinimo(dto.getStockMinimo() != null ? dto.getStockMinimo() : 10)
+                .tipoIva(dto.getTipoIva() != null ? dto.getTipoIva() : TipoIva.IVA_10)
                 .build();
 
         return presentacionRepository.save(presentacion);
@@ -73,6 +75,9 @@ public class PresentacionService {
         }
         if (dto.getStockMinimo() != null) {
             presentacion.setStockMinimo(dto.getStockMinimo());
+        }
+        if (dto.getTipoIva() != null) {
+            presentacion.setTipoIva(dto.getTipoIva());
         }
 
         return presentacionRepository.save(presentacion);

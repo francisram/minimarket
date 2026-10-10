@@ -8,6 +8,7 @@ import com.heladeria.api.entities.enums.EstadoPedido;
 import com.heladeria.api.entities.enums.EstadoSesionCaja;
 import com.heladeria.api.entities.enums.TipoComprobante;
 import com.heladeria.api.entities.enums.TipoItemPedido;
+import com.heladeria.api.entities.enums.TipoIva;
 import com.heladeria.api.exceptions.RecursoNoEncontradoException;
 import com.heladeria.api.exceptions.ReglaDeNegocioException;
 import com.heladeria.api.repositories.*;
@@ -117,6 +118,9 @@ public class PedidoService {
                 .build();
 
         BigDecimal granTotal = BigDecimal.ZERO;
+        BigDecimal acumuladorExentas = BigDecimal.ZERO;
+        BigDecimal acumulador5 = BigDecimal.ZERO;
+        BigDecimal acumulador10 = BigDecimal.ZERO;
 
         for (DetallePedidoRequestDTO itemDto : request.getItems()) {
             DetallePedido detalle = DetallePedido.builder()
@@ -140,6 +144,7 @@ public class PedidoService {
                 }
 
                 detalle.setPresentacion(presentacion);
+                detalle.setTipoIva(presentacion.getTipoIva() != null ? presentacion.getTipoIva() : TipoIva.IVA_10);
                 precioUnitario = presentacion.getPrecio();
 
                 // Control de stock de envases/cucuruchos
@@ -245,6 +250,7 @@ public class PedidoService {
                 }
 
                 detalle.setProductoSimple(prod);
+                detalle.setTipoIva(prod.getTipoIva() != null ? prod.getTipoIva() : TipoIva.IVA_10);
                 precioUnitario = prod.getPrecio();
             }
 
@@ -254,8 +260,30 @@ public class PedidoService {
 
             pedido.getDetalles().add(detalle);
             granTotal = MonedaPyUtils.redondearGs(granTotal.add(subtotal));
+
+            TipoIva ivaItem = detalle.getTipoIva() != null ? detalle.getTipoIva() : TipoIva.IVA_10;
+            if (ivaItem == TipoIva.EXENTA) {
+                acumuladorExentas = acumuladorExentas.add(subtotal);
+            } else if (ivaItem == TipoIva.IVA_5) {
+                acumulador5 = acumulador5.add(subtotal);
+            } else {
+                acumulador10 = acumulador10.add(subtotal);
+            }
         }
 
+        BigDecimal totalExentas = MonedaPyUtils.redondearGs(acumuladorExentas);
+        BigDecimal totalIva5 = MonedaPyUtils.calcularIva5(acumulador5);
+        BigDecimal totalGravada5 = MonedaPyUtils.calcularGravada5(acumulador5);
+        BigDecimal totalIva10 = MonedaPyUtils.calcularIva10(acumulador10);
+        BigDecimal totalGravada10 = MonedaPyUtils.calcularGravada10(acumulador10);
+        BigDecimal totalIva = MonedaPyUtils.redondearGs(totalIva5.add(totalIva10));
+
+        pedido.setTotalExentas(totalExentas);
+        pedido.setTotalGravada5(totalGravada5);
+        pedido.setTotalIva5(totalIva5);
+        pedido.setTotalGravada10(totalGravada10);
+        pedido.setTotalIva10(totalIva10);
+        pedido.setTotalIva(totalIva);
         pedido.setTotal(granTotal);
         Pedido guardado = pedidoRepository.save(pedido);
 

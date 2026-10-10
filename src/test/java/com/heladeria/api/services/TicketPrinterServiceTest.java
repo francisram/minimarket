@@ -372,4 +372,44 @@ class TicketPrinterServiceTest {
         assertTrue(decodificadoWpc1252.contains("Ñemby - Centro"));
         assertTrue(decodificadoWpc1252.contains("pingüino - rápido"));
     }
+
+    @Test
+    @DisplayName("construirTicketPedido desglose completo de liquidacion de IVA mixto (10%, 5% y Exentas)")
+    void testConstruirTicketPedidoConIvaMixto() {
+        Pedido pedido = Pedido.builder()
+                .id(202L)
+                .tipoComprobante(TipoComprobante.TICKET)
+                .clienteNombre("María Benítez")
+                .metodoPago(MetodoPago.TRANSFERENCIA_QR)
+                .tipoEntrega(TipoEntrega.TAKE_AWAY)
+                .estado(EstadoPedido.ENTREGADO)
+                .fechaCreacion(LocalDateTime.now())
+                .totalExentas(new BigDecimal("10000"))
+                .totalGravada5(new BigDecimal("20000"))
+                .totalIva5(new BigDecimal("1000"))
+                .totalGravada10(new BigDecimal("50000"))
+                .totalIva10(new BigDecimal("5000"))
+                .totalIva(new BigDecimal("6000"))
+                .total(new BigDecimal("86000"))
+                .detalles(List.of())
+                .build();
+
+        byte[] ticketBytes = ticketPrinterService.construirTicketPedido(pedido);
+        assertNotNull(ticketBytes);
+
+        String texto = new String(ticketBytes, java.nio.charset.Charset.forName("windows-1252"));
+        assertTrue(texto.contains("LIQUIDACION DE IVA"));
+        assertTrue(texto.contains("Gravadas 10%:"));
+        assertTrue(texto.contains("Gs. 50.000"));
+        assertTrue(texto.contains("IVA 10%:"));
+        assertTrue(texto.contains("Gs. 5.000"));
+        assertTrue(texto.contains("Gravadas 5%:"));
+        assertTrue(texto.contains("Gs. 20.000"));
+        assertTrue(texto.contains("IVA 5%:"));
+        assertTrue(texto.contains("Gs. 1.000"));
+        assertTrue(texto.contains("Exentas:"));
+        assertTrue(texto.contains("Gs. 10.000"));
+        assertTrue(texto.contains("Total IVA:"));
+        assertTrue(texto.contains("Gs. 6.000"));
+    }
 }

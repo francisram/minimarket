@@ -3,6 +3,7 @@ package com.heladeria.api.entities;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.heladeria.api.entities.enums.TipoItemPedido;
+import com.heladeria.api.entities.enums.TipoIva;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
@@ -60,12 +61,22 @@ public class DetallePedido {
     @Column(nullable = false, precision = 12, scale = 0)
     private BigDecimal subtotal;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo_iva", nullable = false, length = 20, columnDefinition = "varchar(20) default 'IVA_10'")
+    private TipoIva tipoIva = TipoIva.IVA_10;
+
     public DetallePedido() {
     }
 
     public DetallePedido(Long id, Pedido pedido, TipoItemPedido tipoItem, Presentacion presentacion,
                          List<Sabor> sabores, List<Topping> toppings, ProductoSimple productoSimple,
                          Integer cantidad, BigDecimal precioUnitario, BigDecimal subtotal) {
+        this(id, pedido, tipoItem, presentacion, sabores, toppings, productoSimple, cantidad, precioUnitario, subtotal, TipoIva.IVA_10);
+    }
+
+    public DetallePedido(Long id, Pedido pedido, TipoItemPedido tipoItem, Presentacion presentacion,
+                         List<Sabor> sabores, List<Topping> toppings, ProductoSimple productoSimple,
+                         Integer cantidad, BigDecimal precioUnitario, BigDecimal subtotal, TipoIva tipoIva) {
         this.id = id;
         this.pedido = pedido;
         this.tipoItem = tipoItem;
@@ -76,6 +87,7 @@ public class DetallePedido {
         this.cantidad = cantidad;
         this.precioUnitario = precioUnitario != null ? precioUnitario.setScale(0, java.math.RoundingMode.HALF_UP) : null;
         this.subtotal = subtotal != null ? subtotal.setScale(0, java.math.RoundingMode.HALF_UP) : null;
+        this.tipoIva = tipoIva != null ? tipoIva : TipoIva.IVA_10;
     }
 
     public static DetallePedidoBuilder builder() {
@@ -116,6 +128,11 @@ public class DetallePedido {
         this.subtotal = subtotal != null ? subtotal.setScale(0, java.math.RoundingMode.HALF_UP) : null;
     }
 
+    public TipoIva getTipoIva() { return tipoIva; }
+    public void setTipoIva(TipoIva tipoIva) {
+        this.tipoIva = tipoIva != null ? tipoIva : TipoIva.IVA_10;
+    }
+
     public static class DetallePedidoBuilder {
         private Long id;
         private Pedido pedido;
@@ -127,6 +144,7 @@ public class DetallePedido {
         private Integer cantidad;
         private BigDecimal precioUnitario;
         private BigDecimal subtotal;
+        private TipoIva tipoIva = TipoIva.IVA_10;
 
         public DetallePedidoBuilder id(Long id) { this.id = id; return this; }
         public DetallePedidoBuilder pedido(Pedido pedido) { this.pedido = pedido; return this; }
@@ -138,9 +156,10 @@ public class DetallePedido {
         public DetallePedidoBuilder cantidad(Integer cantidad) { this.cantidad = cantidad; return this; }
         public DetallePedidoBuilder precioUnitario(BigDecimal precioUnitario) { this.precioUnitario = precioUnitario; return this; }
         public DetallePedidoBuilder subtotal(BigDecimal subtotal) { this.subtotal = subtotal; return this; }
+        public DetallePedidoBuilder tipoIva(TipoIva tipoIva) { this.tipoIva = tipoIva; return this; }
 
         public DetallePedido build() {
-            return new DetallePedido(id, pedido, tipoItem, presentacion, sabores, toppings, productoSimple, cantidad, precioUnitario, subtotal);
+            return new DetallePedido(id, pedido, tipoItem, presentacion, sabores, toppings, productoSimple, cantidad, precioUnitario, subtotal, tipoIva);
         }
     }
 }

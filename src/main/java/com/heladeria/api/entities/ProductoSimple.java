@@ -1,6 +1,7 @@
 package com.heladeria.api.entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.heladeria.api.entities.enums.TipoIva;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 
@@ -31,10 +32,18 @@ public class ProductoSimple {
     @Column(nullable = false)
     private Boolean activo = true;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo_iva", nullable = false, length = 20, columnDefinition = "varchar(20) default 'IVA_10'")
+    private TipoIva tipoIva = TipoIva.IVA_10;
+
     public ProductoSimple() {
     }
 
     public ProductoSimple(Long id, String nombre, BigDecimal precio, String categoria, Integer stock, Integer stockMinimo, Boolean activo) {
+        this(id, nombre, precio, categoria, stock, stockMinimo, activo, TipoIva.IVA_10);
+    }
+
+    public ProductoSimple(Long id, String nombre, BigDecimal precio, String categoria, Integer stock, Integer stockMinimo, Boolean activo, TipoIva tipoIva) {
         this.id = id;
         this.nombre = nombre;
         this.precio = precio != null ? precio.setScale(0, java.math.RoundingMode.HALF_UP) : null;
@@ -42,6 +51,7 @@ public class ProductoSimple {
         this.stock = stock != null ? stock : 0;
         this.stockMinimo = stockMinimo != null ? stockMinimo : 5;
         this.activo = activo != null ? activo : true;
+        this.tipoIva = tipoIva != null ? tipoIva : TipoIva.IVA_10;
     }
 
     public static ProductoSimpleBuilder builder() {
@@ -71,6 +81,11 @@ public class ProductoSimple {
     public Boolean getActivo() { return activo; }
     public void setActivo(Boolean activo) { this.activo = activo; }
 
+    public TipoIva getTipoIva() { return tipoIva; }
+    public void setTipoIva(TipoIva tipoIva) {
+        this.tipoIva = tipoIva != null ? tipoIva : TipoIva.IVA_10;
+    }
+
     public static class ProductoSimpleBuilder {
         private Long id;
         private String nombre;
@@ -79,6 +94,7 @@ public class ProductoSimple {
         private Integer stock = 0;
         private Integer stockMinimo = 5;
         private Boolean activo = true;
+        private TipoIva tipoIva = TipoIva.IVA_10;
 
         public ProductoSimpleBuilder id(Long id) { this.id = id; return this; }
         public ProductoSimpleBuilder nombre(String nombre) { this.nombre = nombre; return this; }
@@ -87,9 +103,10 @@ public class ProductoSimple {
         public ProductoSimpleBuilder stock(Integer stock) { this.stock = stock; return this; }
         public ProductoSimpleBuilder stockMinimo(Integer stockMinimo) { this.stockMinimo = stockMinimo; return this; }
         public ProductoSimpleBuilder activo(Boolean activo) { this.activo = activo; return this; }
+        public ProductoSimpleBuilder tipoIva(TipoIva tipoIva) { this.tipoIva = tipoIva; return this; }
 
         public ProductoSimple build() {
-            return new ProductoSimple(id, nombre, precio, categoria, stock, stockMinimo, activo);
+            return new ProductoSimple(id, nombre, precio, categoria, stock, stockMinimo, activo, tipoIva);
         }
     }
 }
