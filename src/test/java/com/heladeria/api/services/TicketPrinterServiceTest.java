@@ -412,4 +412,27 @@ class TicketPrinterServiceTest {
         assertTrue(texto.contains("Total IVA:"));
         assertTrue(texto.contains("Gs. 6.000"));
     }
+
+    @Test
+    @DisplayName("construirTicketPedido incluye número de voucher en línea de método de pago")
+    void testConstruirTicketPedidoConNumeroVoucher() {
+        Pedido pedido = Pedido.builder()
+                .id(203L)
+                .tipoComprobante(TipoComprobante.TICKET)
+                .clienteNombre("Carlos López")
+                .metodoPago(MetodoPago.TARJETA_DEBITO)
+                .numeroVoucher("VCH-987654")
+                .tipoEntrega(TipoEntrega.MOSTRADOR)
+                .estado(EstadoPedido.ENTREGADO)
+                .fechaCreacion(LocalDateTime.now())
+                .total(new BigDecimal("50000"))
+                .detalles(List.of())
+                .build();
+
+        byte[] ticketBytes = ticketPrinterService.construirTicketPedido(pedido);
+        assertNotNull(ticketBytes);
+
+        String texto = new String(ticketBytes, java.nio.charset.Charset.forName("windows-1252"));
+        assertTrue(texto.contains("Pago: TARJETA_DEBITO (Voucher: VCH-987654)"));
+    }
 }

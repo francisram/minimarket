@@ -189,7 +189,11 @@ public class TicketPrinterService {
             escribirLinea(out, "Cajero: " + pedido.getSesionCaja().getUsuarioApertura().getUsername());
         }
         if (pedido.getMetodoPago() != null) {
-            escribirLinea(out, "Pago: " + pedido.getMetodoPago());
+            String lineaPago = "Pago: " + pedido.getMetodoPago();
+            if (pedido.getNumeroVoucher() != null && !pedido.getNumeroVoucher().isBlank()) {
+                lineaPago += " (Voucher: " + pedido.getNumeroVoucher() + ")";
+            }
+            escribirLinea(out, lineaPago);
         }
         if (pedido.getTipoEntrega() != null) {
             escribirLinea(out, "Entrega: " + pedido.getTipoEntrega());

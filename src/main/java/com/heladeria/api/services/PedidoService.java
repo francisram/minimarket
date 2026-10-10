@@ -122,6 +122,7 @@ public class PedidoService {
                 .clienteRuc(request.getClienteRuc() != null ? request.getClienteRuc().trim() : null)
                 .clienteDireccion(request.getClienteDireccion() != null ? request.getClienteDireccion().trim() : null)
                 .numeroFactura(numeroFactura)
+                .numeroVoucher(request.getNumeroVoucher() != null ? request.getNumeroVoucher().trim() : null)
                 .metodoPago(request.getMetodoPago())
                 .tipoEntrega(request.getTipoEntrega())
                 .notas(request.getNotas())

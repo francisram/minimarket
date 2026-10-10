@@ -656,4 +656,25 @@ class PedidoServiceTest {
                 .add(pedido.getTotalIva10());
         assertEquals(pedido.getTotal(), sumaTotal);
     }
+
+    @Test
+    @DisplayName("Crear pedido con tarjeta registra y persiste el número de voucher")
+    void testCrearPedidoConNumeroVoucher() {
+        DetallePedidoRequestDTO itemHelado = new DetallePedidoRequestDTO();
+        itemHelado.setTipoItem(TipoItemPedido.HELADO);
+        itemHelado.setPresentacionId(poteMedioKg.getId());
+        itemHelado.setSaborIds(List.of(dulceDeLeche.getId()));
+        itemHelado.setCantidad(1);
+
+        PedidoRequestDTO request = new PedidoRequestDTO();
+        request.setMetodoPago(MetodoPago.TARJETA_CREDITO);
+        request.setTipoEntrega(TipoEntrega.MOSTRADOR);
+        request.setNumeroVoucher("  VCH-123456  ");
+        request.setItems(List.of(itemHelado));
+
+        Pedido pedido = pedidoService.crearPedido(request);
+
+        assertNotNull(pedido.getId());
+        assertEquals("VCH-123456", pedido.getNumeroVoucher());
+    }
 }

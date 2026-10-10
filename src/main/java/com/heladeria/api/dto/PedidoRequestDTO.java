@@ -37,6 +37,8 @@ public class PedidoRequestDTO {
 
     private String clienteDireccion;
 
+    private String numeroVoucher;
+
     public PedidoRequestDTO() {
     }
 
@@ -69,4 +71,7 @@ public class PedidoRequestDTO {
 
     public String getClienteDireccion() { return clienteDireccion; }
     public void setClienteDireccion(String clienteDireccion) { this.clienteDireccion = clienteDireccion; }
+
+    public String getNumeroVoucher() { return numeroVoucher; }
+    public void setNumeroVoucher(String numeroVoucher) { this.numeroVoucher = numeroVoucher; }
 }
