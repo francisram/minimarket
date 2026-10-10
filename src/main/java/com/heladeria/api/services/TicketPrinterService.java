@@ -33,6 +33,8 @@ public class TicketPrinterService {
     private static final byte[] ALINEAR_IZQUIERDA = {0x1B, 0x61, 0x00};
     private static final byte[] TEXTO_DOBLE = {0x1D, 0x21, 0x11};
     private static final byte[] TEXTO_NORMAL = {0x1D, 0x21, 0x00};
+    private static final byte[] NEGRITA_ON = {0x1B, 0x45, 0x01};
+    private static final byte[] NEGRITA_OFF = {0x1B, 0x45, 0x00};
     private static final byte[] AVANZAR_Y_CORTAR = {0x1B, 0x64, 0x04, 0x1D, 0x56, 0x00};
 
     private final TicketeraRepository ticketeraRepository;
@@ -126,97 +128,99 @@ public class TicketPrinterService {
         logoInstitucion().ifPresent(out::writeBytes);
 
         boolean esFactura = pedido.getTipoComprobante() == TipoComprobante.FACTURA;
+        Optional<Institucion> instOpt = institucionRepository.findById(1L);
+        Institucion inst = instOpt.orElse(null);
 
-        if (esFactura) {
-            Optional<Institucion> instOpt = institucionRepository.findById(1L);
-            Institucion inst = instOpt.orElse(null);
+        String nombreLocal = (inst != null && inst.getNombre() != null && !inst.getNombre().isBlank())
+                ? inst.getNombre()
+                : "HELADERIA ARTESANAL";
+        escribirLinea(out, nombreLocal);
 
-            String nombreLocal = (inst != null && inst.getNombre() != null && !inst.getNombre().isBlank())
-                    ? inst.getNombre()
-                    : "HELADERIA ARTESANAL";
-            escribirLinea(out, nombreLocal);
-
-            if (inst != null) {
-                if (inst.getRuc() != null && !inst.getRuc().isBlank()) {
-                    escribirLinea(out, "RUC: " + inst.getRuc());
-                }
-                if (inst.getTimbrado() != null && !inst.getTimbrado().isBlank()) {
-                    escribirLinea(out, "TIMBRADO N°: " + inst.getTimbrado());
-                }
-                if (inst.getTimbradoVencimiento() != null) {
-                    escribirLinea(out, "VIGENCIA: " + FORMATO_SOLO_FECHA.format(inst.getTimbradoVencimiento()));
-                }
+        if (inst != null) {
+            if (inst.getDireccion() != null && !inst.getDireccion().isBlank()) {
+                escribirLinea(out, inst.getDireccion());
             }
-
-            out.writeBytes(TEXTO_DOBLE);
-            escribirLinea(out, "FACTURA N°: " + (pedido.getNumeroFactura() != null ? pedido.getNumeroFactura() : "000-000-0000000"));
-            out.writeBytes(TEXTO_NORMAL);
-
-            if (pedido.getFechaCreacion() != null) {
-                escribirLinea(out, FORMATO_FECHA.format(pedido.getFechaCreacion()));
+            if (inst.getTelefono() != null && !inst.getTelefono().isBlank()) {
+                escribirLinea(out, "Tel: " + inst.getTelefono());
             }
-
-            out.writeBytes(ALINEAR_IZQUIERDA);
-            escribirLinea(out, "--------------------------------");
-            escribirLinea(out, "CONDICION: " + (pedido.getCondicionVenta() != null ? pedido.getCondicionVenta() : CondicionVenta.CONTADO));
-            if (pedido.getClienteRuc() != null && !pedido.getClienteRuc().isBlank()) {
-                escribirLinea(out, "RUC/CI CLIENTE: " + pedido.getClienteRuc());
+            if (inst.getCiudad() != null && !inst.getCiudad().isBlank()) {
+                escribirLinea(out, inst.getCiudad());
             }
-            if (pedido.getClienteNombre() != null && !pedido.getClienteNombre().isBlank()) {
-                escribirLinea(out, "CLIENTE / RAZON SOCIAL: " + pedido.getClienteNombre());
-            }
-            if (pedido.getClienteDireccion() != null && !pedido.getClienteDireccion().isBlank()) {
-                escribirLinea(out, "DIRECCION: " + pedido.getClienteDireccion());
-            }
-            if (pedido.getMetodoPago() != null) {
-                escribirLinea(out, "Pago: " + pedido.getMetodoPago());
-            }
-            if (pedido.getTipoEntrega() != null) {
-                escribirLinea(out, "Entrega: " + pedido.getTipoEntrega());
-            }
-        } else {
-            String nombreLocal = institucionRepository.findById(1L)
-                    .map(Institucion::getNombre)
-                    .filter(n -> !n.isBlank())
-                    .orElse("HELADERIA ARTESANAL");
-            escribirLinea(out, nombreLocal);
-
-            out.writeBytes(TEXTO_DOBLE);
-            escribirLinea(out, "PEDIDO #" + pedido.getId());
-            out.writeBytes(TEXTO_NORMAL);
-
-            if (pedido.getFechaCreacion() != null) {
-                escribirLinea(out, FORMATO_FECHA.format(pedido.getFechaCreacion()));
-            }
-
-            out.writeBytes(ALINEAR_IZQUIERDA);
-            escribirLinea(out, "--------------------------------");
-            if (pedido.getClienteNombre() != null && !pedido.getClienteNombre().isBlank()) {
-                escribirLinea(out, "Cliente: " + pedido.getClienteNombre());
-            }
-            if (pedido.getMetodoPago() != null) {
-                escribirLinea(out, "Pago: " + pedido.getMetodoPago());
-            }
-            if (pedido.getTipoEntrega() != null) {
-                escribirLinea(out, "Entrega: " + pedido.getTipoEntrega());
+            if (inst.getRuc() != null && !inst.getRuc().isBlank()) {
+                escribirLinea(out, "RUC: " + inst.getRuc());
             }
         }
+
+        if (esFactura && inst != null) {
+            escribirLinea(out, "--------------------------------");
+            if (inst.getTimbrado() != null && !inst.getTimbrado().isBlank()) {
+                escribirLinea(out, "TIMBRADO N°: " + inst.getTimbrado());
+            }
+            if (inst.getTimbradoVencimiento() != null) {
+                escribirLinea(out, "VALIDO HASTA: " + FORMATO_SOLO_FECHA.format(inst.getTimbradoVencimiento()));
+            }
+            escribirLinea(out, "IVA INCLUIDO");
+        }
+
         escribirLinea(out, "--------------------------------");
+        out.writeBytes(NEGRITA_ON);
+        if (esFactura) {
+            escribirLinea(out, "FACTURA N°: " + (pedido.getNumeroFactura() != null ? pedido.getNumeroFactura() : "001-001-0000001"));
+        } else {
+            escribirLinea(out, "TICKET DE VENTA #" + pedido.getId());
+        }
+        out.writeBytes(NEGRITA_OFF);
+
+        if (pedido.getFechaCreacion() != null) {
+            escribirLinea(out, "Fecha: " + FORMATO_FECHA.format(pedido.getFechaCreacion()));
+        }
+
+        out.writeBytes(ALINEAR_IZQUIERDA);
+        escribirLinea(out, "--------------------------------");
+        if (esFactura) {
+            escribirLinea(out, "Condicion: " + (pedido.getCondicionVenta() != null ? pedido.getCondicionVenta() : CondicionVenta.CONTADO));
+        }
+        if (pedido.getSesionCaja() != null && pedido.getSesionCaja().getUsuarioApertura() != null) {
+            escribirLinea(out, "Cajero: " + pedido.getSesionCaja().getUsuarioApertura().getUsername());
+        }
+        if (pedido.getMetodoPago() != null) {
+            escribirLinea(out, "Medio Pago: " + pedido.getMetodoPago());
+        }
+        if (pedido.getTipoEntrega() != null) {
+            escribirLinea(out, "Entrega: " + pedido.getTipoEntrega());
+        }
+
+        escribirLinea(out, "--------------------------------");
+        escribirLinea(out, "Cliente: " + (pedido.getClienteNombre() != null && !pedido.getClienteNombre().isBlank() ? pedido.getClienteNombre() : "Consumidor Final"));
+        if (esFactura || (pedido.getClienteRuc() != null && !pedido.getClienteRuc().isBlank())) {
+            escribirLinea(out, "RUC / C.I.: " + (pedido.getClienteRuc() != null && !pedido.getClienteRuc().isBlank() ? pedido.getClienteRuc() : "X"));
+        }
+        if (pedido.getClienteDireccion() != null && !pedido.getClienteDireccion().isBlank()) {
+            escribirLinea(out, "Direccion: " + pedido.getClienteDireccion());
+        }
+
+        escribirLinea(out, "================================");
         escribirLinea(out, "CANT DESCRIPCION           TOTAL");
         escribirLinea(out, "--------------------------------");
 
         if (pedido.getDetalles() != null) {
             for (DetallePedido d : pedido.getDetalles()) {
                 String desc = "";
+                BigDecimal precioUnit = BigDecimal.ZERO;
                 if (d.getTipoItem() == TipoItemPedido.HELADO && d.getPresentacion() != null) {
                     desc = d.getPresentacion().getNombre();
+                    precioUnit = d.getPresentacion().getPrecio();
                 } else if (d.getTipoItem() == TipoItemPedido.PRODUCTO_SIMPLE && d.getProductoSimple() != null) {
                     desc = d.getProductoSimple().getNombre();
+                    precioUnit = d.getProductoSimple().getPrecio();
                 } else {
                     desc = "Item";
                 }
 
                 escribirLinea(out, formatearLineaItem(d.getCantidad(), desc, MonedaPyUtils.formatearGs(d.getSubtotal())));
+                if (precioUnit != null && precioUnit.compareTo(BigDecimal.ZERO) > 0) {
+                    escribirLinea(out, "  " + MonedaPyUtils.formatearGs(precioUnit) + " c/u");
+                }
 
                 if (d.getSabores() != null && !d.getSabores().isEmpty()) {
                     for (Sabor s : d.getSabores()) {
@@ -232,28 +236,34 @@ public class TicketPrinterService {
         }
 
         escribirLinea(out, "--------------------------------");
-        out.writeBytes(TEXTO_DOBLE);
-        escribirLinea(out, "TOTAL: " + MonedaPyUtils.formatearGs(pedido.getTotal()));
-        out.writeBytes(TEXTO_NORMAL);
+        out.writeBytes(NEGRITA_ON);
+        escribirLinea(out, alinearDosColumnas("TOTAL A PAGAR:", MonedaPyUtils.formatearGs(pedido.getTotal())));
+        out.writeBytes(NEGRITA_OFF);
         escribirLinea(out, "--------------------------------");
 
-        BigDecimal total = pedido.getTotal() != null ? pedido.getTotal() : BigDecimal.ZERO;
-        BigDecimal gravada10 = MonedaPyUtils.calcularGravada10(total);
-        BigDecimal iva10 = MonedaPyUtils.calcularIva10(total);
+        if (esFactura) {
+            BigDecimal total = pedido.getTotal() != null ? pedido.getTotal() : BigDecimal.ZERO;
+            BigDecimal gravada10 = MonedaPyUtils.calcularGravada10(total);
+            BigDecimal iva10 = MonedaPyUtils.calcularIva10(total);
 
-        escribirLinea(out, "LIQUIDACION DE IVA");
-        escribirLinea(out, alinearDosColumnas("Gravadas 10%:", MonedaPyUtils.formatearGs(gravada10)));
-        escribirLinea(out, alinearDosColumnas("IVA 10%:", MonedaPyUtils.formatearGs(iva10)));
-        escribirLinea(out, alinearDosColumnas("Total IVA:", MonedaPyUtils.formatearGs(iva10)));
-        escribirLinea(out, "--------------------------------");
+            escribirLinea(out, "LIQUIDACION DEL IVA (10%)");
+            escribirLinea(out, alinearDosColumnas("Gravadas (10%):", MonedaPyUtils.formatearGs(gravada10)));
+            escribirLinea(out, alinearDosColumnas("Liquidacion IVA (10%):", MonedaPyUtils.formatearGs(iva10)));
+            escribirLinea(out, alinearDosColumnas("TOTAL IVA:", MonedaPyUtils.formatearGs(iva10)));
+            escribirLinea(out, "--------------------------------");
+        }
 
         if (pedido.getNotas() != null && !pedido.getNotas().isBlank()) {
-            escribirLinea(out, "Notas: " + pedido.getNotas());
+            escribirLinea(out, "Obs: " + pedido.getNotas());
             escribirLinea(out, "--------------------------------");
         }
 
         out.writeBytes(ALINEAR_CENTRO);
-        escribirLinea(out, "Gracias por su preferencia!");
+        escribirLinea(out, "¡GRACIAS POR SU PREFERENCIA!");
+        escribirLinea(out, nombreLocal);
+        if (esFactura) {
+            escribirLinea(out, "Original: Cliente • Duplicado: Archivo");
+        }
         out.writeBytes(AVANZAR_Y_CORTAR);
 
         return out.toByteArray();
