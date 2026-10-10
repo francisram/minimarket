@@ -12,6 +12,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -46,8 +47,11 @@ public class PedidoController {
 
     @PostMapping
     @Operation(summary = "Registrar nuevo pedido/venta con validaciones de heladería (límite de sabores, disponibilidad, etc.)")
-    public ResponseEntity<Pedido> crear(@Valid @RequestBody PedidoRequestDTO request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(pedidoService.crearPedido(request));
+    public ResponseEntity<Pedido> crear(
+            @Valid @RequestBody PedidoRequestDTO request,
+            Authentication authentication) {
+        String username = authentication != null ? authentication.getName() : "admin";
+        return ResponseEntity.status(HttpStatus.CREATED).body(pedidoService.crearPedido(request, username));
     }
 
     @PatchMapping("/{id}/estado")

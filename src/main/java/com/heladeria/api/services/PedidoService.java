@@ -58,8 +58,22 @@ public class PedidoService {
 
     @Transactional
     public Pedido crearPedido(PedidoRequestDTO request) {
-        SesionCaja sesionActiva = sesionCajaRepository.findFirstByEstadoOrderByFechaAperturaDesc(EstadoSesionCaja.ABIERTA)
-                .orElseThrow(() -> new ReglaDeNegocioException("No se pueden registrar ventas: no existe una sesión de caja abierta."));
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        String username = (auth != null && auth.getName() != null) ? auth.getName() : "admin";
+        return crearPedido(request, username);
+    }
+
+    @Transactional
+    public Pedido crearPedido(PedidoRequestDTO request, String username) {
+        if (username == null || username.isBlank()) {
+            var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            username = (auth != null && auth.getName() != null) ? auth.getName() : "admin";
+        }
+
+        String finalUsername = username;
+        SesionCaja sesionActiva = sesionCajaRepository
+                .findFirstByUsuarioApertura_UsernameAndEstadoOrderByFechaAperturaDesc(finalUsername, EstadoSesionCaja.ABIERTA)
+                .orElseThrow(() -> new ReglaDeNegocioException("El usuario '" + finalUsername + "' no tiene una sesión de caja abierta para registrar ventas."));
 
         if (request.getItems() == null || request.getItems().isEmpty()) {
             throw new ReglaDeNegocioException("El pedido debe contener al menos un ítem.");

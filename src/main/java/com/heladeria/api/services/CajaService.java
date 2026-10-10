@@ -37,7 +37,26 @@ public class CajaService {
 
     @Transactional(readOnly = true)
     public EstadoCajaDTO obtenerEstado() {
-        return sesionCajaRepository.findFirstByEstadoOrderByFechaAperturaDesc(EstadoSesionCaja.ABIERTA)
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        String username = (auth != null && auth.getName() != null) ? auth.getName() : null;
+        return obtenerEstado(username);
+    }
+
+    @Transactional(readOnly = true)
+    public EstadoCajaDTO obtenerEstado(String username) {
+        if (username == null || username.isBlank()) {
+            return sesionCajaRepository.findFirstByEstadoOrderByFechaAperturaDesc(EstadoSesionCaja.ABIERTA)
+                    .map(s -> new EstadoCajaDTO(
+                            true,
+                            s.getId(),
+                            s.getUsuarioApertura() != null ? s.getUsuarioApertura().getUsername() : null,
+                            s.getFechaApertura(),
+                            s.getMontoInicial()
+                    ))
+                    .orElseGet(() -> new EstadoCajaDTO(false, null, null, null, null));
+        }
+
+        return sesionCajaRepository.findFirstByUsuarioApertura_UsernameAndEstadoOrderByFechaAperturaDesc(username, EstadoSesionCaja.ABIERTA)
                 .map(s -> new EstadoCajaDTO(
                         true,
                         s.getId(),
@@ -50,8 +69,26 @@ public class CajaService {
 
     @Transactional(readOnly = true)
     public ResumenCajaDTO obtenerResumenActual() {
-        SesionCaja sesion = sesionCajaRepository.findFirstByEstadoOrderByFechaAperturaDesc(EstadoSesionCaja.ABIERTA)
-                .orElseThrow(() -> new ReglaDeNegocioException("No existe una sesión de caja abierta actualmente."));
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        String username = (auth != null && auth.getName() != null) ? auth.getName() : null;
+        return obtenerResumen(null, username);
+    }
+
+    @Transactional(readOnly = true)
+    public ResumenCajaDTO obtenerResumen(Long sesionId, String username) {
+        SesionCaja sesion;
+        if (sesionId != null) {
+            sesion = sesionCajaRepository.findById(sesionId)
+                    .orElseThrow(() -> new RecursoNoEncontradoException("Sesión de caja con id " + sesionId + " no encontrada."));
+        } else {
+            if (username != null && !username.isBlank()) {
+                sesion = sesionCajaRepository.findFirstByUsuarioApertura_UsernameAndEstadoOrderByFechaAperturaDesc(username, EstadoSesionCaja.ABIERTA)
+                        .orElseThrow(() -> new ReglaDeNegocioException("No existe una sesión de caja abierta para el usuario '" + username + "'."));
+            } else {
+                sesion = sesionCajaRepository.findFirstByEstadoOrderByFechaAperturaDesc(EstadoSesionCaja.ABIERTA)
+                        .orElseThrow(() -> new ReglaDeNegocioException("No existe una sesión de caja abierta actualmente."));
+            }
+        }
 
         List<Pedido> pedidos = pedidoRepository.findBySesionCaja_IdAndEstadoNot(sesion.getId(), EstadoPedido.CANCELADO);
 
@@ -96,8 +133,8 @@ public class CajaService {
 
     @Transactional
     public SesionCajaDTO abrirCaja(AbrirCajaRequestDTO request, String username) {
-        if (sesionCajaRepository.existsByEstado(EstadoSesionCaja.ABIERTA)) {
-            throw new ReglaDeNegocioException("Ya existe una caja abierta en el sistema.");
+        if (sesionCajaRepository.existsByUsuarioApertura_UsernameAndEstado(username, EstadoSesionCaja.ABIERTA)) {
+            throw new ReglaDeNegocioException("El usuario '" + username + "' ya tiene una sesión de caja abierta.");
         }
 
         Usuario usuario = usuarioRepository.findByUsername(username)
@@ -123,8 +160,17 @@ public class CajaService {
 
     @Transactional
     public SesionCajaDTO cerrarCaja(CerrarCajaRequestDTO request, String username) {
-        SesionCaja sesion = sesionCajaRepository.findFirstByEstadoOrderByFechaAperturaDesc(EstadoSesionCaja.ABIERTA)
-                .orElseThrow(() -> new ReglaDeNegocioException("No existe una sesión de caja abierta para cerrar."));
+        SesionCaja sesion;
+        if (request != null && request.getSesionId() != null) {
+            sesion = sesionCajaRepository.findById(request.getSesionId())
+                    .orElseThrow(() -> new RecursoNoEncontradoException("Sesión de caja con id " + request.getSesionId() + " no encontrada."));
+            if (sesion.getEstado() != EstadoSesionCaja.ABIERTA) {
+                throw new ReglaDeNegocioException("La sesión de caja con id " + request.getSesionId() + " ya se encuentra cerrada.");
+            }
+        } else {
+            sesion = sesionCajaRepository.findFirstByUsuarioApertura_UsernameAndEstadoOrderByFechaAperturaDesc(username, EstadoSesionCaja.ABIERTA)
+                    .orElseThrow(() -> new ReglaDeNegocioException("No existe una sesión de caja abierta para cerrar."));
+        }
 
         Usuario usuario = usuarioRepository.findByUsername(username)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado: " + username));
@@ -200,6 +246,14 @@ public class CajaService {
 
         SesionCaja guardada = sesionCajaRepository.save(sesion);
         return SesionCajaDTO.fromEntity(guardada);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SesionCajaDTO> obtenerSesionesAbiertas() {
+        return sesionCajaRepository.findByEstadoOrderByFechaAperturaDesc(EstadoSesionCaja.ABIERTA)
+                .stream()
+                .map(SesionCajaDTO::fromEntity)
+                .toList();
     }
 
     @Transactional(readOnly = true)

@@ -136,7 +136,7 @@ class CajaControllerTest {
     }
 
     @Test
-    @DisplayName("Intentar abrir caja cuando ya hay una abierta devuelve 400 Bad Request por regla de negocio")
+    @DisplayName("Intentar abrir caja cuando el mismo usuario ya tiene una abierta devuelve 400 Bad Request")
     void abrirCajaDuplicadaDevuelve400() throws Exception {
         AbrirCajaRequestDTO req = new AbrirCajaRequestDTO(new BigDecimal("50000"), "Primera apertura");
 
@@ -151,7 +151,31 @@ class CajaControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.mensaje").value("Ya existe una caja abierta en el sistema."));
+                .andExpect(jsonPath("$.mensaje").value("El usuario 'cajero_caja_ctrl' ya tiene una sesión de caja abierta."));
+    }
+
+    @Test
+    @DisplayName("Multi-caja: dos cajeros distintos pueden tener cajas abiertas simultáneamente y listarse en /api/caja/abiertas")
+    void dosCajerosAbrenCajasSimultaneamente() throws Exception {
+        AbrirCajaRequestDTO req1 = new AbrirCajaRequestDTO(new BigDecimal("50000"), "Caja 1");
+        AbrirCajaRequestDTO req2 = new AbrirCajaRequestDTO(new BigDecimal("80000"), "Caja 2");
+
+        mockMvc.perform(post("/api/caja/abrir")
+                        .header("Authorization", "Bearer " + cajeroToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req1)))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/api/caja/abrir")
+                        .header("Authorization", "Bearer " + otroCajeroToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req2)))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/caja/abiertas")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)));
     }
 
     @Test
@@ -215,13 +239,16 @@ class CajaControllerTest {
     @DisplayName("Cerrar caja por un cajero distinto al que la abrió devuelve 400 Bad Request por regla de negocio")
     void cerrarCajaPorOtroCajeroDevuelve400() throws Exception {
         AbrirCajaRequestDTO reqApertura = new AbrirCajaRequestDTO(new BigDecimal("50000"), "Apertura cajero titular");
-        mockMvc.perform(post("/api/caja/abrir")
+        String aperturaResp = mockMvc.perform(post("/api/caja/abrir")
                         .header("Authorization", "Bearer " + cajeroToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(reqApertura)))
-                .andExpect(status().isCreated());
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
 
-        CerrarCajaRequestDTO reqCierre = new CerrarCajaRequestDTO(new BigDecimal("50000"), "Cierre por otro");
+        Long sesionId = objectMapper.readTree(aperturaResp).get("id").asLong();
+
+        CerrarCajaRequestDTO reqCierre = new CerrarCajaRequestDTO(sesionId, new BigDecimal("50000"), "Cierre por otro");
 
         mockMvc.perform(post("/api/caja/cerrar")
                         .header("Authorization", "Bearer " + otroCajeroToken)
@@ -235,13 +262,16 @@ class CajaControllerTest {
     @DisplayName("Cerrar caja abierta por cajero realizada por un Administrador devuelve 200 OK")
     void cerrarCajaPorAdminAutorizadoDevuelve200() throws Exception {
         AbrirCajaRequestDTO reqApertura = new AbrirCajaRequestDTO(new BigDecimal("50000"), "Apertura cajero titular");
-        mockMvc.perform(post("/api/caja/abrir")
+        String aperturaResp = mockMvc.perform(post("/api/caja/abrir")
                         .header("Authorization", "Bearer " + cajeroToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(reqApertura)))
-                .andExpect(status().isCreated());
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
 
-        CerrarCajaRequestDTO reqCierre = new CerrarCajaRequestDTO(new BigDecimal("50000"), "Cierre supervisor");
+        Long sesionId = objectMapper.readTree(aperturaResp).get("id").asLong();
+
+        CerrarCajaRequestDTO reqCierre = new CerrarCajaRequestDTO(sesionId, new BigDecimal("50000"), "Cierre supervisor");
 
         mockMvc.perform(post("/api/caja/cerrar")
                         .header("Authorization", "Bearer " + adminToken)

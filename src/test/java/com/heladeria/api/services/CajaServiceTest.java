@@ -137,7 +137,7 @@ class CajaServiceTest {
     }
 
     @Test
-    @DisplayName("Falla al abrir caja si ya existe una sesión abierta")
+    @DisplayName("Falla al abrir caja si el usuario ya tiene una sesión abierta")
     void testAbrirCajaDuplicadaFalla() {
         cajaService.abrirCaja(new AbrirCajaRequestDTO(new BigDecimal("50000"), null), usuarioCajero.getUsername());
 
@@ -145,7 +145,29 @@ class CajaServiceTest {
             cajaService.abrirCaja(new AbrirCajaRequestDTO(new BigDecimal("70000"), null), usuarioCajero.getUsername());
         });
 
-        assertEquals("Ya existe una caja abierta en el sistema.", ex.getMessage());
+        assertEquals("El usuario '" + usuarioCajero.getUsername() + "' ya tiene una sesión de caja abierta.", ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("Multi-caja: usuarios distintos pueden abrir cajas concurrentemente")
+    void testAperturaConcurrenteDistintosUsuarios() {
+        SesionCajaDTO s1 = cajaService.abrirCaja(new AbrirCajaRequestDTO(new BigDecimal("50000"), "Caja 1"), usuarioCajero.getUsername());
+        SesionCajaDTO s2 = cajaService.abrirCaja(new AbrirCajaRequestDTO(new BigDecimal("80000"), "Caja 2"), otroCajero.getUsername());
+
+        assertNotNull(s1.getId());
+        assertNotNull(s2.getId());
+        assertNotEquals(s1.getId(), s2.getId());
+
+        List<SesionCajaDTO> abiertas = cajaService.obtenerSesionesAbiertas();
+        assertEquals(2, abiertas.size());
+
+        EstadoCajaDTO estadoCajero = cajaService.obtenerEstado(usuarioCajero.getUsername());
+        assertTrue(estadoCajero.isAbierta());
+        assertEquals(s1.getId(), estadoCajero.getSesionId());
+
+        EstadoCajaDTO estadoOtro = cajaService.obtenerEstado(otroCajero.getUsername());
+        assertTrue(estadoOtro.isAbierta());
+        assertEquals(s2.getId(), estadoOtro.getSesionId());
     }
 
     @Test
@@ -311,9 +333,9 @@ class CajaServiceTest {
     @Test
     @DisplayName("Cerrar caja por un cajero distinto al que la abrió arroja ReglaDeNegocioException")
     void testCerrarCajaPorOtroCajeroLanzaReglaDeNegocioException() {
-        cajaService.abrirCaja(new AbrirCajaRequestDTO(new BigDecimal("50000"), "Turno Mañana"), usuarioCajero.getUsername());
+        SesionCajaDTO sesion = cajaService.abrirCaja(new AbrirCajaRequestDTO(new BigDecimal("50000"), "Turno Mañana"), usuarioCajero.getUsername());
 
-        CerrarCajaRequestDTO requestCierre = new CerrarCajaRequestDTO(new BigDecimal("50000"), "Intento de cierre ajeno");
+        CerrarCajaRequestDTO requestCierre = new CerrarCajaRequestDTO(sesion.getId(), new BigDecimal("50000"), "Intento de cierre ajeno");
 
         ReglaDeNegocioException ex = assertThrows(ReglaDeNegocioException.class, () -> {
             cajaService.cerrarCaja(requestCierre, otroCajero.getUsername());
@@ -326,9 +348,9 @@ class CajaServiceTest {
     @Test
     @DisplayName("Cerrar caja abierta por cajero puede ser realizada por un ADMIN")
     void testCerrarCajaPorAdminAutorizado() {
-        cajaService.abrirCaja(new AbrirCajaRequestDTO(new BigDecimal("50000"), "Turno Cajero"), usuarioCajero.getUsername());
+        SesionCajaDTO sesion = cajaService.abrirCaja(new AbrirCajaRequestDTO(new BigDecimal("50000"), "Turno Cajero"), usuarioCajero.getUsername());
 
-        CerrarCajaRequestDTO requestCierre = new CerrarCajaRequestDTO(new BigDecimal("50000"), "Cierre autorizado por Admin");
+        CerrarCajaRequestDTO requestCierre = new CerrarCajaRequestDTO(sesion.getId(), new BigDecimal("50000"), "Cierre autorizado por Admin");
         SesionCajaDTO cerrada = cajaService.cerrarCaja(requestCierre, usuarioAdmin.getUsername());
 
         assertEquals(EstadoSesionCaja.CERRADA, cerrada.getEstado());
@@ -338,12 +360,27 @@ class CajaServiceTest {
     @Test
     @DisplayName("Cerrar caja abierta por cajero puede ser realizada por un OWNER")
     void testCerrarCajaPorOwnerAutorizado() {
-        cajaService.abrirCaja(new AbrirCajaRequestDTO(new BigDecimal("50000"), "Turno Cajero"), usuarioCajero.getUsername());
+        SesionCajaDTO sesion = cajaService.abrirCaja(new AbrirCajaRequestDTO(new BigDecimal("50000"), "Turno Cajero"), usuarioCajero.getUsername());
 
-        CerrarCajaRequestDTO requestCierre = new CerrarCajaRequestDTO(new BigDecimal("50000"), "Cierre autorizado por Owner");
+        CerrarCajaRequestDTO requestCierre = new CerrarCajaRequestDTO(sesion.getId(), new BigDecimal("50000"), "Cierre autorizado por Owner");
         SesionCajaDTO cerrada = cajaService.cerrarCaja(requestCierre, usuarioOwner.getUsername());
 
         assertEquals(EstadoSesionCaja.CERRADA, cerrada.getEstado());
         assertEquals(usuarioOwner.getUsername(), cerrada.getUsuarioCierre());
+    }
+
+    @Test
+    @DisplayName("Resumen por sesionId específico y por usuario")
+    void testResumenPorSesionIdYUsuario() {
+        SesionCajaDTO s1 = cajaService.abrirCaja(new AbrirCajaRequestDTO(new BigDecimal("50000"), "Caja 1"), usuarioCajero.getUsername());
+        SesionCajaDTO s2 = cajaService.abrirCaja(new AbrirCajaRequestDTO(new BigDecimal("90000"), "Caja 2"), otroCajero.getUsername());
+
+        ResumenCajaDTO res1 = cajaService.obtenerResumen(s1.getId(), null);
+        assertEquals(s1.getId(), res1.getSesionId());
+        assertEquals(0, new BigDecimal("50000").compareTo(res1.getMontoInicial()));
+
+        ResumenCajaDTO res2 = cajaService.obtenerResumen(null, otroCajero.getUsername());
+        assertEquals(s2.getId(), res2.getSesionId());
+        assertEquals(0, new BigDecimal("90000").compareTo(res2.getMontoInicial()));
     }
 }

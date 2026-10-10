@@ -27,15 +27,25 @@ public class CajaController {
     }
 
     @GetMapping("/estado")
-    @Operation(summary = "Consultar el estado actual de la caja (si está abierta o cerrada)")
-    public ResponseEntity<EstadoCajaDTO> obtenerEstado() {
-        return ResponseEntity.ok(cajaService.obtenerEstado());
+    @Operation(summary = "Consultar el estado actual de la caja del usuario autenticado")
+    public ResponseEntity<EstadoCajaDTO> obtenerEstado(Authentication authentication) {
+        String username = authentication != null ? authentication.getName() : null;
+        return ResponseEntity.ok(cajaService.obtenerEstado(username));
     }
 
     @GetMapping("/resumen")
-    @Operation(summary = "Consultar en tiempo real el arqueo acumulado por método de pago de la sesión abierta")
-    public ResponseEntity<ResumenCajaDTO> obtenerResumen() {
-        return ResponseEntity.ok(cajaService.obtenerResumenActual());
+    @Operation(summary = "Consultar en tiempo real el arqueo acumulado por método de pago de la sesión indicada o la abierta del usuario")
+    public ResponseEntity<ResumenCajaDTO> obtenerResumen(
+            @RequestParam(required = false) Long sesionId,
+            Authentication authentication) {
+        String username = authentication != null ? authentication.getName() : null;
+        return ResponseEntity.ok(cajaService.obtenerResumen(sesionId, username));
+    }
+
+    @GetMapping("/abiertas")
+    @Operation(summary = "Listar todas las sesiones de caja que se encuentran actualmente abiertas")
+    public ResponseEntity<List<SesionCajaDTO>> obtenerSesionesAbiertas() {
+        return ResponseEntity.ok(cajaService.obtenerSesionesAbiertas());
     }
 
     @PostMapping("/abrir")

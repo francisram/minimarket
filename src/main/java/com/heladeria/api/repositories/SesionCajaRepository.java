@@ -13,7 +13,15 @@ public interface SesionCajaRepository extends JpaRepository<SesionCaja, Long> {
 
     Optional<SesionCaja> findFirstByEstadoOrderByFechaAperturaDesc(EstadoSesionCaja estado);
 
+    Optional<SesionCaja> findFirstByUsuarioApertura_UsernameAndEstadoOrderByFechaAperturaDesc(String username, EstadoSesionCaja estado);
+
     boolean existsByEstado(EstadoSesionCaja estado);
+
+    boolean existsByUsuarioApertura_UsernameAndEstado(String username, EstadoSesionCaja estado);
+
+    List<SesionCaja> findByEstado(EstadoSesionCaja estado);
+
+    List<SesionCaja> findByEstadoOrderByFechaAperturaDesc(EstadoSesionCaja estado);
 
     List<SesionCaja> findAllByOrderByFechaAperturaDesc();
 }
