@@ -32,10 +32,11 @@ public class ImpresionService {
     private static final Logger log = LoggerFactory.getLogger(ImpresionService.class);
 
     private static final int TIMEOUT_MS = 4000;
-    private static final Charset CP437 = Charset.forName("Cp437");
+    private static final Charset CHARSET_IMPRESION = Charset.forName("windows-1252");
 
-    private static final byte[] INICIALIZAR = {0x1B, 0x40};
-    private static final byte[] AVANCE_PAPEL = "\n\n\n\n".getBytes(CP437);
+    // ESC @ (inicializar) + ESC t 16 (selección de página de códigos WPC1252 para ñ y acentos)
+    private static final byte[] INICIALIZAR = {0x1B, 0x40, 0x1B, 0x74, 0x10};
+    private static final byte[] AVANCE_PAPEL = "\n\n\n\n".getBytes(CHARSET_IMPRESION);
     private static final byte[] CORTAR = {0x1D, 0x56, 0x00};
 
     // 384 dots = 58mm a 203dpi, el ancho de papel térmico más común
@@ -66,7 +67,7 @@ public class ImpresionService {
     private byte[] construirJob(String texto) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         out.writeBytes(INICIALIZAR);
-        out.writeBytes(texto.getBytes(CP437));
+        out.writeBytes((texto != null ? texto : "").getBytes(CHARSET_IMPRESION));
         out.writeBytes(AVANCE_PAPEL);
         out.writeBytes(CORTAR);
         return out.toByteArray();

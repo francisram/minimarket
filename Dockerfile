@@ -25,5 +25,5 @@ COPY --from=build /app/target/*.jar app.jar
 # Exponer el puerto interno de la API
 EXPOSE 8080
 
-# Comando de arranque
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Comando de arranque con codificación UTF-8 explícita
+ENTRYPOINT ["java", "-Dfile.encoding=UTF-8", "-jar", "app.jar"]

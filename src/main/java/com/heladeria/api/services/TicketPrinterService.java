@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -28,7 +29,9 @@ public class TicketPrinterService {
     private static final DateTimeFormatter FORMATO_FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
     private static final DateTimeFormatter FORMATO_SOLO_FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
-    private static final byte[] INICIALIZAR = {0x1B, 0x40};
+    // ESC @ (inicializar) + ESC t 16 (selección de página de códigos WPC1252 / Windows-1252 para ñ y acentos)
+    private static final byte[] INICIALIZAR = {0x1B, 0x40, 0x1B, 0x74, 0x10};
+    private static final Charset CHARSET_TICKET = Charset.forName("windows-1252");
     private static final byte[] ALINEAR_CENTRO = {0x1B, 0x61, 0x01};
     private static final byte[] ALINEAR_IZQUIERDA = {0x1B, 0x61, 0x00};
     private static final byte[] TEXTO_DOBLE = {0x1D, 0x21, 0x11};
@@ -262,7 +265,7 @@ public class TicketPrinterService {
         escribirLinea(out, "¡GRACIAS POR SU PREFERENCIA!");
         escribirLinea(out, nombreLocal);
         if (esFactura) {
-            escribirLinea(out, "Original: Cliente • Duplicado: Archivo");
+            escribirLinea(out, "Original: Cliente - Duplicado: Archivo");
         }
         out.writeBytes(AVANZAR_Y_CORTAR);
 
@@ -315,7 +318,10 @@ public class TicketPrinterService {
     }
 
     private void escribirLinea(ByteArrayOutputStream out, String texto) {
-        out.writeBytes((texto + "\n").getBytes(StandardCharsets.ISO_8859_1));
+        if (texto == null) {
+            return;
+        }
+        out.writeBytes((texto + "\n").getBytes(CHARSET_TICKET));
     }
 
     private Optional<byte[]> logoInstitucion() {
