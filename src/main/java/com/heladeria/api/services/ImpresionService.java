@@ -67,7 +67,8 @@ public class ImpresionService {
     private byte[] construirJob(String texto) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         out.writeBytes(INICIALIZAR);
-        out.writeBytes((texto != null ? texto : "").getBytes(CHARSET_IMPRESION));
+        String sanitizado = texto != null ? texto.replace('•', '-') : "";
+        out.writeBytes(sanitizado.getBytes(CHARSET_IMPRESION));
         out.writeBytes(AVANCE_PAPEL);
         out.writeBytes(CORTAR);
         return out.toByteArray();

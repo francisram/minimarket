@@ -160,7 +160,7 @@ public class TicketPrinterService {
                 escribirLinea(out, "TIMBRADO N°: " + inst.getTimbrado());
             }
             if (inst.getTimbradoVencimiento() != null) {
-                escribirLinea(out, "VALIDO HASTA: " + FORMATO_SOLO_FECHA.format(inst.getTimbradoVencimiento()));
+                escribirLinea(out, "VIGENCIA: " + FORMATO_SOLO_FECHA.format(inst.getTimbradoVencimiento()));
             }
             escribirLinea(out, "IVA INCLUIDO");
         }
@@ -170,7 +170,9 @@ public class TicketPrinterService {
         if (esFactura) {
             escribirLinea(out, "FACTURA N°: " + (pedido.getNumeroFactura() != null ? pedido.getNumeroFactura() : "001-001-0000001"));
         } else {
-            escribirLinea(out, "TICKET DE VENTA #" + pedido.getId());
+            out.writeBytes(TEXTO_DOBLE);
+            escribirLinea(out, "PEDIDO #" + pedido.getId());
+            out.writeBytes(TEXTO_NORMAL);
         }
         out.writeBytes(NEGRITA_OFF);
 
@@ -181,25 +183,36 @@ public class TicketPrinterService {
         out.writeBytes(ALINEAR_IZQUIERDA);
         escribirLinea(out, "--------------------------------");
         if (esFactura) {
-            escribirLinea(out, "Condicion: " + (pedido.getCondicionVenta() != null ? pedido.getCondicionVenta() : CondicionVenta.CONTADO));
+            escribirLinea(out, "CONDICION: " + (pedido.getCondicionVenta() != null ? pedido.getCondicionVenta() : CondicionVenta.CONTADO));
         }
         if (pedido.getSesionCaja() != null && pedido.getSesionCaja().getUsuarioApertura() != null) {
             escribirLinea(out, "Cajero: " + pedido.getSesionCaja().getUsuarioApertura().getUsername());
         }
         if (pedido.getMetodoPago() != null) {
-            escribirLinea(out, "Medio Pago: " + pedido.getMetodoPago());
+            escribirLinea(out, "Pago: " + pedido.getMetodoPago());
         }
         if (pedido.getTipoEntrega() != null) {
             escribirLinea(out, "Entrega: " + pedido.getTipoEntrega());
         }
 
         escribirLinea(out, "--------------------------------");
-        escribirLinea(out, "Cliente: " + (pedido.getClienteNombre() != null && !pedido.getClienteNombre().isBlank() ? pedido.getClienteNombre() : "Consumidor Final"));
-        if (esFactura || (pedido.getClienteRuc() != null && !pedido.getClienteRuc().isBlank())) {
-            escribirLinea(out, "RUC / C.I.: " + (pedido.getClienteRuc() != null && !pedido.getClienteRuc().isBlank() ? pedido.getClienteRuc() : "X"));
-        }
-        if (pedido.getClienteDireccion() != null && !pedido.getClienteDireccion().isBlank()) {
-            escribirLinea(out, "Direccion: " + pedido.getClienteDireccion());
+        if (esFactura) {
+            if (pedido.getClienteRuc() != null && !pedido.getClienteRuc().isBlank()) {
+                escribirLinea(out, "RUC/CI CLIENTE: " + pedido.getClienteRuc());
+            }
+            escribirLinea(out, "CLIENTE / RAZON SOCIAL:");
+            escribirLinea(out, (pedido.getClienteNombre() != null && !pedido.getClienteNombre().isBlank() ? pedido.getClienteNombre() : "Consumidor Final"));
+            if (pedido.getClienteDireccion() != null && !pedido.getClienteDireccion().isBlank()) {
+                escribirLinea(out, "DIRECCION: " + pedido.getClienteDireccion());
+            }
+        } else {
+            escribirLinea(out, "Cliente: " + (pedido.getClienteNombre() != null && !pedido.getClienteNombre().isBlank() ? pedido.getClienteNombre() : "Consumidor Final"));
+            if (pedido.getClienteRuc() != null && !pedido.getClienteRuc().isBlank()) {
+                escribirLinea(out, "RUC / C.I.: " + pedido.getClienteRuc());
+            }
+            if (pedido.getClienteDireccion() != null && !pedido.getClienteDireccion().isBlank()) {
+                escribirLinea(out, "Direccion: " + pedido.getClienteDireccion());
+            }
         }
 
         escribirLinea(out, "================================");
@@ -240,21 +253,19 @@ public class TicketPrinterService {
 
         escribirLinea(out, "--------------------------------");
         out.writeBytes(NEGRITA_ON);
-        escribirLinea(out, alinearDosColumnas("TOTAL A PAGAR:", MonedaPyUtils.formatearGs(pedido.getTotal())));
+        escribirLinea(out, alinearDosColumnas("TOTAL:", MonedaPyUtils.formatearGs(pedido.getTotal())));
         out.writeBytes(NEGRITA_OFF);
         escribirLinea(out, "--------------------------------");
 
-        if (esFactura) {
-            BigDecimal total = pedido.getTotal() != null ? pedido.getTotal() : BigDecimal.ZERO;
-            BigDecimal gravada10 = MonedaPyUtils.calcularGravada10(total);
-            BigDecimal iva10 = MonedaPyUtils.calcularIva10(total);
+        BigDecimal total = pedido.getTotal() != null ? pedido.getTotal() : BigDecimal.ZERO;
+        BigDecimal gravada10 = MonedaPyUtils.calcularGravada10(total);
+        BigDecimal iva10 = MonedaPyUtils.calcularIva10(total);
 
-            escribirLinea(out, "LIQUIDACION DEL IVA (10%)");
-            escribirLinea(out, alinearDosColumnas("Gravadas (10%):", MonedaPyUtils.formatearGs(gravada10)));
-            escribirLinea(out, alinearDosColumnas("Liquidacion IVA (10%):", MonedaPyUtils.formatearGs(iva10)));
-            escribirLinea(out, alinearDosColumnas("TOTAL IVA:", MonedaPyUtils.formatearGs(iva10)));
-            escribirLinea(out, "--------------------------------");
-        }
+        escribirLinea(out, "LIQUIDACION DE IVA");
+        escribirLinea(out, alinearDosColumnas("Gravadas 10%:", MonedaPyUtils.formatearGs(gravada10)));
+        escribirLinea(out, alinearDosColumnas("IVA 10%:", MonedaPyUtils.formatearGs(iva10)));
+        escribirLinea(out, alinearDosColumnas("Total IVA:", MonedaPyUtils.formatearGs(iva10)));
+        escribirLinea(out, "--------------------------------");
 
         if (pedido.getNotas() != null && !pedido.getNotas().isBlank()) {
             escribirLinea(out, "Obs: " + pedido.getNotas());
@@ -321,7 +332,8 @@ public class TicketPrinterService {
         if (texto == null) {
             return;
         }
-        out.writeBytes((texto + "\n").getBytes(CHARSET_TICKET));
+        String sanitizado = texto.replace('•', '-');
+        out.writeBytes((sanitizado + "\n").getBytes(CHARSET_TICKET));
     }
 
     private Optional<byte[]> logoInstitucion() {

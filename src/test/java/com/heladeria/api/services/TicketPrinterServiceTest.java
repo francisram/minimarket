@@ -329,4 +329,47 @@ class TicketPrinterServiceTest {
         assertTrue(texto.contains("LIQUIDACION DE IVA"));
         assertFalse(texto.contains("\u20B2"));
     }
+
+    @Test
+    @DisplayName("construirTicketPedido cumple con inicialización WPC1252 (ESC t 16), soporte español (ñ, acentos, diéresis, ¿ ¡ °) y reemplazo de viñeta • por -")
+    void testCompatibilidadCaracteresEspanolYEscPosWpc1252() {
+        Institucion institucion = new Institucion(1L, "Heladería Dulce Sueño", null);
+        institucionRepository.save(institucion);
+
+        Pedido pedido = Pedido.builder()
+                .id(303L)
+                .tipoComprobante(TipoComprobante.TICKET)
+                .clienteNombre("Iñaki Piñeiro")
+                .clienteDireccion("Ñemby • Centro")
+                .metodoPago(MetodoPago.EFECTIVO)
+                .tipoEntrega(TipoEntrega.MOSTRADOR)
+                .estado(EstadoPedido.ENTREGADO)
+                .fechaCreacion(LocalDateTime.now())
+                .total(new BigDecimal("15000"))
+                .notas("¿Con cuchara? ¡Sí! Degustación pingüino • rápido")
+                .detalles(List.of())
+                .build();
+
+        byte[] ticketBytes = ticketPrinterService.construirTicketPedido(pedido);
+        assertNotNull(ticketBytes);
+
+        // 1. Verificar secuencia de inicialización ESC @ + ESC t 16 (0x1B, 0x40, 0x1B, 0x74, 0x10)
+        assertEquals((byte) 0x1B, ticketBytes[0]);
+        assertEquals((byte) 0x40, ticketBytes[1]);
+        assertEquals((byte) 0x1B, ticketBytes[2]);
+        assertEquals((byte) 0x74, ticketBytes[3]);
+        assertEquals((byte) 0x10, ticketBytes[4]);
+
+        // 2. Decodificar en Windows-1252 y verificar caracteres en español
+        String decodificadoWpc1252 = new String(ticketBytes, java.nio.charset.Charset.forName("windows-1252"));
+        assertTrue(decodificadoWpc1252.contains("Iñaki Piñeiro"));
+        assertTrue(decodificadoWpc1252.contains("Heladería Dulce Sueño"));
+        assertTrue(decodificadoWpc1252.contains("¿Con cuchara? ¡Sí! Degustación pingüino"));
+        assertTrue(decodificadoWpc1252.contains("¡GRACIAS POR SU PREFERENCIA!"));
+
+        // 3. Verificar que la viñeta unicode • se haya sanitizado a guion -
+        assertFalse(decodificadoWpc1252.contains("•"));
+        assertTrue(decodificadoWpc1252.contains("Ñemby - Centro"));
+        assertTrue(decodificadoWpc1252.contains("pingüino - rápido"));
+    }
 }
