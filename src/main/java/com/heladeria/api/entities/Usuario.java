@@ -1,10 +1,13 @@
 package com.heladeria.api.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 
 @Entity
 @Table(name = "usuarios")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Usuario {
 
     @Id
@@ -16,6 +19,7 @@ public class Usuario {
     private String username;
 
     @Column(name = "password_hash", nullable = false, columnDefinition = "text")
+    @JsonIgnore
     private String passwordHash;
 
     @ManyToOne(fetch = FetchType.EAGER)

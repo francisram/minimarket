@@ -13,6 +13,6 @@ public interface PedidoRepository extends JpaRepository<Pedido, Long> {
     List<Pedido> findByEstado(EstadoPedido estado);
     List<Pedido> findByFechaCreacionBetweenOrderByFechaCreacionDesc(LocalDateTime inicio, LocalDateTime fin);
     List<Pedido> findAllByOrderByFechaCreacionDesc();
-    List<Pedido> findBySesionCajaId(Long sesionCajaId);
-    List<Pedido> findBySesionCajaIdAndEstadoNot(Long sesionCajaId, EstadoPedido estado);
+    List<Pedido> findBySesionCaja_Id(Long sesionCajaId);
+    List<Pedido> findBySesionCaja_IdAndEstadoNot(Long sesionCajaId, EstadoPedido estado);
 }

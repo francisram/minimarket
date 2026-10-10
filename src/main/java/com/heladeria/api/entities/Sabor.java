@@ -1,10 +1,12 @@
 package com.heladeria.api.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.heladeria.api.entities.enums.CategoriaSabor;
 import jakarta.persistence.*;
 
 @Entity
 @Table(name = "sabores")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Sabor {
 
     @Id

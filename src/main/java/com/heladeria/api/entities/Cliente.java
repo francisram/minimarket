@@ -1,5 +1,6 @@
 package com.heladeria.api.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -7,6 +8,7 @@ import java.time.LocalDateTime;
 @Table(name = "clientes", indexes = {
     @Index(name = "idx_cliente_ruc", columnList = "ruc", unique = true)
 })
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Cliente {
 
     @Id

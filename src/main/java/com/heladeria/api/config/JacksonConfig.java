@@ -21,16 +21,19 @@ public class JacksonConfig {
 
     @Bean
     public Jackson2ObjectMapperBuilderCustomizer customizarJacksonParaMonedaPy() {
-        return builder -> builder.serializerByType(BigDecimal.class, new JsonSerializer<BigDecimal>() {
-            @Override
-            public void serialize(BigDecimal value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
-                if (value == null) {
-                    gen.writeNull();
-                } else {
-                    // Escribir como entero sin decimales
-                    gen.writeNumber(value.setScale(0, RoundingMode.HALF_UP).toBigInteger());
+        return builder -> {
+            builder.failOnEmptyBeans(false);
+            builder.serializerByType(BigDecimal.class, new JsonSerializer<BigDecimal>() {
+                @Override
+                public void serialize(BigDecimal value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+                    if (value == null) {
+                        gen.writeNull();
+                    } else {
+                        // Escribir como entero sin decimales
+                        gen.writeNumber(value.setScale(0, RoundingMode.HALF_UP).toBigInteger());
+                    }
                 }
-            }
-        });
+            });
+        };
     }
 }

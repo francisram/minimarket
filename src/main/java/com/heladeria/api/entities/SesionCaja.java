@@ -1,5 +1,6 @@
 package com.heladeria.api.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.heladeria.api.entities.enums.EstadoSesionCaja;
 import com.heladeria.api.util.MonedaPyUtils;
 import jakarta.persistence.*;
@@ -9,6 +10,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "sesiones_caja")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class SesionCaja {
 
     @Id

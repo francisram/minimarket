@@ -1,9 +1,11 @@
 package com.heladeria.api.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
 @Entity
 @Table(name = "paginas")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Pagina {
 
     @Id

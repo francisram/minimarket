@@ -1,6 +1,7 @@
 package com.heladeria.api.entities;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.heladeria.api.entities.enums.TipoItemPedido;
 import jakarta.persistence.*;
 
@@ -10,6 +11,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "detalles_pedido")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class DetallePedido {
 
     @Id

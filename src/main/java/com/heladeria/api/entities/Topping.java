@@ -1,10 +1,12 @@
 package com.heladeria.api.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "toppings")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Topping {
 
     @Id

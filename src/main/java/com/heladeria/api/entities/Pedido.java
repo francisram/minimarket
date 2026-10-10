@@ -1,6 +1,9 @@
 package com.heladeria.api.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.heladeria.api.entities.enums.CondicionVenta;
 import com.heladeria.api.entities.enums.EstadoPedido;
 import com.heladeria.api.entities.enums.MetodoPago;
@@ -15,6 +18,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "pedidos")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Pedido {
 
     @Id
@@ -47,6 +51,7 @@ public class Pedido {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sesion_caja_id")
+    @JsonIgnore
     private SesionCaja sesionCaja;
 
     @Enumerated(EnumType.STRING)
@@ -157,6 +162,12 @@ public class Pedido {
 
     public SesionCaja getSesionCaja() { return sesionCaja; }
     public void setSesionCaja(SesionCaja sesionCaja) { this.sesionCaja = sesionCaja; }
+
+    @Transient
+    @JsonProperty("sesionCajaId")
+    public Long getSesionCajaId() {
+        return sesionCaja != null ? sesionCaja.getId() : null;
+    }
 
     public TipoComprobante getTipoComprobante() { return tipoComprobante; }
     public void setTipoComprobante(TipoComprobante tipoComprobante) { this.tipoComprobante = tipoComprobante; }

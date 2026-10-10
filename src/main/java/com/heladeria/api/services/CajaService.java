@@ -53,7 +53,7 @@ public class CajaService {
         SesionCaja sesion = sesionCajaRepository.findFirstByEstadoOrderByFechaAperturaDesc(EstadoSesionCaja.ABIERTA)
                 .orElseThrow(() -> new ReglaDeNegocioException("No existe una sesión de caja abierta actualmente."));
 
-        List<Pedido> pedidos = pedidoRepository.findBySesionCajaIdAndEstadoNot(sesion.getId(), EstadoPedido.CANCELADO);
+        List<Pedido> pedidos = pedidoRepository.findBySesionCaja_IdAndEstadoNot(sesion.getId(), EstadoPedido.CANCELADO);
 
         BigDecimal totalEfectivo = BigDecimal.ZERO;
         BigDecimal totalTarjetaDebito = BigDecimal.ZERO;
@@ -129,7 +129,7 @@ public class CajaService {
         Usuario usuario = usuarioRepository.findByUsername(username)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado: " + username));
 
-        List<Pedido> pedidos = pedidoRepository.findBySesionCajaIdAndEstadoNot(sesion.getId(), EstadoPedido.CANCELADO);
+        List<Pedido> pedidos = pedidoRepository.findBySesionCaja_IdAndEstadoNot(sesion.getId(), EstadoPedido.CANCELADO);
 
         BigDecimal totalEfectivo = BigDecimal.ZERO;
         BigDecimal totalTarjetaDebito = BigDecimal.ZERO;
