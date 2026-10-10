@@ -33,6 +33,7 @@ public class PedidoService {
     private final TicketPrinterService ticketPrinterService;
     private final SesionCajaRepository sesionCajaRepository;
     private final InstitucionRepository institucionRepository;
+    private final ClienteService clienteService;
 
     public PedidoService(PedidoRepository pedidoRepository,
                          PresentacionRepository presentacionRepository,
@@ -41,7 +42,8 @@ public class PedidoService {
                          ProductoSimpleRepository productoSimpleRepository,
                          TicketPrinterService ticketPrinterService,
                          SesionCajaRepository sesionCajaRepository,
-                         InstitucionRepository institucionRepository) {
+                         InstitucionRepository institucionRepository,
+                         ClienteService clienteService) {
         this.pedidoRepository = pedidoRepository;
         this.presentacionRepository = presentacionRepository;
         this.saborRepository = saborRepository;
@@ -50,6 +52,7 @@ public class PedidoService {
         this.ticketPrinterService = ticketPrinterService;
         this.sesionCajaRepository = sesionCajaRepository;
         this.institucionRepository = institucionRepository;
+        this.clienteService = clienteService;
     }
 
     @Transactional
@@ -85,6 +88,15 @@ public class PedidoService {
 
             inst.setUltimoNumeroFactura(sig);
             institucionRepository.save(inst);
+        }
+
+        // Auto-guardado o actualización del cliente en la base de datos si se provee RUC
+        if (request.getClienteRuc() != null && !request.getClienteRuc().trim().isEmpty()) {
+            clienteService.obtenerOCrearClienteDesdeVenta(
+                    request.getClienteRuc(),
+                    request.getClienteNombre(),
+                    request.getClienteDireccion()
+            );
         }
 
         Pedido pedido = Pedido.builder()

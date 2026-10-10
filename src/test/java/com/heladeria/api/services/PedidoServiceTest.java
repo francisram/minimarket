@@ -51,6 +51,9 @@ class PedidoServiceTest {
     @Autowired
     private InstitucionRepository institucionRepository;
 
+    @Autowired
+    private ClienteRepository clienteRepository;
+
     private Presentacion poteMedioKg;
     private Sabor dulceDeLeche;
     private Sabor frutilla;
@@ -484,5 +487,30 @@ class PedidoServiceTest {
 
         assertEquals(TipoComprobante.TICKET, pedido.getTipoComprobante());
         assertNull(pedido.getNumeroFactura());
+    }
+
+    @Test
+    @DisplayName("Crear pedido con RUC autoguarda el cliente en la base de datos")
+    void testCrearPedidoConRucGuardaClienteAutomaticamente() {
+        DetallePedidoRequestDTO itemHelado = new DetallePedidoRequestDTO();
+        itemHelado.setTipoItem(TipoItemPedido.HELADO);
+        itemHelado.setPresentacionId(poteMedioKg.getId());
+        itemHelado.setSaborIds(List.of(dulceDeLeche.getId()));
+        itemHelado.setCantidad(1);
+
+        PedidoRequestDTO request = new PedidoRequestDTO();
+        request.setClienteRuc("7777777-7");
+        request.setClienteNombre("Cliente Desde Pos");
+        request.setClienteDireccion("Barrio Las Mercedes");
+        request.setMetodoPago(MetodoPago.EFECTIVO);
+        request.setTipoEntrega(TipoEntrega.MOSTRADOR);
+        request.setItems(List.of(itemHelado));
+
+        pedidoService.crearPedido(request);
+
+        assertTrue(clienteRepository.existsByRucIgnoreCase("7777777-7"));
+        Cliente cliente = clienteRepository.findByRucIgnoreCase("7777777-7").orElseThrow();
+        assertEquals("Cliente Desde Pos", cliente.getRazonSocial());
+        assertEquals("Barrio Las Mercedes", cliente.getDireccion());
     }
 }

@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Component
@@ -29,6 +30,7 @@ public class DataSeeder implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final LicenciaService licenciaService;
     private final InstitucionRepository institucionRepository;
+    private final ClienteRepository clienteRepository;
 
     private final String defaultAdminPassword;
     private final String defaultOwnerPassword;
@@ -41,6 +43,7 @@ public class DataSeeder implements CommandLineRunner {
                       PasswordEncoder passwordEncoder,
                       LicenciaService licenciaService,
                       InstitucionRepository institucionRepository,
+                      ClienteRepository clienteRepository,
                       @Value("${app.security.default-admin-password:admin123}") String defaultAdminPassword,
                       @Value("${app.security.default-owner-password:owner123}") String defaultOwnerPassword) {
         this.paginaRepository = paginaRepository;
@@ -51,6 +54,7 @@ public class DataSeeder implements CommandLineRunner {
         this.passwordEncoder = passwordEncoder;
         this.licenciaService = licenciaService;
         this.institucionRepository = institucionRepository;
+        this.clienteRepository = clienteRepository;
         this.defaultAdminPassword = defaultAdminPassword;
         this.defaultOwnerPassword = defaultOwnerPassword;
     }
@@ -62,6 +66,7 @@ public class DataSeeder implements CommandLineRunner {
         sembrarPlanesYLicencia();
         sembrarRolesYUsuarios();
         sembrarInstitucion();
+        sembrarClientes();
     }
 
     private void sembrarPaginas() {
@@ -73,6 +78,7 @@ public class DataSeeder implements CommandLineRunner {
                 new Pagina(null, "productos", "Productos y Bebidas", "/productos", null, "inventory_2", 40),
                 new Pagina(null, "caja", "Control de Caja", "/caja", null, "payments", 45),
                 new Pagina(null, "pedidos", "Punto de Venta / Pedidos", "/pedidos", null, "point_of_sale", 50),
+                new Pagina(null, "clientes", "Clientes", "/clientes", null, "users", 52),
                 new Pagina(null, "stock", "Control de Stock", "/stock", null, "warehouse", 55),
                 new Pagina(null, "usuarios", "Usuarios", "/usuarios", null, "people", 60),
                 new Pagina(null, "roles", "Roles y Permisos", "/roles", null, "security", 70),
@@ -102,7 +108,7 @@ public class DataSeeder implements CommandLineRunner {
             p.setNombre("Basico");
             return planLicenciaRepository.save(p);
         });
-        basico.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "pedidos", "caja"));
+        basico.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "pedidos", "caja", "clientes"));
         planLicenciaRepository.save(basico);
 
         // Plan Estandar
@@ -111,7 +117,7 @@ public class DataSeeder implements CommandLineRunner {
             p.setNombre("Estandar");
             return planLicenciaRepository.save(p);
         });
-        estandar.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "stock", "pedidos", "impresoras", "caja"));
+        estandar.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "stock", "pedidos", "impresoras", "caja", "clientes"));
         planLicenciaRepository.save(estandar);
 
         // Plan Premium
@@ -120,7 +126,7 @@ public class DataSeeder implements CommandLineRunner {
             p.setNombre("Premium");
             return planLicenciaRepository.save(p);
         });
-        premium.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "stock", "pedidos", "usuarios", "roles", "impresoras", "licencia", "caja"));
+        premium.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "stock", "pedidos", "usuarios", "roles", "impresoras", "licencia", "caja", "clientes"));
         planLicenciaRepository.save(premium);
 
         // Licencia activa de esta instalacion (id=1)
@@ -156,7 +162,7 @@ public class DataSeeder implements CommandLineRunner {
             r.setNombreRol("CAJERO");
             return rolRepository.save(r);
         });
-        cajero.setPaginas(obtenerPaginasPorClaves("dashboard", "pedidos", "caja"));
+        cajero.setPaginas(obtenerPaginasPorClaves("dashboard", "pedidos", "caja", "clientes"));
         rolRepository.save(cajero);
 
         // Usuarios iniciales
@@ -233,5 +239,28 @@ public class DataSeeder implements CommandLineRunner {
 
         institucionRepository.save(inst);
         log.info("[SEED] Institución y datos fiscales configurados.");
+    }
+
+    private void sembrarClientes() {
+        if (clienteRepository.count() == 0) {
+            Cliente consumidorFinal = new Cliente();
+            consumidorFinal.setRuc("4444444-1");
+            consumidorFinal.setRazonSocial("Consumidor Final");
+            consumidorFinal.setDireccion("Asunción");
+            consumidorFinal.setActivo(true);
+            consumidorFinal.setFechaCreacion(LocalDateTime.now());
+            clienteRepository.save(consumidorFinal);
+
+            Cliente distribuidora = new Cliente();
+            distribuidora.setRuc("80012345-6");
+            distribuidora.setRazonSocial("Distribuidora Central S.R.L.");
+            distribuidora.setDireccion("Av. Eusebio Ayala 1230");
+            distribuidora.setTelefono("021-555123");
+            distribuidora.setActivo(true);
+            distribuidora.setFechaCreacion(LocalDateTime.now());
+            clienteRepository.save(distribuidora);
+
+            log.info("[SEED] Clientes iniciales sembrados exitosamente.");
+        }
     }
 }
