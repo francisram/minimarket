@@ -129,6 +129,34 @@ public class CajaService {
         Usuario usuario = usuarioRepository.findByUsername(username)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado: " + username));
 
+        boolean esTitular = sesion.getUsuarioApertura() != null
+                && sesion.getUsuarioApertura().getUsername() != null
+                && sesion.getUsuarioApertura().getUsername().equalsIgnoreCase(username);
+
+        boolean esAdminOSupervisor = false;
+        if (usuario.getRol() != null && usuario.getRol().getNombreRol() != null) {
+            String nombreRol = usuario.getRol().getNombreRol().trim().toUpperCase();
+            esAdminOSupervisor = "ADMIN".equals(nombreRol) || "ROLE_ADMIN".equals(nombreRol)
+                    || "OWNER".equals(nombreRol) || "ROLE_OWNER".equals(nombreRol);
+        }
+
+        if (!esAdminOSupervisor) {
+            var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.getAuthorities() != null) {
+                esAdminOSupervisor = auth.getAuthorities().stream()
+                        .anyMatch(a -> {
+                            String authName = a.getAuthority().trim().toUpperCase();
+                            return "ROLE_ADMIN".equals(authName) || "ADMIN".equals(authName)
+                                    || "ROLE_OWNER".equals(authName) || "OWNER".equals(authName);
+                        });
+            }
+        }
+
+        if (!esTitular && !esAdminOSupervisor) {
+            String titular = sesion.getUsuarioApertura() != null ? sesion.getUsuarioApertura().getUsername() : "el cajero titular";
+            throw new ReglaDeNegocioException("Solo el usuario que abrió la caja ('" + titular + "') o un Administrador/Supervisor pueden realizar el arqueo y cierre.");
+        }
+
         List<Pedido> pedidos = pedidoRepository.findBySesionCaja_IdAndEstadoNot(sesion.getId(), EstadoPedido.CANCELADO);
 
         BigDecimal totalEfectivo = BigDecimal.ZERO;

@@ -51,6 +51,9 @@ class CajaServiceTest {
     private RolRepository rolRepository;
 
     private Usuario usuarioCajero;
+    private Usuario otroCajero;
+    private Usuario usuarioAdmin;
+    private Usuario usuarioOwner;
 
     @BeforeEach
     void setUp() {
@@ -62,11 +65,50 @@ class CajaServiceTest {
             return rolRepository.save(r);
         });
 
+        Rol rolAdmin = rolRepository.findByNombreRol("ADMIN").orElseGet(() -> {
+            Rol r = new Rol();
+            r.setNombreRol("ADMIN");
+            return rolRepository.save(r);
+        });
+
+        Rol rolOwner = rolRepository.findByNombreRol("OWNER").orElseGet(() -> {
+            Rol r = new Rol();
+            r.setNombreRol("OWNER");
+            return rolRepository.save(r);
+        });
+
         usuarioCajero = usuarioRepository.findByUsername("cajero_test_caja").orElseGet(() -> {
             Usuario u = new Usuario();
             u.setUsername("cajero_test_caja");
             u.setPasswordHash("pass");
             u.setRol(rolCajero);
+            u.setEstado(true);
+            return usuarioRepository.save(u);
+        });
+
+        otroCajero = usuarioRepository.findByUsername("otro_cajero_test").orElseGet(() -> {
+            Usuario u = new Usuario();
+            u.setUsername("otro_cajero_test");
+            u.setPasswordHash("pass");
+            u.setRol(rolCajero);
+            u.setEstado(true);
+            return usuarioRepository.save(u);
+        });
+
+        usuarioAdmin = usuarioRepository.findByUsername("admin_test_caja").orElseGet(() -> {
+            Usuario u = new Usuario();
+            u.setUsername("admin_test_caja");
+            u.setPasswordHash("pass");
+            u.setRol(rolAdmin);
+            u.setEstado(true);
+            return usuarioRepository.save(u);
+        });
+
+        usuarioOwner = usuarioRepository.findByUsername("owner_test_caja").orElseGet(() -> {
+            Usuario u = new Usuario();
+            u.setUsername("owner_test_caja");
+            u.setPasswordHash("pass");
+            u.setRol(rolOwner);
             u.setEstado(true);
             return usuarioRepository.save(u);
         });
@@ -264,5 +306,44 @@ class CajaServiceTest {
         SesionCajaDTO porId = cajaService.obtenerPorId(abierta.getId());
         assertEquals(abierta.getId(), porId.getId());
         assertEquals(EstadoSesionCaja.CERRADA, porId.getEstado());
+    }
+
+    @Test
+    @DisplayName("Cerrar caja por un cajero distinto al que la abrió arroja ReglaDeNegocioException")
+    void testCerrarCajaPorOtroCajeroLanzaReglaDeNegocioException() {
+        cajaService.abrirCaja(new AbrirCajaRequestDTO(new BigDecimal("50000"), "Turno Mañana"), usuarioCajero.getUsername());
+
+        CerrarCajaRequestDTO requestCierre = new CerrarCajaRequestDTO(new BigDecimal("50000"), "Intento de cierre ajeno");
+
+        ReglaDeNegocioException ex = assertThrows(ReglaDeNegocioException.class, () -> {
+            cajaService.cerrarCaja(requestCierre, otroCajero.getUsername());
+        });
+
+        assertEquals("Solo el usuario que abrió la caja ('" + usuarioCajero.getUsername() + "') o un Administrador/Supervisor pueden realizar el arqueo y cierre.",
+                ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("Cerrar caja abierta por cajero puede ser realizada por un ADMIN")
+    void testCerrarCajaPorAdminAutorizado() {
+        cajaService.abrirCaja(new AbrirCajaRequestDTO(new BigDecimal("50000"), "Turno Cajero"), usuarioCajero.getUsername());
+
+        CerrarCajaRequestDTO requestCierre = new CerrarCajaRequestDTO(new BigDecimal("50000"), "Cierre autorizado por Admin");
+        SesionCajaDTO cerrada = cajaService.cerrarCaja(requestCierre, usuarioAdmin.getUsername());
+
+        assertEquals(EstadoSesionCaja.CERRADA, cerrada.getEstado());
+        assertEquals(usuarioAdmin.getUsername(), cerrada.getUsuarioCierre());
+    }
+
+    @Test
+    @DisplayName("Cerrar caja abierta por cajero puede ser realizada por un OWNER")
+    void testCerrarCajaPorOwnerAutorizado() {
+        cajaService.abrirCaja(new AbrirCajaRequestDTO(new BigDecimal("50000"), "Turno Cajero"), usuarioCajero.getUsername());
+
+        CerrarCajaRequestDTO requestCierre = new CerrarCajaRequestDTO(new BigDecimal("50000"), "Cierre autorizado por Owner");
+        SesionCajaDTO cerrada = cajaService.cerrarCaja(requestCierre, usuarioOwner.getUsername());
+
+        assertEquals(EstadoSesionCaja.CERRADA, cerrada.getEstado());
+        assertEquals(usuarioOwner.getUsername(), cerrada.getUsuarioCierre());
     }
 }

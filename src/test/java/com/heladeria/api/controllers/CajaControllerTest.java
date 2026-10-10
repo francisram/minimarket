@@ -54,6 +54,7 @@ class CajaControllerTest {
     private JwtService jwtService;
 
     private String cajeroToken;
+    private String otroCajeroToken;
     private String adminToken;
 
     @BeforeEach
@@ -72,7 +73,19 @@ class CajaControllerTest {
             usuarioRepository.save(cajero);
         }
 
+        if (usuarioRepository.findByUsername("otro_cajero_ctrl").isEmpty()) {
+            Usuario otro = new Usuario();
+            otro.setUsername("otro_cajero_ctrl");
+            otro.setPasswordHash(passwordEncoder.encode("cajero123"));
+            otro.setRol(rolCajero);
+            otro.setEstado(true);
+            otro.setPasswordNuncaExpira(true);
+            otro.setDebeCambiarPassword(false);
+            usuarioRepository.save(otro);
+        }
+
         cajeroToken = jwtService.generateToken("cajero_caja_ctrl", "CAJERO");
+        otroCajeroToken = jwtService.generateToken("otro_cajero_ctrl", "CAJERO");
         adminToken = jwtService.generateToken("admin", "ADMIN");
     }
 
@@ -196,5 +209,46 @@ class CajaControllerTest {
         mockMvc.perform(get("/api/caja/999999")
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("Cerrar caja por un cajero distinto al que la abrió devuelve 400 Bad Request por regla de negocio")
+    void cerrarCajaPorOtroCajeroDevuelve400() throws Exception {
+        AbrirCajaRequestDTO reqApertura = new AbrirCajaRequestDTO(new BigDecimal("50000"), "Apertura cajero titular");
+        mockMvc.perform(post("/api/caja/abrir")
+                        .header("Authorization", "Bearer " + cajeroToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(reqApertura)))
+                .andExpect(status().isCreated());
+
+        CerrarCajaRequestDTO reqCierre = new CerrarCajaRequestDTO(new BigDecimal("50000"), "Cierre por otro");
+
+        mockMvc.perform(post("/api/caja/cerrar")
+                        .header("Authorization", "Bearer " + otroCajeroToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(reqCierre)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje").value(containsString("Solo el usuario que abrió la caja ('cajero_caja_ctrl') o un Administrador/Supervisor pueden realizar el arqueo y cierre.")));
+    }
+
+    @Test
+    @DisplayName("Cerrar caja abierta por cajero realizada por un Administrador devuelve 200 OK")
+    void cerrarCajaPorAdminAutorizadoDevuelve200() throws Exception {
+        AbrirCajaRequestDTO reqApertura = new AbrirCajaRequestDTO(new BigDecimal("50000"), "Apertura cajero titular");
+        mockMvc.perform(post("/api/caja/abrir")
+                        .header("Authorization", "Bearer " + cajeroToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(reqApertura)))
+                .andExpect(status().isCreated());
+
+        CerrarCajaRequestDTO reqCierre = new CerrarCajaRequestDTO(new BigDecimal("50000"), "Cierre supervisor");
+
+        mockMvc.perform(post("/api/caja/cerrar")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(reqCierre)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("CERRADA"))
+                .andExpect(jsonPath("$.usuarioCierre").value("admin"));
     }
 }
