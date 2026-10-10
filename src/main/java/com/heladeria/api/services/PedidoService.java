@@ -3,8 +3,10 @@ package com.heladeria.api.services;
 import com.heladeria.api.dto.DetallePedidoRequestDTO;
 import com.heladeria.api.dto.PedidoRequestDTO;
 import com.heladeria.api.entities.*;
+import com.heladeria.api.entities.enums.CondicionVenta;
 import com.heladeria.api.entities.enums.EstadoPedido;
 import com.heladeria.api.entities.enums.EstadoSesionCaja;
+import com.heladeria.api.entities.enums.TipoComprobante;
 import com.heladeria.api.entities.enums.TipoItemPedido;
 import com.heladeria.api.exceptions.RecursoNoEncontradoException;
 import com.heladeria.api.exceptions.ReglaDeNegocioException;
@@ -30,6 +32,7 @@ public class PedidoService {
     private final ProductoSimpleRepository productoSimpleRepository;
     private final TicketPrinterService ticketPrinterService;
     private final SesionCajaRepository sesionCajaRepository;
+    private final InstitucionRepository institucionRepository;
 
     public PedidoService(PedidoRepository pedidoRepository,
                          PresentacionRepository presentacionRepository,
@@ -37,7 +40,8 @@ public class PedidoService {
                          ToppingRepository toppingRepository,
                          ProductoSimpleRepository productoSimpleRepository,
                          TicketPrinterService ticketPrinterService,
-                         SesionCajaRepository sesionCajaRepository) {
+                         SesionCajaRepository sesionCajaRepository,
+                         InstitucionRepository institucionRepository) {
         this.pedidoRepository = pedidoRepository;
         this.presentacionRepository = presentacionRepository;
         this.saborRepository = saborRepository;
@@ -45,6 +49,7 @@ public class PedidoService {
         this.productoSimpleRepository = productoSimpleRepository;
         this.ticketPrinterService = ticketPrinterService;
         this.sesionCajaRepository = sesionCajaRepository;
+        this.institucionRepository = institucionRepository;
     }
 
     @Transactional
@@ -56,9 +61,40 @@ public class PedidoService {
             throw new ReglaDeNegocioException("El pedido debe contener al menos un ítem.");
         }
 
+        TipoComprobante tipoComprobante = request.getTipoComprobante() != null ? request.getTipoComprobante() : TipoComprobante.TICKET;
+        CondicionVenta condicionVenta = request.getCondicionVenta() != null ? request.getCondicionVenta() : CondicionVenta.CONTADO;
+        String numeroFactura = null;
+
+        if (tipoComprobante == TipoComprobante.FACTURA) {
+            if (request.getClienteRuc() == null || request.getClienteRuc().trim().isEmpty()
+                    || request.getClienteNombre() == null || request.getClienteNombre().trim().isEmpty()) {
+                throw new ReglaDeNegocioException("Para emitir factura legal debe indicar el RUC y la Razón Social del cliente.");
+            }
+
+            Institucion inst = institucionRepository.findById(1L).orElseGet(() -> {
+                Institucion nueva = new Institucion();
+                nueva.setId(1L);
+                nueva.setNombre("Heladería Artesanal");
+                return institucionRepository.save(nueva);
+            });
+
+            long sig = (inst.getUltimoNumeroFactura() != null ? inst.getUltimoNumeroFactura() : 0L) + 1;
+            String estab = (inst.getEstablecimiento() != null && !inst.getEstablecimiento().isBlank()) ? inst.getEstablecimiento() : "001";
+            String punto = (inst.getPuntoEmision() != null && !inst.getPuntoEmision().isBlank()) ? inst.getPuntoEmision() : "001";
+            numeroFactura = String.format("%s-%s-%07d", estab, punto, sig);
+
+            inst.setUltimoNumeroFactura(sig);
+            institucionRepository.save(inst);
+        }
+
         Pedido pedido = Pedido.builder()
                 .sesionCaja(sesionActiva)
-                .clienteNombre(request.getClienteNombre())
+                .tipoComprobante(tipoComprobante)
+                .condicionVenta(condicionVenta)
+                .clienteNombre(request.getClienteNombre() != null ? request.getClienteNombre().trim() : null)
+                .clienteRuc(request.getClienteRuc() != null ? request.getClienteRuc().trim() : null)
+                .clienteDireccion(request.getClienteDireccion() != null ? request.getClienteDireccion().trim() : null)
+                .numeroFactura(numeroFactura)
                 .metodoPago(request.getMetodoPago())
                 .tipoEntrega(request.getTipoEntrega())
                 .notas(request.getNotas())

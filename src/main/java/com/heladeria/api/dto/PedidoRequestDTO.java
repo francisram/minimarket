@@ -1,6 +1,8 @@
 package com.heladeria.api.dto;
 
+import com.heladeria.api.entities.enums.CondicionVenta;
 import com.heladeria.api.entities.enums.MetodoPago;
+import com.heladeria.api.entities.enums.TipoComprobante;
 import com.heladeria.api.entities.enums.TipoEntrega;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
@@ -27,6 +29,14 @@ public class PedidoRequestDTO {
 
     private Long impresoraId;
 
+    private TipoComprobante tipoComprobante;
+
+    private CondicionVenta condicionVenta;
+
+    private String clienteRuc;
+
+    private String clienteDireccion;
+
     public PedidoRequestDTO() {
     }
 
@@ -47,4 +57,16 @@ public class PedidoRequestDTO {
 
     public Long getImpresoraId() { return impresoraId; }
     public void setImpresoraId(Long impresoraId) { this.impresoraId = impresoraId; }
+
+    public TipoComprobante getTipoComprobante() { return tipoComprobante; }
+    public void setTipoComprobante(TipoComprobante tipoComprobante) { this.tipoComprobante = tipoComprobante; }
+
+    public CondicionVenta getCondicionVenta() { return condicionVenta; }
+    public void setCondicionVenta(CondicionVenta condicionVenta) { this.condicionVenta = condicionVenta; }
+
+    public String getClienteRuc() { return clienteRuc; }
+    public void setClienteRuc(String clienteRuc) { this.clienteRuc = clienteRuc; }
+
+    public String getClienteDireccion() { return clienteDireccion; }
+    public void setClienteDireccion(String clienteDireccion) { this.clienteDireccion = clienteDireccion; }
 }

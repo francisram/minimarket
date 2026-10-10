@@ -2,6 +2,8 @@ package com.heladeria.api.services;
 
 import com.heladeria.api.dto.TicketEmitidoDTO;
 import com.heladeria.api.entities.*;
+import com.heladeria.api.entities.enums.CondicionVenta;
+import com.heladeria.api.entities.enums.TipoComprobante;
 import com.heladeria.api.entities.enums.TipoItemPedido;
 import com.heladeria.api.exceptions.ImpresionException;
 import com.heladeria.api.repositories.ImpresoraRepository;
@@ -24,6 +26,7 @@ public class TicketPrinterService {
 
     private static final Logger log = LoggerFactory.getLogger(TicketPrinterService.class);
     private static final DateTimeFormatter FORMATO_FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
+    private static final DateTimeFormatter FORMATO_SOLO_FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private static final byte[] INICIALIZAR = {0x1B, 0x40};
     private static final byte[] ALINEAR_CENTRO = {0x1B, 0x61, 0x01};
@@ -122,30 +125,81 @@ public class TicketPrinterService {
         out.writeBytes(ALINEAR_CENTRO);
         logoInstitucion().ifPresent(out::writeBytes);
 
-        String nombreLocal = institucionRepository.findById(1L)
-                .map(Institucion::getNombre)
-                .filter(n -> !n.isBlank())
-                .orElse("HELADERIA ARTESANAL");
-        escribirLinea(out, nombreLocal);
+        boolean esFactura = pedido.getTipoComprobante() == TipoComprobante.FACTURA;
 
-        out.writeBytes(TEXTO_DOBLE);
-        escribirLinea(out, "PEDIDO #" + pedido.getId());
-        out.writeBytes(TEXTO_NORMAL);
+        if (esFactura) {
+            Optional<Institucion> instOpt = institucionRepository.findById(1L);
+            Institucion inst = instOpt.orElse(null);
 
-        if (pedido.getFechaCreacion() != null) {
-            escribirLinea(out, FORMATO_FECHA.format(pedido.getFechaCreacion()));
-        }
+            String nombreLocal = (inst != null && inst.getNombre() != null && !inst.getNombre().isBlank())
+                    ? inst.getNombre()
+                    : "HELADERIA ARTESANAL";
+            escribirLinea(out, nombreLocal);
 
-        out.writeBytes(ALINEAR_IZQUIERDA);
-        escribirLinea(out, "--------------------------------");
-        if (pedido.getClienteNombre() != null && !pedido.getClienteNombre().isBlank()) {
-            escribirLinea(out, "Cliente: " + pedido.getClienteNombre());
-        }
-        if (pedido.getMetodoPago() != null) {
-            escribirLinea(out, "Pago: " + pedido.getMetodoPago());
-        }
-        if (pedido.getTipoEntrega() != null) {
-            escribirLinea(out, "Entrega: " + pedido.getTipoEntrega());
+            if (inst != null) {
+                if (inst.getRuc() != null && !inst.getRuc().isBlank()) {
+                    escribirLinea(out, "RUC: " + inst.getRuc());
+                }
+                if (inst.getTimbrado() != null && !inst.getTimbrado().isBlank()) {
+                    escribirLinea(out, "TIMBRADO N°: " + inst.getTimbrado());
+                }
+                if (inst.getTimbradoVencimiento() != null) {
+                    escribirLinea(out, "VIGENCIA: " + FORMATO_SOLO_FECHA.format(inst.getTimbradoVencimiento()));
+                }
+            }
+
+            out.writeBytes(TEXTO_DOBLE);
+            escribirLinea(out, "FACTURA N°: " + (pedido.getNumeroFactura() != null ? pedido.getNumeroFactura() : "000-000-0000000"));
+            out.writeBytes(TEXTO_NORMAL);
+
+            if (pedido.getFechaCreacion() != null) {
+                escribirLinea(out, FORMATO_FECHA.format(pedido.getFechaCreacion()));
+            }
+
+            out.writeBytes(ALINEAR_IZQUIERDA);
+            escribirLinea(out, "--------------------------------");
+            escribirLinea(out, "CONDICION: " + (pedido.getCondicionVenta() != null ? pedido.getCondicionVenta() : CondicionVenta.CONTADO));
+            if (pedido.getClienteRuc() != null && !pedido.getClienteRuc().isBlank()) {
+                escribirLinea(out, "RUC/CI CLIENTE: " + pedido.getClienteRuc());
+            }
+            if (pedido.getClienteNombre() != null && !pedido.getClienteNombre().isBlank()) {
+                escribirLinea(out, "CLIENTE / RAZON SOCIAL: " + pedido.getClienteNombre());
+            }
+            if (pedido.getClienteDireccion() != null && !pedido.getClienteDireccion().isBlank()) {
+                escribirLinea(out, "DIRECCION: " + pedido.getClienteDireccion());
+            }
+            if (pedido.getMetodoPago() != null) {
+                escribirLinea(out, "Pago: " + pedido.getMetodoPago());
+            }
+            if (pedido.getTipoEntrega() != null) {
+                escribirLinea(out, "Entrega: " + pedido.getTipoEntrega());
+            }
+        } else {
+            String nombreLocal = institucionRepository.findById(1L)
+                    .map(Institucion::getNombre)
+                    .filter(n -> !n.isBlank())
+                    .orElse("HELADERIA ARTESANAL");
+            escribirLinea(out, nombreLocal);
+
+            out.writeBytes(TEXTO_DOBLE);
+            escribirLinea(out, "PEDIDO #" + pedido.getId());
+            out.writeBytes(TEXTO_NORMAL);
+
+            if (pedido.getFechaCreacion() != null) {
+                escribirLinea(out, FORMATO_FECHA.format(pedido.getFechaCreacion()));
+            }
+
+            out.writeBytes(ALINEAR_IZQUIERDA);
+            escribirLinea(out, "--------------------------------");
+            if (pedido.getClienteNombre() != null && !pedido.getClienteNombre().isBlank()) {
+                escribirLinea(out, "Cliente: " + pedido.getClienteNombre());
+            }
+            if (pedido.getMetodoPago() != null) {
+                escribirLinea(out, "Pago: " + pedido.getMetodoPago());
+            }
+            if (pedido.getTipoEntrega() != null) {
+                escribirLinea(out, "Entrega: " + pedido.getTipoEntrega());
+            }
         }
         escribirLinea(out, "--------------------------------");
         escribirLinea(out, "CANT DESCRIPCION           TOTAL");

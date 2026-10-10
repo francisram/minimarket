@@ -268,4 +268,65 @@ class TicketPrinterServiceTest {
         // Asegurar que NO contenga el carácter unicode ₲
         assertFalse(texto.contains("\u20B2"), "El ticket térmico ESC/POS nunca debe contener el carácter unicode ₲");
     }
+
+    @Test
+    @DisplayName("construirTicketPedido genera encabezado fiscal legal cuando el pedido es FACTURA")
+    void testConstruirFacturaFiscal() {
+        Institucion institucion = new Institucion(1L, "Heladería Fiscal S.A.", null);
+        institucion.setRuc("80099887-1");
+        institucion.setTimbrado("17894561");
+        institucion.setTimbradoVencimiento(java.time.LocalDate.of(2027, 12, 31));
+        institucionRepository.save(institucion);
+
+        Presentacion pres = Presentacion.builder()
+                .id(1L)
+                .nombre("Pote 1 Kg")
+                .precio(new BigDecimal("80000"))
+                .build();
+
+        DetallePedido detalle = DetallePedido.builder()
+                .tipoItem(TipoItemPedido.HELADO)
+                .presentacion(pres)
+                .cantidad(1)
+                .precioUnitario(new BigDecimal("80000"))
+                .subtotal(new BigDecimal("80000"))
+                .build();
+
+        Pedido pedido = Pedido.builder()
+                .id(202L)
+                .tipoComprobante(TipoComprobante.FACTURA)
+                .condicionVenta(CondicionVenta.CONTADO)
+                .numeroFactura("001-001-0000045")
+                .clienteRuc("80012345-6")
+                .clienteNombre("Empresa Cliente S.A.")
+                .clienteDireccion("Av. España 1020")
+                .metodoPago(MetodoPago.TRANSFERENCIA_QR)
+                .tipoEntrega(TipoEntrega.TAKE_AWAY)
+                .estado(EstadoPedido.ENTREGADO)
+                .fechaCreacion(LocalDateTime.now())
+                .total(new BigDecimal("80000"))
+                .detalles(List.of(detalle))
+                .build();
+
+        byte[] ticketBytes = ticketPrinterService.construirTicketPedido(pedido);
+        assertNotNull(ticketBytes);
+
+        String texto = new String(ticketBytes, StandardCharsets.ISO_8859_1);
+
+        assertTrue(texto.contains("Heladería Fiscal S.A."));
+        assertTrue(texto.contains("RUC: 80099887-1"));
+        assertTrue(texto.contains("TIMBRADO N°: 17894561"));
+        assertTrue(texto.contains("VIGENCIA: 31/12/2027"));
+        assertTrue(texto.contains("FACTURA N°: 001-001-0000045"));
+        assertTrue(texto.contains("CONDICION: CONTADO"));
+        assertTrue(texto.contains("RUC/CI CLIENTE: 80012345-6"));
+        assertTrue(texto.contains("CLIENTE / RAZON SOCIAL:"));
+        assertTrue(texto.contains("Empresa Cliente S.A."));
+        assertTrue(texto.contains("DIRECCION: Av. España 1020"));
+        assertTrue(texto.contains("Pago: TRANSFERENCIA_QR"));
+        assertTrue(texto.contains("Entrega: TAKE_AWAY"));
+        assertTrue(texto.contains("Gs. 80.000"));
+        assertTrue(texto.contains("LIQUIDACION DE IVA"));
+        assertFalse(texto.contains("\u20B2"));
+    }
 }

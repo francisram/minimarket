@@ -194,10 +194,44 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private void sembrarInstitucion() {
-        if (institucionRepository.findById(1L).isEmpty()) {
-            Institucion inst = new Institucion(1L, "Heladería Artesanal", null);
-            institucionRepository.save(inst);
-            log.info("[SEED] Institución inicial sembrada.");
+        Institucion inst = institucionRepository.findById(1L).orElseGet(() -> {
+            Institucion nueva = new Institucion();
+            nueva.setId(1L);
+            return nueva;
+        });
+
+        if (inst.getNombre() == null || inst.getNombre().isBlank()) {
+            inst.setNombre("Heladería Artesanal");
         }
+        if (inst.getRuc() == null) {
+            inst.setRuc("80099887-1");
+        }
+        if (inst.getTimbrado() == null) {
+            inst.setTimbrado("17894561");
+        }
+        if (inst.getTimbradoVencimiento() == null) {
+            inst.setTimbradoVencimiento(LocalDate.now().plusYears(1));
+        }
+        if (inst.getEstablecimiento() == null) {
+            inst.setEstablecimiento("001");
+        }
+        if (inst.getPuntoEmision() == null) {
+            inst.setPuntoEmision("001");
+        }
+        if (inst.getUltimoNumeroFactura() == null) {
+            inst.setUltimoNumeroFactura(0L);
+        }
+        if (inst.getDireccion() == null) {
+            inst.setDireccion("Av. Mariscal López 1234");
+        }
+        if (inst.getTelefono() == null) {
+            inst.setTelefono("021-123456");
+        }
+        if (inst.getCiudad() == null) {
+            inst.setCiudad("Asunción");
+        }
+
+        institucionRepository.save(inst);
+        log.info("[SEED] Institución y datos fiscales configurados.");
     }
 }

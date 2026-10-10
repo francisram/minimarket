@@ -38,6 +38,17 @@ public class InstitucionService {
         Institucion institucion = obtenerOCrear();
         institucion.setNombre(request.getNombre() != null ? request.getNombre() : "");
         institucion.setLogoBase64(request.getLogoBase64());
+
+        if (request.getRuc() != null) institucion.setRuc(request.getRuc());
+        if (request.getTimbrado() != null) institucion.setTimbrado(request.getTimbrado());
+        if (request.getTimbradoVencimiento() != null) institucion.setTimbradoVencimiento(request.getTimbradoVencimiento());
+        if (request.getEstablecimiento() != null) institucion.setEstablecimiento(request.getEstablecimiento());
+        if (request.getPuntoEmision() != null) institucion.setPuntoEmision(request.getPuntoEmision());
+        if (request.getUltimoNumeroFactura() != null) institucion.setUltimoNumeroFactura(request.getUltimoNumeroFactura());
+        if (request.getDireccion() != null) institucion.setDireccion(request.getDireccion());
+        if (request.getTelefono() != null) institucion.setTelefono(request.getTelefono());
+        if (request.getCiudad() != null) institucion.setCiudad(request.getCiudad());
+
         return InstitucionDTO.from(institucionRepository.save(institucion));
     }
 

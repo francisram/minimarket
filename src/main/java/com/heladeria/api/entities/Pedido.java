@@ -1,8 +1,10 @@
 package com.heladeria.api.entities;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.heladeria.api.entities.enums.CondicionVenta;
 import com.heladeria.api.entities.enums.EstadoPedido;
 import com.heladeria.api.entities.enums.MetodoPago;
+import com.heladeria.api.entities.enums.TipoComprobante;
 import com.heladeria.api.entities.enums.TipoEntrega;
 import jakarta.persistence.*;
 
@@ -47,6 +49,23 @@ public class Pedido {
     @JoinColumn(name = "sesion_caja_id")
     private SesionCaja sesionCaja;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private TipoComprobante tipoComprobante = TipoComprobante.TICKET;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private CondicionVenta condicionVenta = CondicionVenta.CONTADO;
+
+    @Column(length = 30)
+    private String clienteRuc;
+
+    @Column(length = 150)
+    private String clienteDireccion;
+
+    @Column(length = 30)
+    private String numeroFactura;
+
     @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<DetallePedido> detalles = new ArrayList<>();
@@ -62,6 +81,14 @@ public class Pedido {
     public Pedido(Long id, LocalDateTime fechaCreacion, String clienteNombre, MetodoPago metodoPago,
                   TipoEntrega tipoEntrega, EstadoPedido estado, String notas, BigDecimal total, List<DetallePedido> detalles,
                   SesionCaja sesionCaja) {
+        this(id, fechaCreacion, clienteNombre, metodoPago, tipoEntrega, estado, notas, total, detalles, sesionCaja,
+                TipoComprobante.TICKET, CondicionVenta.CONTADO, null, null, null);
+    }
+
+    public Pedido(Long id, LocalDateTime fechaCreacion, String clienteNombre, MetodoPago metodoPago,
+                  TipoEntrega tipoEntrega, EstadoPedido estado, String notas, BigDecimal total, List<DetallePedido> detalles,
+                  SesionCaja sesionCaja, TipoComprobante tipoComprobante, CondicionVenta condicionVenta,
+                  String clienteRuc, String clienteDireccion, String numeroFactura) {
         this.id = id;
         this.fechaCreacion = fechaCreacion != null ? fechaCreacion : LocalDateTime.now();
         this.clienteNombre = clienteNombre;
@@ -72,6 +99,11 @@ public class Pedido {
         this.total = total != null ? total.setScale(0, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO;
         this.detalles = detalles != null ? detalles : new ArrayList<>();
         this.sesionCaja = sesionCaja;
+        this.tipoComprobante = tipoComprobante != null ? tipoComprobante : TipoComprobante.TICKET;
+        this.condicionVenta = condicionVenta != null ? condicionVenta : CondicionVenta.CONTADO;
+        this.clienteRuc = clienteRuc;
+        this.clienteDireccion = clienteDireccion;
+        this.numeroFactura = numeroFactura;
     }
 
     public static PedidoBuilder builder() {
@@ -85,6 +117,12 @@ public class Pedido {
         }
         if (this.estado == null) {
             this.estado = EstadoPedido.PENDIENTE;
+        }
+        if (this.tipoComprobante == null) {
+            this.tipoComprobante = TipoComprobante.TICKET;
+        }
+        if (this.condicionVenta == null) {
+            this.condicionVenta = CondicionVenta.CONTADO;
         }
     }
 
@@ -120,6 +158,21 @@ public class Pedido {
     public SesionCaja getSesionCaja() { return sesionCaja; }
     public void setSesionCaja(SesionCaja sesionCaja) { this.sesionCaja = sesionCaja; }
 
+    public TipoComprobante getTipoComprobante() { return tipoComprobante; }
+    public void setTipoComprobante(TipoComprobante tipoComprobante) { this.tipoComprobante = tipoComprobante; }
+
+    public CondicionVenta getCondicionVenta() { return condicionVenta; }
+    public void setCondicionVenta(CondicionVenta condicionVenta) { this.condicionVenta = condicionVenta; }
+
+    public String getClienteRuc() { return clienteRuc; }
+    public void setClienteRuc(String clienteRuc) { this.clienteRuc = clienteRuc; }
+
+    public String getClienteDireccion() { return clienteDireccion; }
+    public void setClienteDireccion(String clienteDireccion) { this.clienteDireccion = clienteDireccion; }
+
+    public String getNumeroFactura() { return numeroFactura; }
+    public void setNumeroFactura(String numeroFactura) { this.numeroFactura = numeroFactura; }
+
     public static class PedidoBuilder {
         private Long id;
         private LocalDateTime fechaCreacion;
@@ -131,6 +184,11 @@ public class Pedido {
         private BigDecimal total = BigDecimal.ZERO;
         private List<DetallePedido> detalles = new ArrayList<>();
         private SesionCaja sesionCaja;
+        private TipoComprobante tipoComprobante = TipoComprobante.TICKET;
+        private CondicionVenta condicionVenta = CondicionVenta.CONTADO;
+        private String clienteRuc;
+        private String clienteDireccion;
+        private String numeroFactura;
 
         public PedidoBuilder id(Long id) { this.id = id; return this; }
         public PedidoBuilder fechaCreacion(LocalDateTime fechaCreacion) { this.fechaCreacion = fechaCreacion; return this; }
@@ -142,9 +200,15 @@ public class Pedido {
         public PedidoBuilder total(BigDecimal total) { this.total = total; return this; }
         public PedidoBuilder detalles(List<DetallePedido> detalles) { this.detalles = detalles; return this; }
         public PedidoBuilder sesionCaja(SesionCaja sesionCaja) { this.sesionCaja = sesionCaja; return this; }
+        public PedidoBuilder tipoComprobante(TipoComprobante tipoComprobante) { this.tipoComprobante = tipoComprobante; return this; }
+        public PedidoBuilder condicionVenta(CondicionVenta condicionVenta) { this.condicionVenta = condicionVenta; return this; }
+        public PedidoBuilder clienteRuc(String clienteRuc) { this.clienteRuc = clienteRuc; return this; }
+        public PedidoBuilder clienteDireccion(String clienteDireccion) { this.clienteDireccion = clienteDireccion; return this; }
+        public PedidoBuilder numeroFactura(String numeroFactura) { this.numeroFactura = numeroFactura; return this; }
 
         public Pedido build() {
-            return new Pedido(id, fechaCreacion, clienteNombre, metodoPago, tipoEntrega, estado, notas, total, detalles, sesionCaja);
+            return new Pedido(id, fechaCreacion, clienteNombre, metodoPago, tipoEntrega, estado, notas, total, detalles,
+                    sesionCaja, tipoComprobante, condicionVenta, clienteRuc, clienteDireccion, numeroFactura);
         }
     }
 }

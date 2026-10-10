@@ -4,7 +4,9 @@ import com.heladeria.api.dto.DetallePedidoRequestDTO;
 import com.heladeria.api.dto.PedidoRequestDTO;
 import com.heladeria.api.entities.*;
 import com.heladeria.api.entities.enums.CategoriaSabor;
+import com.heladeria.api.entities.enums.CondicionVenta;
 import com.heladeria.api.entities.enums.MetodoPago;
+import com.heladeria.api.entities.enums.TipoComprobante;
 import com.heladeria.api.entities.enums.TipoEntrega;
 import com.heladeria.api.entities.enums.TipoItemPedido;
 import com.heladeria.api.exceptions.ReglaDeNegocioException;
@@ -45,6 +47,9 @@ class PedidoServiceTest {
 
     @Autowired
     private UsuarioRepository usuarioRepository;
+
+    @Autowired
+    private InstitucionRepository institucionRepository;
 
     private Presentacion poteMedioKg;
     private Sabor dulceDeLeche;
@@ -386,5 +391,98 @@ class PedidoServiceTest {
         });
 
         assertEquals("No se pueden registrar ventas: no existe una sesión de caja abierta.", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Debe emitir factura fiscal con correlativo SET de 3 bloques e incrementar contador en Institucion")
+    void testCrearPedidoFacturaExitosoConCorrelativo() {
+        Institucion inst = institucionRepository.findById(1L).orElseGet(() -> new Institucion(1L, "Heladería", null));
+        inst.setUltimoNumeroFactura(0L);
+        institucionRepository.save(inst);
+
+        DetallePedidoRequestDTO itemHelado = new DetallePedidoRequestDTO();
+        itemHelado.setTipoItem(TipoItemPedido.HELADO);
+        itemHelado.setPresentacionId(poteMedioKg.getId());
+        itemHelado.setSaborIds(List.of(dulceDeLeche.getId()));
+        itemHelado.setCantidad(1);
+
+        PedidoRequestDTO request = new PedidoRequestDTO();
+        request.setTipoComprobante(TipoComprobante.FACTURA);
+        request.setCondicionVenta(CondicionVenta.CONTADO);
+        request.setClienteRuc("80012345-6");
+        request.setClienteNombre("Acme Corp S.A.");
+        request.setClienteDireccion("Palma 543");
+        request.setMetodoPago(MetodoPago.EFECTIVO);
+        request.setTipoEntrega(TipoEntrega.MOSTRADOR);
+        request.setItems(List.of(itemHelado));
+
+        Pedido pedido = pedidoService.crearPedido(request);
+
+        assertNotNull(pedido.getId());
+        assertEquals(TipoComprobante.FACTURA, pedido.getTipoComprobante());
+        assertEquals(CondicionVenta.CONTADO, pedido.getCondicionVenta());
+        assertEquals("80012345-6", pedido.getClienteRuc());
+        assertEquals("Acme Corp S.A.", pedido.getClienteNombre());
+        assertEquals("Palma 543", pedido.getClienteDireccion());
+        assertEquals("001-001-0000001", pedido.getNumeroFactura());
+
+        Institucion instActualizada = institucionRepository.findById(1L).orElseThrow();
+        assertEquals(1L, instActualizada.getUltimoNumeroFactura());
+
+        // Segunda factura consecutiva
+        Pedido pedido2 = pedidoService.crearPedido(request);
+        assertEquals("001-001-0000002", pedido2.getNumeroFactura());
+        assertEquals(2L, institucionRepository.findById(1L).orElseThrow().getUltimoNumeroFactura());
+    }
+
+    @Test
+    @DisplayName("Debe fallar al solicitar factura sin RUC o sin Razón Social")
+    void testCrearPedidoFacturaSinRucOFalla() {
+        DetallePedidoRequestDTO itemHelado = new DetallePedidoRequestDTO();
+        itemHelado.setTipoItem(TipoItemPedido.HELADO);
+        itemHelado.setPresentacionId(poteMedioKg.getId());
+        itemHelado.setSaborIds(List.of(dulceDeLeche.getId()));
+        itemHelado.setCantidad(1);
+
+        PedidoRequestDTO requestSinRuc = new PedidoRequestDTO();
+        requestSinRuc.setTipoComprobante(TipoComprobante.FACTURA);
+        requestSinRuc.setClienteNombre("Cliente Sin Ruc");
+        requestSinRuc.setMetodoPago(MetodoPago.EFECTIVO);
+        requestSinRuc.setTipoEntrega(TipoEntrega.MOSTRADOR);
+        requestSinRuc.setItems(List.of(itemHelado));
+
+        ReglaDeNegocioException ex1 = assertThrows(ReglaDeNegocioException.class, () -> pedidoService.crearPedido(requestSinRuc));
+        assertTrue(ex1.getMessage().contains("debe indicar el RUC y la Razón Social"));
+
+        PedidoRequestDTO requestSinNombre = new PedidoRequestDTO();
+        requestSinNombre.setTipoComprobante(TipoComprobante.FACTURA);
+        requestSinNombre.setClienteRuc("80012345-6");
+        requestSinNombre.setMetodoPago(MetodoPago.EFECTIVO);
+        requestSinNombre.setTipoEntrega(TipoEntrega.MOSTRADOR);
+        requestSinNombre.setItems(List.of(itemHelado));
+
+        ReglaDeNegocioException ex2 = assertThrows(ReglaDeNegocioException.class, () -> pedidoService.crearPedido(requestSinNombre));
+        assertTrue(ex2.getMessage().contains("debe indicar el RUC y la Razón Social"));
+    }
+
+    @Test
+    @DisplayName("Debe emitir comprobante TICKET por defecto si no se especifica tipoComprobante")
+    void testCrearPedidoTicketPorDefecto() {
+        DetallePedidoRequestDTO itemHelado = new DetallePedidoRequestDTO();
+        itemHelado.setTipoItem(TipoItemPedido.HELADO);
+        itemHelado.setPresentacionId(poteMedioKg.getId());
+        itemHelado.setSaborIds(List.of(dulceDeLeche.getId()));
+        itemHelado.setCantidad(1);
+
+        PedidoRequestDTO request = new PedidoRequestDTO();
+        request.setClienteNombre("Carlos Venta");
+        request.setMetodoPago(MetodoPago.EFECTIVO);
+        request.setTipoEntrega(TipoEntrega.MOSTRADOR);
+        request.setItems(List.of(itemHelado));
+
+        Pedido pedido = pedidoService.crearPedido(request);
+
+        assertEquals(TipoComprobante.TICKET, pedido.getTipoComprobante());
+        assertNull(pedido.getNumeroFactura());
     }
 }
