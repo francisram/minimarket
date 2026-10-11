@@ -526,6 +526,62 @@ class PedidoServiceTest {
     }
 
     @Test
+    @DisplayName("Debe fallar al emitir factura cuando el timbrado fiscal ha vencido")
+    void testCrearPedidoFacturaFallaCuandoTimbradoHaVencido() {
+        Institucion inst = institucionRepository.findById(1L).orElseGet(() -> new Institucion(1L, "Heladería", null));
+        inst.setTimbrado("17894561");
+        inst.setTimbradoVencimiento(java.time.LocalDate.now().minusDays(1));
+        institucionRepository.save(inst);
+
+        DetallePedidoRequestDTO itemHelado = new DetallePedidoRequestDTO();
+        itemHelado.setTipoItem(TipoItemPedido.HELADO);
+        itemHelado.setPresentacionId(poteMedioKg.getId());
+        itemHelado.setSaborIds(List.of(dulceDeLeche.getId()));
+        itemHelado.setCantidad(1);
+
+        PedidoRequestDTO request = new PedidoRequestDTO();
+        request.setTipoComprobante(TipoComprobante.FACTURA);
+        request.setClienteRuc("80012345-6");
+        request.setClienteNombre("Acme Corp S.A.");
+        request.setMetodoPago(MetodoPago.EFECTIVO);
+        request.setTipoEntrega(TipoEntrega.MOSTRADOR);
+        request.setItems(List.of(itemHelado));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> pedidoService.crearPedido(request));
+        assertTrue(ex.getMessage().contains("ha vencido el"), "El mensaje debe indicar que el timbrado ha vencido");
+        assertTrue(ex.getMessage().contains("Debe renovar el timbrado"));
+    }
+
+    @Test
+    @DisplayName("Debe fallar al emitir factura cuando se alcanza el límite máximo del talonario")
+    void testCrearPedidoFacturaFallaCuandoSuperaLimiteTalonario() {
+        Institucion inst = institucionRepository.findById(1L).orElseGet(() -> new Institucion(1L, "Heladería", null));
+        inst.setTimbrado("17894561");
+        inst.setTimbradoVencimiento(java.time.LocalDate.now().plusMonths(6));
+        inst.setNumeroFinFactura(50L);
+        inst.setUltimoNumeroFactura(50L);
+        institucionRepository.save(inst);
+
+        DetallePedidoRequestDTO itemHelado = new DetallePedidoRequestDTO();
+        itemHelado.setTipoItem(TipoItemPedido.HELADO);
+        itemHelado.setPresentacionId(poteMedioKg.getId());
+        itemHelado.setSaborIds(List.of(dulceDeLeche.getId()));
+        itemHelado.setCantidad(1);
+
+        PedidoRequestDTO request = new PedidoRequestDTO();
+        request.setTipoComprobante(TipoComprobante.FACTURA);
+        request.setClienteRuc("80012345-6");
+        request.setClienteNombre("Acme Corp S.A.");
+        request.setMetodoPago(MetodoPago.EFECTIVO);
+        request.setTipoEntrega(TipoEntrega.MOSTRADOR);
+        request.setItems(List.of(itemHelado));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> pedidoService.crearPedido(request));
+        assertTrue(ex.getMessage().contains("Se ha alcanzado el límite máximo del talonario (50)"));
+        assertTrue(ex.getMessage().contains("Debe habilitar un nuevo talonario"));
+    }
+
+    @Test
     @DisplayName("Debe emitir comprobante TICKET por defecto si no se especifica tipoComprobante")
     void testCrearPedidoTicketPorDefecto() {
         DetallePedidoRequestDTO itemHelado = new DetallePedidoRequestDTO();

@@ -219,6 +219,15 @@ public class DataSeeder implements CommandLineRunner {
         if (inst.getTimbradoVencimiento() == null) {
             inst.setTimbradoVencimiento(LocalDate.now().plusYears(1));
         }
+        if (inst.getTimbradoInicio() == null) {
+            inst.setTimbradoInicio(LocalDate.now().minusMonths(1));
+        }
+        if (inst.getNumeroInicioFactura() == null) {
+            inst.setNumeroInicioFactura(1L);
+        }
+        if (inst.getNumeroFinFactura() == null) {
+            inst.setNumeroFinFactura(1000L);
+        }
         if (inst.getEstablecimiento() == null) {
             inst.setEstablecimiento("001");
         }

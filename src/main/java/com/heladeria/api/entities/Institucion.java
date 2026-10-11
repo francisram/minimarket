@@ -35,6 +35,15 @@ public class Institucion {
     @Column
     private LocalDate timbradoVencimiento;
 
+    @Column
+    private LocalDate timbradoInicio;
+
+    @Column
+    private Long numeroInicioFactura = 1L;
+
+    @Column
+    private Long numeroFinFactura = 1000L;
+
     @Column(length = 10)
     private String establecimiento = "001";
 
@@ -89,6 +98,8 @@ public class Institucion {
         if (this.establecimiento == null) this.establecimiento = "001";
         if (this.puntoEmision == null) this.puntoEmision = "001";
         if (this.ultimoNumeroFactura == null) this.ultimoNumeroFactura = 0L;
+        if (this.numeroInicioFactura == null) this.numeroInicioFactura = 1L;
+        if (this.numeroFinFactura == null) this.numeroFinFactura = 1000L;
         if (this.ciudad == null) this.ciudad = "Asunción";
     }
 
@@ -186,5 +197,29 @@ public class Institucion {
 
     public void setCiudad(String ciudad) {
         this.ciudad = ciudad;
+    }
+
+    public LocalDate getTimbradoInicio() {
+        return timbradoInicio;
+    }
+
+    public void setTimbradoInicio(LocalDate timbradoInicio) {
+        this.timbradoInicio = timbradoInicio;
+    }
+
+    public Long getNumeroInicioFactura() {
+        return numeroInicioFactura;
+    }
+
+    public void setNumeroInicioFactura(Long numeroInicioFactura) {
+        this.numeroInicioFactura = numeroInicioFactura;
+    }
+
+    public Long getNumeroFinFactura() {
+        return numeroFinFactura;
+    }
+
+    public void setNumeroFinFactura(Long numeroFinFactura) {
+        this.numeroFinFactura = numeroFinFactura;
     }
 }

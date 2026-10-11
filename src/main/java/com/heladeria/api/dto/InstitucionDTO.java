@@ -16,6 +16,9 @@ public class InstitucionDTO {
     private String direccion;
     private String telefono;
     private String ciudad;
+    private LocalDate timbradoInicio;
+    private Long numeroInicioFactura;
+    private Long numeroFinFactura;
 
     public InstitucionDTO() {
     }
@@ -41,11 +44,23 @@ public class InstitucionDTO {
         this.ciudad = ciudad;
     }
 
+    public InstitucionDTO(String nombre, String logoBase64, String ruc, String timbrado,
+                          LocalDate timbradoVencimiento, LocalDate timbradoInicio,
+                          Long numeroInicioFactura, Long numeroFinFactura,
+                          String establecimiento, String puntoEmision,
+                          Long ultimoNumeroFactura, String direccion, String telefono, String ciudad) {
+        this(nombre, logoBase64, ruc, timbrado, timbradoVencimiento, establecimiento, puntoEmision,
+                ultimoNumeroFactura, direccion, telefono, ciudad);
+        this.timbradoInicio = timbradoInicio;
+        this.numeroInicioFactura = numeroInicioFactura;
+        this.numeroFinFactura = numeroFinFactura;
+    }
+
     public static InstitucionDTO from(Institucion inst) {
         if (inst == null) {
             return null;
         }
-        return new InstitucionDTO(
+        InstitucionDTO dto = new InstitucionDTO(
                 inst.getNombre(),
                 inst.getLogoBase64(),
                 inst.getRuc(),
@@ -58,6 +73,10 @@ public class InstitucionDTO {
                 inst.getTelefono(),
                 inst.getCiudad()
         );
+        dto.setTimbradoInicio(inst.getTimbradoInicio());
+        dto.setNumeroInicioFactura(inst.getNumeroInicioFactura());
+        dto.setNumeroFinFactura(inst.getNumeroFinFactura());
+        return dto;
     }
 
     public String getNombre() {
@@ -146,5 +165,29 @@ public class InstitucionDTO {
 
     public void setCiudad(String ciudad) {
         this.ciudad = ciudad;
+    }
+
+    public LocalDate getTimbradoInicio() {
+        return timbradoInicio;
+    }
+
+    public void setTimbradoInicio(LocalDate timbradoInicio) {
+        this.timbradoInicio = timbradoInicio;
+    }
+
+    public Long getNumeroInicioFactura() {
+        return numeroInicioFactura;
+    }
+
+    public void setNumeroInicioFactura(Long numeroInicioFactura) {
+        this.numeroInicioFactura = numeroInicioFactura;
+    }
+
+    public Long getNumeroFinFactura() {
+        return numeroFinFactura;
+    }
+
+    public void setNumeroFinFactura(Long numeroFinFactura) {
+        this.numeroFinFactura = numeroFinFactura;
     }
 }

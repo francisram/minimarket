@@ -98,7 +98,18 @@ public class PedidoService {
                 return institucionRepository.save(nueva);
             });
 
+            // Validar Vencimiento del Timbrado
+            if (inst.getTimbradoVencimiento() != null && inst.getTimbradoVencimiento().isBefore(LocalDate.now())) {
+                throw new IllegalStateException("El timbrado fiscal N° " + inst.getTimbrado() + " ha vencido el " + inst.getTimbradoVencimiento() + ". Debe renovar el timbrado para poder emitir facturas legales.");
+            }
+
             long sig = (inst.getUltimoNumeroFactura() != null ? inst.getUltimoNumeroFactura() : 0L) + 1;
+
+            // Validar Límite del Talonario
+            if (inst.getNumeroFinFactura() != null && sig > inst.getNumeroFinFactura()) {
+                throw new IllegalStateException("Se ha alcanzado el límite máximo del talonario (" + inst.getNumeroFinFactura() + "). Debe habilitar un nuevo talonario desde el módulo contable.");
+            }
+
             String estab = (inst.getEstablecimiento() != null && !inst.getEstablecimiento().isBlank()) ? inst.getEstablecimiento() : "001";
             String punto = (inst.getPuntoEmision() != null && !inst.getPuntoEmision().isBlank()) ? inst.getPuntoEmision() : "001";
             numeroFactura = String.format("%s-%s-%07d", estab, punto, sig);

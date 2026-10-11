@@ -48,6 +48,9 @@ public class InstitucionService {
         if (request.getDireccion() != null) institucion.setDireccion(request.getDireccion());
         if (request.getTelefono() != null) institucion.setTelefono(request.getTelefono());
         if (request.getCiudad() != null) institucion.setCiudad(request.getCiudad());
+        if (request.getTimbradoInicio() != null) institucion.setTimbradoInicio(request.getTimbradoInicio());
+        if (request.getNumeroInicioFactura() != null) institucion.setNumeroInicioFactura(request.getNumeroInicioFactura());
+        if (request.getNumeroFinFactura() != null) institucion.setNumeroFinFactura(request.getNumeroFinFactura());
 
         return InstitucionDTO.from(institucionRepository.save(institucion));
     }
