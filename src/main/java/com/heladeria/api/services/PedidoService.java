@@ -389,6 +389,6 @@ public class PedidoService {
     @Transactional(readOnly = true)
     public void imprimirTicket(Long pedidoId, Long impresoraId) {
         Pedido pedido = obtenerPorId(pedidoId);
-        ticketPrinterService.imprimirPedidoEnSegundoPlano(impresoraId, pedido);
+        ticketPrinterService.imprimirPedido(impresoraId, pedido);
     }
 }

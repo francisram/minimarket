@@ -22,6 +22,8 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Base64;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -209,61 +211,65 @@ public class ImpresionService {
     }
 
     private void imprimirPorCups(Impresora impresora, byte[] job) {
-        String host = impresora.getIp() + ":" + impresora.getPuerto();
-        ProcessBuilder pb = new ProcessBuilder("lp", "-h", host, "-d", impresora.getCola(), "-o", "raw");
-        pb.redirectErrorStream(true);
-
-        Process process;
+        Path tempFile = null;
         try {
-            process = pb.start();
-        } catch (IOException e) {
-            throw new ImpresionException("No se pudo ejecutar lp para " + impresora.getNombre() + ": " + e.getMessage());
-        }
+            tempFile = Files.createTempFile("escpos-", ".bin");
+            Files.write(tempFile, job);
 
-        ByteArrayOutputStream salida = new ByteArrayOutputStream();
-        Thread drenador = Thread.ofVirtual().start(() -> {
-            try (InputStream in = process.getInputStream()) {
-                in.transferTo(salida);
-            } catch (IOException ignored) {
-            }
-        });
+            String host = impresora.getIp() + ":" + impresora.getPuerto();
+            ProcessBuilder pb = new ProcessBuilder("lp", "-h", host, "-d", impresora.getCola(), "-o", "raw", tempFile.toAbsolutePath().toString());
+            pb.redirectErrorStream(true);
 
-        try {
-            process.getOutputStream().write(job);
-            process.getOutputStream().flush();
-        } catch (IOException ignored) {
-        } finally {
+            Process process;
             try {
-                process.getOutputStream().close();
-            } catch (IOException ignored) {
+                process = pb.start();
+            } catch (IOException e) {
+                throw new ImpresionException("No se pudo ejecutar lp para " + impresora.getNombre() + ": " + e.getMessage());
             }
-        }
 
-        boolean termino;
-        try {
-            termino = process.waitFor(TIMEOUT_MS, TimeUnit.MILLISECONDS);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            process.destroyForcibly();
-            throw new ImpresionException("Impresión interrumpida para " + impresora.getNombre());
-        }
+            ByteArrayOutputStream salida = new ByteArrayOutputStream();
+            Thread drenador = Thread.ofVirtual().start(() -> {
+                try (InputStream in = process.getInputStream()) {
+                    in.transferTo(salida);
+                } catch (IOException ignored) {
+                }
+            });
 
-        if (!termino) {
-            process.destroyForcibly();
-            throw new ImpresionException("No se pudo imprimir en " + impresora.getNombre() + ": tiempo de espera agotado");
-        }
+            boolean termino;
+            try {
+                termino = process.waitFor(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                process.destroyForcibly();
+                throw new ImpresionException("Impresión interrumpida para " + impresora.getNombre());
+            }
 
-        try {
-            drenador.join(TIMEOUT_MS);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+            if (!termino) {
+                process.destroyForcibly();
+                throw new ImpresionException("No se pudo imprimir en " + impresora.getNombre() + ": tiempo de espera agotado");
+            }
 
-        int exitCode = process.exitValue();
-        if (exitCode != 0) {
-            String mensaje = salida.toString(StandardCharsets.UTF_8).trim();
-            throw new ImpresionException("lp terminó con código " + exitCode + " para " + impresora.getNombre()
-                    + (mensaje.isEmpty() ? "" : ": " + mensaje));
+            try {
+                drenador.join(TIMEOUT_MS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+
+            int exitCode = process.exitValue();
+            if (exitCode != 0) {
+                String mensaje = salida.toString(StandardCharsets.UTF_8).trim();
+                throw new ImpresionException("lp terminó con código " + exitCode + " para " + impresora.getNombre()
+                        + (mensaje.isEmpty() ? "" : ": " + mensaje));
+            }
+        } catch (IOException e) {
+            throw new ImpresionException("Error al preparar archivo de impresión para " + impresora.getNombre() + ": " + e.getMessage());
+        } finally {
+            if (tempFile != null) {
+                try {
+                    Files.deleteIfExists(tempFile);
+                } catch (IOException ignored) {
+                }
+            }
         }
     }
 }

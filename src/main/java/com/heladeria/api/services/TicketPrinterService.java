@@ -90,38 +90,36 @@ public class TicketPrinterService {
         if (pedido == null) {
             return;
         }
-        Thread.ofVirtual().start(() -> imprimirPedido(impresoraId, pedido));
+        Thread.ofVirtual().start(() -> {
+            try {
+                imprimirPedido(impresoraId, pedido);
+            } catch (ImpresionException e) {
+                log.warn("No se pudo imprimir en segundo plano el ticket del pedido #{}: {}", pedido.getId(), e.getMessage());
+            } catch (Exception e) {
+                log.error("Error inesperado al intentar imprimir el ticket del pedido #{}", pedido.getId(), e);
+            }
+        });
     }
 
     public void imprimirPedido(Long impresoraId, Pedido pedido) {
         if (pedido == null) {
             return;
         }
-        try {
-            Optional<Impresora> impresora;
-            if (impresoraId != null) {
-                impresora = impresoraRepository.findById(impresoraId);
-                if (impresora.isEmpty()) {
-                    log.warn("impresoraId {} no existe, no se imprime el ticket del pedido #{}", impresoraId, pedido.getId());
-                    return;
-                }
-            } else {
-                impresora = impresoraRepository.findAll().stream().findFirst();
-                if (impresora.isEmpty()) {
-                    log.warn("No hay ninguna impresora configurada, no se imprime el ticket del pedido #{}", pedido.getId());
-                    return;
-                }
+        Optional<Impresora> impresora;
+        if (impresoraId != null) {
+            impresora = impresoraRepository.findById(impresoraId);
+            if (impresora.isEmpty()) {
+                throw new ImpresionException("La impresora con ID " + impresoraId + " no existe");
             }
-
-            try {
-                impresionService.imprimir(impresora.get(), construirTicketPedido(pedido));
-                log.info("Ticket del pedido #{} enviado a imprimir en '{}'", pedido.getId(), impresora.get().getNombre());
-            } catch (ImpresionException e) {
-                log.warn("No se pudo imprimir el ticket del pedido #{}: {}", pedido.getId(), e.getMessage());
+        } else {
+            impresora = impresoraRepository.findAll().stream().findFirst();
+            if (impresora.isEmpty()) {
+                throw new ImpresionException("No hay ninguna impresora configurada en el sistema");
             }
-        } catch (Exception e) {
-            log.error("Error inesperado al intentar imprimir el ticket del pedido #{}", pedido.getId(), e);
         }
+
+        impresionService.imprimir(impresora.get(), construirTicketPedido(pedido));
+        log.info("Ticket del pedido #{} enviado a imprimir en '{}'", pedido.getId(), impresora.get().getNombre());
     }
 
     public byte[] construirTicketPedido(Pedido pedido) {
