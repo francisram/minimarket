@@ -12,6 +12,7 @@ import java.util.List;
 public interface PedidoRepository extends JpaRepository<Pedido, Long> {
     List<Pedido> findByEstado(EstadoPedido estado);
     List<Pedido> findByFechaCreacionBetweenOrderByFechaCreacionDesc(LocalDateTime inicio, LocalDateTime fin);
+    List<Pedido> findByFechaCreacionBetweenAndEstadoNotOrderByFechaCreacionDesc(LocalDateTime inicio, LocalDateTime fin, EstadoPedido estado);
     List<Pedido> findAllByOrderByFechaCreacionDesc();
     List<Pedido> findBySesionCaja_Id(Long sesionCajaId);
     List<Pedido> findBySesionCaja_IdAndEstadoNot(Long sesionCajaId, EstadoPedido estado);

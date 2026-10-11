@@ -5,6 +5,7 @@ import com.heladeria.api.entities.enums.EstadoSesionCaja;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,6 +23,10 @@ public interface SesionCajaRepository extends JpaRepository<SesionCaja, Long> {
     List<SesionCaja> findByEstado(EstadoSesionCaja estado);
 
     List<SesionCaja> findByEstadoOrderByFechaAperturaDesc(EstadoSesionCaja estado);
+
+    List<SesionCaja> findByFechaAperturaBetweenOrderByFechaAperturaDesc(LocalDateTime inicio, LocalDateTime fin);
+
+    List<SesionCaja> findByUsuarioApertura_UsernameAndFechaAperturaBetweenOrderByFechaAperturaDesc(String username, LocalDateTime inicio, LocalDateTime fin);
 
     List<SesionCaja> findAllByOrderByFechaAperturaDesc();
 }
