@@ -240,6 +240,7 @@ class TicketPrinterServiceTest {
                 .total(new BigDecimal("30000"))
                 .detalles(List.of(detalle))
                 .notas("Servir rápido")
+                .trxId("TRX-20261011-000101")
                 .build();
 
         byte[] ticketBytes = ticketPrinterService.construirTicketPedido(pedido);
@@ -249,7 +250,8 @@ class TicketPrinterServiceTest {
         String texto = new String(ticketBytes, StandardCharsets.ISO_8859_1);
 
         // Validaciones clave de moneda y formato
-        assertTrue(texto.contains("PEDIDO #101"));
+        assertTrue(texto.contains("NUMERO DE TICKET: #101"));
+        assertTrue(texto.contains("TRX ID: TRX-20261011-000101"));
         assertTrue(texto.contains("Cliente: Juan Pérez"));
         assertTrue(texto.contains("Pago: EFECTIVO"));
         assertTrue(texto.contains("Cucurucho 1 Bocha"));

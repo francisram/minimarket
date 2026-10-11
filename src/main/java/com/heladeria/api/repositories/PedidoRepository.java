@@ -7,9 +7,11 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface PedidoRepository extends JpaRepository<Pedido, Long> {
+    Optional<Pedido> findByTrxId(String trxId);
     List<Pedido> findByEstado(EstadoPedido estado);
     List<Pedido> findByFechaCreacionBetweenOrderByFechaCreacionDesc(LocalDateTime inicio, LocalDateTime fin);
     List<Pedido> findByFechaCreacionBetweenAndEstadoNotOrderByFechaCreacionDesc(LocalDateTime inicio, LocalDateTime fin, EstadoPedido estado);

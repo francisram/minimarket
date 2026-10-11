@@ -20,8 +20,10 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class PedidoService {
@@ -114,6 +116,10 @@ public class PedidoService {
             );
         }
 
+        String trxId = (request.getTrxId() != null && !request.getTrxId().isBlank())
+                ? request.getTrxId().trim()
+                : "TRX-" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")) + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+
         Pedido pedido = Pedido.builder()
                 .sesionCaja(sesionActiva)
                 .tipoComprobante(tipoComprobante)
@@ -123,6 +129,7 @@ public class PedidoService {
                 .clienteDireccion(request.getClienteDireccion() != null ? request.getClienteDireccion().trim() : null)
                 .numeroFactura(numeroFactura)
                 .numeroVoucher(request.getNumeroVoucher() != null ? request.getNumeroVoucher().trim() : null)
+                .trxId(trxId)
                 .metodoPago(request.getMetodoPago())
                 .tipoEntrega(request.getTipoEntrega())
                 .notas(request.getNotas())
@@ -328,6 +335,15 @@ public class PedidoService {
     public Pedido obtenerPorId(Long id) {
         return pedidoRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Pedido con id " + id + " no encontrado"));
+    }
+
+    @Transactional(readOnly = true)
+    public Pedido obtenerPorTrxId(String trxId) {
+        if (trxId == null || trxId.isBlank()) {
+            throw new RecursoNoEncontradoException("Identificador trxId no válido");
+        }
+        return pedidoRepository.findByTrxId(trxId.trim())
+                .orElseThrow(() -> new RecursoNoEncontradoException("Pedido con trxId '" + trxId + "' no encontrado"));
     }
 
     @Transactional

@@ -39,6 +39,8 @@ public class PedidoRequestDTO {
 
     private String numeroVoucher;
 
+    private String trxId;
+
     public PedidoRequestDTO() {
     }
 
@@ -74,4 +76,7 @@ public class PedidoRequestDTO {
 
     public String getNumeroVoucher() { return numeroVoucher; }
     public void setNumeroVoucher(String numeroVoucher) { this.numeroVoucher = numeroVoucher; }
+
+    public String getTrxId() { return trxId; }
+    public void setTrxId(String trxId) { this.trxId = trxId; }
 }

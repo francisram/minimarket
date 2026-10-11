@@ -181,6 +181,13 @@ public class ReporteService {
     public ReporteVentasDTO obtenerReporteVentas(LocalDate fechaInicio, LocalDate fechaFin,
                                                   MetodoPago metodoPago, TipoComprobante tipoComprobante,
                                                   TipoEntrega tipoEntrega, String cajero) {
+        return obtenerReporteVentas(fechaInicio, fechaFin, metodoPago, tipoComprobante, tipoEntrega, cajero, null);
+    }
+
+    @Transactional(readOnly = true)
+    public ReporteVentasDTO obtenerReporteVentas(LocalDate fechaInicio, LocalDate fechaFin,
+                                                  MetodoPago metodoPago, TipoComprobante tipoComprobante,
+                                                  TipoEntrega tipoEntrega, String cajero, String trxId) {
         LocalDateTime inicio = fechaInicio != null ? fechaInicio.atStartOfDay() : LocalDate.now().withDayOfMonth(1).atStartOfDay();
         LocalDateTime fin = fechaFin != null ? fechaFin.atTime(LocalTime.MAX) : LocalDate.now().atTime(LocalTime.MAX);
 
@@ -212,6 +219,11 @@ public class ReporteService {
                     continue;
                 }
             }
+            if (trxId != null && !trxId.isBlank()) {
+                if (p.getTrxId() == null || !p.getTrxId().toLowerCase().contains(trxId.trim().toLowerCase())) {
+                    continue;
+                }
+            }
 
             PedidoResumenReporteDTO item = new PedidoResumenReporteDTO();
             item.setId(p.getId());
@@ -222,6 +234,7 @@ public class ReporteService {
             item.setCondicionVenta(p.getCondicionVenta());
             item.setNumeroFactura(p.getNumeroFactura());
             item.setNumeroVoucher(p.getNumeroVoucher());
+            item.setTrxId(p.getTrxId());
             item.setMetodoPago(p.getMetodoPago());
             item.setTipoEntrega(p.getTipoEntrega());
             item.setTotal(MonedaPyUtils.redondearGs(p.getTotal()));

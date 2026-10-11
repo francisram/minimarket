@@ -168,9 +168,10 @@ public class TicketPrinterService {
         if (esFactura) {
             escribirLinea(out, "FACTURA N°: " + (pedido.getNumeroFactura() != null ? pedido.getNumeroFactura() : "001-001-0000001"));
         } else {
-            out.writeBytes(TEXTO_DOBLE);
-            escribirLinea(out, "PEDIDO #" + pedido.getId());
-            out.writeBytes(TEXTO_NORMAL);
+            escribirLinea(out, "NUMERO DE TICKET: #" + pedido.getId());
+        }
+        if (pedido.getTrxId() != null && !pedido.getTrxId().isBlank()) {
+            escribirLinea(out, "TRX ID: " + pedido.getTrxId());
         }
         out.writeBytes(NEGRITA_OFF);
 

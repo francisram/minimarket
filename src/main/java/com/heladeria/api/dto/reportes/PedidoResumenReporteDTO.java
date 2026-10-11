@@ -18,6 +18,7 @@ public class PedidoResumenReporteDTO {
     private CondicionVenta condicionVenta;
     private String numeroFactura;
     private String numeroVoucher;
+    private String trxId;
     private MetodoPago metodoPago;
     private TipoEntrega tipoEntrega;
     private BigDecimal total;
@@ -129,5 +130,13 @@ public class PedidoResumenReporteDTO {
 
     public void setEstado(EstadoPedido estado) {
         this.estado = estado;
+    }
+
+    public String getTrxId() {
+        return trxId;
+    }
+
+    public void setTrxId(String trxId) {
+        this.trxId = trxId;
     }
 }

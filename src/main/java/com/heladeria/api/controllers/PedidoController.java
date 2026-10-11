@@ -76,4 +76,20 @@ public class PedidoController {
         pedidoService.imprimirTicket(id, impresoraId);
         return ResponseEntity.ok().build();
     }
+
+    @GetMapping("/trx/{trxId}")
+    @Operation(summary = "Obtener detalle completo de un pedido/venta por trxId")
+    public ResponseEntity<Pedido> obtenerPorTrxId(@PathVariable String trxId) {
+        return ResponseEntity.ok(pedidoService.obtenerPorTrxId(trxId));
+    }
+
+    @PostMapping("/trx/{trxId}/imprimir")
+    @Operation(summary = "Reimprimir ticket térmico ESC/POS del pedido por trxId")
+    public ResponseEntity<Void> imprimirPorTrxId(
+            @PathVariable String trxId,
+            @RequestParam(required = false) Long impresoraId) {
+        Pedido pedido = pedidoService.obtenerPorTrxId(trxId);
+        pedidoService.imprimirTicket(pedido.getId(), impresoraId);
+        return ResponseEntity.ok().build();
+    }
 }

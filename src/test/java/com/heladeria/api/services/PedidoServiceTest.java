@@ -677,4 +677,52 @@ class PedidoServiceTest {
         assertNotNull(pedido.getId());
         assertEquals("VCH-123456", pedido.getNumeroVoucher());
     }
+
+    @Test
+    @DisplayName("Crear pedido sin trxId genera automáticamente un trxId con formato TRX-YYYYMMDD-...")
+    void testCrearPedidoGeneraTrxIdAutomatico() {
+        DetallePedidoRequestDTO itemHelado = new DetallePedidoRequestDTO();
+        itemHelado.setTipoItem(TipoItemPedido.HELADO);
+        itemHelado.setPresentacionId(poteMedioKg.getId());
+        itemHelado.setSaborIds(List.of(dulceDeLeche.getId()));
+        itemHelado.setCantidad(1);
+
+        PedidoRequestDTO request = new PedidoRequestDTO();
+        request.setMetodoPago(MetodoPago.EFECTIVO);
+        request.setTipoEntrega(TipoEntrega.MOSTRADOR);
+        request.setItems(List.of(itemHelado));
+
+        Pedido pedido = pedidoService.crearPedido(request);
+
+        assertNotNull(pedido.getId());
+        assertNotNull(pedido.getTrxId());
+        assertTrue(pedido.getTrxId().startsWith("TRX-"), "El trxId debe comenzar con TRX-");
+
+        Pedido recuperado = pedidoService.obtenerPorTrxId(pedido.getTrxId());
+        assertEquals(pedido.getId(), recuperado.getId());
+        assertEquals(pedido.getTrxId(), recuperado.getTrxId());
+    }
+
+    @Test
+    @DisplayName("Crear pedido con trxId explícito lo preserva y permite búsqueda por trxId")
+    void testCrearPedidoConTrxIdExplicito() {
+        DetallePedidoRequestDTO itemHelado = new DetallePedidoRequestDTO();
+        itemHelado.setTipoItem(TipoItemPedido.HELADO);
+        itemHelado.setPresentacionId(poteMedioKg.getId());
+        itemHelado.setSaborIds(List.of(dulceDeLeche.getId()));
+        itemHelado.setCantidad(1);
+
+        PedidoRequestDTO request = new PedidoRequestDTO();
+        request.setMetodoPago(MetodoPago.EFECTIVO);
+        request.setTipoEntrega(TipoEntrega.MOSTRADOR);
+        request.setTrxId("  TRX-MANUAL-001  ");
+        request.setItems(List.of(itemHelado));
+
+        Pedido pedido = pedidoService.crearPedido(request);
+
+        assertEquals("TRX-MANUAL-001", pedido.getTrxId());
+
+        Pedido recuperado = pedidoService.obtenerPorTrxId("TRX-MANUAL-001");
+        assertEquals(pedido.getId(), recuperado.getId());
+    }
 }

@@ -98,6 +98,15 @@ class ReporteControllerTest {
     }
 
     @Test
+    @DisplayName("GET /api/reportes/ventas con trxId devuelve 200 OK y estructura filtrada")
+    void reporteVentasConTrxIdDevuelve200() throws Exception {
+        mockMvc.perform(get("/api/reportes/ventas?trxId=TRX-123")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.pedidos").isArray());
+    }
+
+    @Test
     @DisplayName("GET /api/reportes/libro-iva devuelve 200 OK con liquidación tributaria")
     void libroIvaDevuelve200() throws Exception {
         mockMvc.perform(get("/api/reportes/libro-iva")

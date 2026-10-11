@@ -38,15 +38,16 @@ public class ReporteController {
     }
 
     @GetMapping("/ventas")
-    @Operation(summary = "Consultar reporte detallado de ventas con filtros de fecha, pago, comprobante y cajero")
+    @Operation(summary = "Consultar reporte detallado de ventas con filtros de fecha, pago, comprobante, cajero y trxId")
     public ResponseEntity<ReporteVentasDTO> obtenerReporteVentas(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
             @RequestParam(required = false) MetodoPago metodoPago,
             @RequestParam(required = false) TipoComprobante tipoComprobante,
             @RequestParam(required = false) TipoEntrega tipoEntrega,
-            @RequestParam(required = false) String cajero) {
-        return ResponseEntity.ok(reporteService.obtenerReporteVentas(fechaInicio, fechaFin, metodoPago, tipoComprobante, tipoEntrega, cajero));
+            @RequestParam(required = false) String cajero,
+            @RequestParam(required = false) String trxId) {
+        return ResponseEntity.ok(reporteService.obtenerReporteVentas(fechaInicio, fechaFin, metodoPago, tipoComprobante, tipoEntrega, cajero, trxId));
     }
 
     @GetMapping("/libro-iva")

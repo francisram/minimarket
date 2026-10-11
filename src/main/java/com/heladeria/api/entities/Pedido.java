@@ -12,9 +12,12 @@ import com.heladeria.api.entities.enums.TipoEntrega;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Table(name = "pedidos")
@@ -73,6 +76,9 @@ public class Pedido {
 
     @Column(name = "numero_voucher", length = 50)
     private String numeroVoucher;
+
+    @Column(name = "trx_id", length = 64, unique = true)
+    private String trxId;
 
     @Column(name = "total_exentas", nullable = false, precision = 12, scale = 0, columnDefinition = "numeric(12,0) default 0")
     private BigDecimal totalExentas = BigDecimal.ZERO;
@@ -198,6 +204,9 @@ public class Pedido {
         if (this.totalIva == null) {
             this.totalIva = BigDecimal.ZERO;
         }
+        if (this.trxId == null || this.trxId.isBlank()) {
+            this.trxId = "TRX-" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")) + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        }
     }
 
     public Long getId() { return id; }
@@ -256,6 +265,9 @@ public class Pedido {
     public String getNumeroVoucher() { return numeroVoucher; }
     public void setNumeroVoucher(String numeroVoucher) { this.numeroVoucher = numeroVoucher; }
 
+    public String getTrxId() { return trxId; }
+    public void setTrxId(String trxId) { this.trxId = trxId; }
+
     public BigDecimal getTotalExentas() { return totalExentas; }
     public void setTotalExentas(BigDecimal totalExentas) {
         this.totalExentas = totalExentas != null ? totalExentas.setScale(0, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO;
@@ -303,6 +315,7 @@ public class Pedido {
         private String clienteDireccion;
         private String numeroFactura;
         private String numeroVoucher;
+        private String trxId;
         private BigDecimal totalExentas = BigDecimal.ZERO;
         private BigDecimal totalGravada5 = BigDecimal.ZERO;
         private BigDecimal totalGravada10 = BigDecimal.ZERO;
@@ -326,6 +339,7 @@ public class Pedido {
         public PedidoBuilder clienteDireccion(String clienteDireccion) { this.clienteDireccion = clienteDireccion; return this; }
         public PedidoBuilder numeroFactura(String numeroFactura) { this.numeroFactura = numeroFactura; return this; }
         public PedidoBuilder numeroVoucher(String numeroVoucher) { this.numeroVoucher = numeroVoucher; return this; }
+        public PedidoBuilder trxId(String trxId) { this.trxId = trxId; return this; }
         public PedidoBuilder totalExentas(BigDecimal totalExentas) { this.totalExentas = totalExentas; return this; }
         public PedidoBuilder totalGravada5(BigDecimal totalGravada5) { this.totalGravada5 = totalGravada5; return this; }
         public PedidoBuilder totalGravada10(BigDecimal totalGravada10) { this.totalGravada10 = totalGravada10; return this; }
@@ -334,9 +348,11 @@ public class Pedido {
         public PedidoBuilder totalIva(BigDecimal totalIva) { this.totalIva = totalIva; return this; }
 
         public Pedido build() {
-            return new Pedido(id, fechaCreacion, clienteNombre, metodoPago, tipoEntrega, estado, notas, total, detalles,
+            Pedido p = new Pedido(id, fechaCreacion, clienteNombre, metodoPago, tipoEntrega, estado, notas, total, detalles,
                     sesionCaja, tipoComprobante, condicionVenta, clienteRuc, clienteDireccion, numeroFactura,
                     totalExentas, totalGravada5, totalGravada10, totalIva5, totalIva10, totalIva, numeroVoucher);
+            p.setTrxId(trxId);
+            return p;
         }
     }
 }

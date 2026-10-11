@@ -133,6 +133,7 @@ class ReporteServiceTest {
                 .clienteRuc("80012345-6")
                 .clienteNombre("Empresa Test SA")
                 .numeroFactura("001-001-0000001")
+                .trxId("TRX-TEST-001")
                 .metodoPago(MetodoPago.EFECTIVO)
                 .tipoEntrega(TipoEntrega.MOSTRADOR)
                 .estado(EstadoPedido.ENTREGADO)
@@ -164,6 +165,7 @@ class ReporteServiceTest {
                 .condicionVenta(CondicionVenta.CONTADO)
                 .clienteNombre("Juan Pérez")
                 .numeroVoucher("VCH-999111")
+                .trxId("TRX-TEST-002")
                 .metodoPago(MetodoPago.TARJETA_DEBITO)
                 .tipoEntrega(TipoEntrega.TAKE_AWAY)
                 .estado(EstadoPedido.ENTREGADO)
@@ -241,8 +243,21 @@ class ReporteServiceTest {
         assertEquals(1, reporteVentas.getPedidos().size());
         PedidoResumenReporteDTO pedido = reporteVentas.getPedidos().get(0);
         assertEquals("VCH-999111", pedido.getNumeroVoucher());
+        assertEquals("TRX-TEST-002", pedido.getTrxId());
         assertEquals(MetodoPago.TARJETA_DEBITO, pedido.getMetodoPago());
         assertEquals(0, new BigDecimal("10000").compareTo(pedido.getTotal()));
+    }
+
+    @Test
+    @DisplayName("Reporte detallado de ventas filtra correctamente por trxId")
+    void testObtenerReporteVentasConFiltroTrxId() {
+        ReporteVentasDTO reporte = reporteService.obtenerReporteVentas(
+                LocalDate.now(), LocalDate.now(), null, null, null, null, "TRX-TEST-001");
+
+        assertNotNull(reporte);
+        assertEquals(1, reporte.getPedidos().size());
+        assertEquals("TRX-TEST-001", reporte.getPedidos().get(0).getTrxId());
+        assertEquals("80012345-6", reporte.getPedidos().get(0).getClienteRuc());
     }
 
     @Test
