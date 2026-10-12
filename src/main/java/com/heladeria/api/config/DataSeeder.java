@@ -84,6 +84,7 @@ public class DataSeeder implements CommandLineRunner {
                 new Pagina(null, "usuarios", "Usuarios", "/usuarios", null, "people", 60),
                 new Pagina(null, "roles", "Roles y Permisos", "/roles", null, "security", 70),
                 new Pagina(null, "impresoras", "Impresoras ESC/POS", "/impresoras", null, "printer", 75),
+                new Pagina(null, "institucion", "Datos del Negocio", "/institucion", null, "building", 78),
                 new Pagina(null, "licencia", "Licenciamiento", "/licencia", null, "verified", 80)
         );
 
@@ -118,7 +119,7 @@ public class DataSeeder implements CommandLineRunner {
             p.setNombre("Estandar");
             return planLicenciaRepository.save(p);
         });
-        estandar.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "stock", "pedidos", "impresoras", "caja", "clientes"));
+        estandar.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "stock", "pedidos", "impresoras", "caja", "clientes", "reportes"));
         planLicenciaRepository.save(estandar);
 
         // Plan Premium
@@ -127,7 +128,7 @@ public class DataSeeder implements CommandLineRunner {
             p.setNombre("Premium");
             return planLicenciaRepository.save(p);
         });
-        premium.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "stock", "pedidos", "usuarios", "roles", "impresoras", "licencia", "caja", "clientes"));
+        premium.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "stock", "pedidos", "usuarios", "roles", "impresoras", "licencia", "caja", "clientes", "reportes", "institucion"));
         planLicenciaRepository.save(premium);
 
         // Licencia activa de esta instalacion (id=1)
