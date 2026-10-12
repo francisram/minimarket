@@ -7,6 +7,7 @@ services:
       POSTGRES_DB: heladeriadb
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+      TZ: America/Asuncion
     ports:
       - "5435:5432"
     volumes:
@@ -26,6 +27,7 @@ services:
     ports:
       - "8085:8080"
     environment:
+      TZ: America/Asuncion
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/heladeriadb
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres

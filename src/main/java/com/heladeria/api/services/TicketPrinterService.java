@@ -26,6 +26,7 @@ import java.util.Optional;
 public class TicketPrinterService {
 
     private static final Logger log = LoggerFactory.getLogger(TicketPrinterService.class);
+    public static final ZoneId ZONA_HORARIA_ASUNCION = ZoneId.of("America/Asuncion");
     private static final DateTimeFormatter FORMATO_FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
     private static final DateTimeFormatter FORMATO_SOLO_FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
@@ -347,7 +348,7 @@ public class TicketPrinterService {
         if (ticket.socio() != null) {
             escribirLinea(out, (ticket.visitante() ? "Visitante: " : "Socio: ") + ticket.socio());
         }
-        escribirLinea(out, FORMATO_FECHA.format(ticket.timestamp().atZoneSameInstant(ZoneId.systemDefault())));
+        escribirLinea(out, FORMATO_FECHA.format(ticket.timestamp().atZoneSameInstant(ZONA_HORARIA_ASUNCION)));
         out.writeBytes(AVANZAR_Y_CORTAR);
         return out.toByteArray();
     }

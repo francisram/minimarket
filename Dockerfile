@@ -12,8 +12,9 @@ RUN mvn clean package -DskipTests
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-# Instalar cliente CUPS para habilitar el binario 'lp'
-RUN apk add --no-cache cups-client
+# Instalar cliente CUPS para habilitar el binario 'lp' y tzdata para la zona horaria de Paraguay
+RUN apk add --no-cache cups-client tzdata
+ENV TZ=America/Asuncion
 
 # Crear usuario sin privilegios por seguridad
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
@@ -25,5 +26,5 @@ COPY --from=build /app/target/*.jar app.jar
 # Exponer el puerto interno de la API
 EXPOSE 8080
 
-# Comando de arranque con codificación UTF-8 explícita
-ENTRYPOINT ["java", "-Dfile.encoding=UTF-8", "-jar", "app.jar"]
+# Comando de arranque con codificación UTF-8 y zona horaria explícita
+ENTRYPOINT ["java", "-Dfile.encoding=UTF-8", "-Duser.timezone=America/Asuncion", "-jar", "app.jar"]
