@@ -11,6 +11,8 @@ import com.heladeria.api.repositories.ImpresoraRepository;
 import com.heladeria.api.repositories.InstitucionRepository;
 import com.heladeria.api.repositories.RolRepository;
 import com.heladeria.api.repositories.TicketeraRepository;
+import com.heladeria.api.entities.Pagina;
+import com.heladeria.api.repositories.PaginaRepository;
 import com.heladeria.api.repositories.UsuarioRepository;
 import com.heladeria.api.security.JwtService;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -72,6 +74,9 @@ class ImpresoraControllerTest {
     private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     @Autowired
+    private PaginaRepository paginaRepository;
+
+    @Autowired
     private JwtService jwtService;
 
     @Autowired
@@ -79,6 +84,7 @@ class ImpresoraControllerTest {
 
     private String adminToken;
     private String cajeroToken;
+    private String operadorToken;
 
     @BeforeEach
     void setUp() {
@@ -97,8 +103,33 @@ class ImpresoraControllerTest {
             usuarioRepository.save(cajero);
         }
 
+        Pagina paginaImpresoras = paginaRepository.findByClave("impresoras").orElseGet(() -> {
+            Pagina p = new Pagina(null, "impresoras", "Impresoras ESC/POS", "/impresoras", null, "printer", 75);
+            return paginaRepository.save(p);
+        });
+
+        Rol rolOperador = rolRepository.findByNombreRol("OPERADOR_IMPRESORAS").orElseGet(() -> {
+            Rol r = new Rol();
+            r.setNombreRol("OPERADOR_IMPRESORAS");
+            return rolRepository.save(r);
+        });
+        rolOperador.setPaginas(new java.util.HashSet<>(java.util.Set.of(paginaImpresoras)));
+        rolRepository.save(rolOperador);
+
+        if (usuarioRepository.findByUsername("operador_impresoras").isEmpty()) {
+            Usuario operador = new Usuario();
+            operador.setUsername("operador_impresoras");
+            operador.setPasswordHash(passwordEncoder.encode("operador123"));
+            operador.setRol(rolOperador);
+            operador.setEstado(true);
+            operador.setPasswordNuncaExpira(true);
+            operador.setDebeCambiarPassword(false);
+            usuarioRepository.save(operador);
+        }
+
         adminToken = jwtService.generateToken("admin", "ADMIN");
         cajeroToken = jwtService.generateToken("cajero", "CAJERO");
+        operadorToken = jwtService.generateToken("operador_impresoras", "OPERADOR_IMPRESORAS");
     }
 
     private Map<String, Object> bodyRed() {
@@ -122,6 +153,14 @@ class ImpresoraControllerTest {
                         .contentType("application/json")
                         .content(objectMapper.writeValueAsString(bodyRed())))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Usuario con autoridad PAGINA_impresoras puede listar impresoras")
+    void usuarioConAutoridadPaginaImpresorasPuedeListar() throws Exception {
+        mockMvc.perform(get("/impresoras")
+                        .header("Authorization", "Bearer " + operadorToken))
+                .andExpect(status().isOk());
     }
 
     @Test
