@@ -26,7 +26,7 @@ public class InstitucionController {
     }
 
     @PutMapping
-    @PreAuthorize("hasRole('ADMIN') or hasRole('OWNER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('OWNER') or hasAuthority('PAGINA_institucion')")
     @Operation(summary = "Actualizar datos y logo en base64 de la institución")
     public InstitucionDTO update(@RequestBody InstitucionDTO request) {
         return institucionService.update(request);

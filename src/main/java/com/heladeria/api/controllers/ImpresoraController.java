@@ -21,7 +21,7 @@ import java.util.List;
 @RestController
 @RequestMapping({"/impresoras", "/api/impresoras"})
 @CrossOrigin(origins = "*")
-@PreAuthorize("hasRole('ADMIN') or hasRole('OWNER')")
+@PreAuthorize("hasRole('ADMIN') or hasRole('OWNER') or hasAuthority('PAGINA_impresoras')")
 @Tag(name = "Impresoras", description = "Administración de impresoras térmicas ESC/POS (RED y CUPS) y pruebas de impresión")
 public class ImpresoraController {
 
