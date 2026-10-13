@@ -150,6 +150,34 @@ docker compose up -d --build
 
 ---
 
+### 5.1 Cómo Actualizar la Imagen de Docker al Hacer Cambios en el Código
+
+#### Opción 1: Actualización Rápida en Caliente (Recomendada)
+Compilas el nuevo ejecutable Java en tu máquina local y actualizas el contenedor activo sin necesidad de reconstruir capas de dependencias:
+
+```bash
+# 1. Compilar el JAR con Maven
+mvn clean package -DskipTests
+
+# 2. Copiar el nuevo JAR dentro del contenedor de la API
+docker cp target/heladeria-api-0.0.1-SNAPSHOT.jar heladeria-api:/app/app.jar
+
+# 3. Reiniciar el contenedor para cargar el nuevo JAR
+docker restart heladeria-api
+
+# 4. Guardar los cambios en la imagen de Docker (permanente)
+docker commit heladeria-api minimarket-app:latest
+```
+
+> **¿Qué hace `docker commit`?** Toma el contenedor `heladeria-api` con el nuevo JAR y actualiza la imagen `minimarket-app:latest` de forma permanente.
+
+#### Opción 2: Reconstrucción Completa con Docker Compose
+```bash
+docker compose up -d --build app
+```
+
+---
+
 ## 6. Resolución de Problemas Frecuentes
 
 ### Problema: "port is already allocated" (Puerto ya ocupado)
