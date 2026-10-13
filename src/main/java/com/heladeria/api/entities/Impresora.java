@@ -29,6 +29,14 @@ public class Impresora {
     @Column(length = 100)
     private String cola;
 
+    /** Solo WINDOWS: usuario de red de Windows (opcional) */
+    @Column(length = 50)
+    private String usuario;
+
+    /** Solo WINDOWS: contraseña de red de Windows (opcional) */
+    @Column(length = 100)
+    private String password;
+
     public Impresora() {
     }
 
@@ -39,6 +47,12 @@ public class Impresora {
         this.ip = ip;
         this.puerto = puerto;
         this.cola = cola;
+    }
+
+    public Impresora(Long id, String nombre, TipoConexion tipoConexion, String ip, Integer puerto, String cola, String usuario, String password) {
+        this(id, nombre, tipoConexion, ip, puerto, cola);
+        this.usuario = usuario;
+        this.password = password;
     }
 
     public Long getId() {
@@ -87,5 +101,21 @@ public class Impresora {
 
     public void setCola(String cola) {
         this.cola = cola;
+    }
+
+    public String getUsuario() {
+        return usuario;
+    }
+
+    public void setUsuario(String usuario) {
+        this.usuario = usuario;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 }

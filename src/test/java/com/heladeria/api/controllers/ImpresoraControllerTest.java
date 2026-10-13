@@ -243,6 +243,40 @@ class ImpresoraControllerTest {
     }
 
     @Test
+    @DisplayName("Crear tipo WINDOWS sin cola devuelve 400 Bad Request")
+    void crearTipoWindowsSinColaDevuelve400() throws Exception {
+        Map<String, Object> body = new HashMap<>(bodyRed());
+        body.put("tipoConexion", "WINDOWS");
+
+        mockMvc.perform(post("/impresoras")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("Crear tipo WINDOWS con cola usa puerto default 445 y mapea usuario")
+    void crearTipoWindowsConColaUsaPuertoDefault445() throws Exception {
+        Map<String, Object> body = new HashMap<>(bodyRed());
+        body.put("tipoConexion", "windows");
+        body.put("cola", "\\TERMICA_POS");
+        body.put("usuario", "cajero");
+        body.put("password", "secreto123");
+
+        mockMvc.perform(post("/impresoras")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.tipoConexion").value("WINDOWS"))
+                .andExpect(jsonPath("$.puerto").value(445))
+                .andExpect(jsonPath("$.cola").value("TERMICA_POS"))
+                .andExpect(jsonPath("$.usuario").value("cajero"))
+                .andExpect(jsonPath("$.tienePassword").value(true));
+    }
+
+    @Test
     @DisplayName("Crear impresora con nombre duplicado devuelve 409 Conflict")
     void crearNombreDuplicadoDevuelve409() throws Exception {
         mockMvc.perform(post("/impresoras")

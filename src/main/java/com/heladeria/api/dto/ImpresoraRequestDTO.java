@@ -16,6 +16,10 @@ public class ImpresoraRequestDTO {
 
     private String cola;
 
+    private String usuario;
+
+    private String password;
+
     public ImpresoraRequestDTO() {
     }
 
@@ -25,6 +29,12 @@ public class ImpresoraRequestDTO {
         this.ip = ip;
         this.puerto = puerto;
         this.cola = cola;
+    }
+
+    public ImpresoraRequestDTO(String nombre, String tipoConexion, String ip, Integer puerto, String cola, String usuario, String password) {
+        this(nombre, tipoConexion, ip, puerto, cola);
+        this.usuario = usuario;
+        this.password = password;
     }
 
     public String getNombre() {
@@ -65,5 +75,21 @@ public class ImpresoraRequestDTO {
 
     public void setCola(String cola) {
         this.cola = cola;
+    }
+
+    public String getUsuario() {
+        return usuario;
+    }
+
+    public void setUsuario(String usuario) {
+        this.usuario = usuario;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 }

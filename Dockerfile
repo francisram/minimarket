@@ -12,8 +12,8 @@ RUN mvn clean package -DskipTests
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-# Instalar cliente CUPS para habilitar el binario 'lp' y tzdata para la zona horaria de Paraguay
-RUN apk add --no-cache cups-client tzdata
+# Instalar cliente CUPS y Samba para impresión por red/Windows y tzdata para la zona horaria de Paraguay
+RUN apk add --no-cache cups-client samba-client tzdata
 ENV TZ=America/Asuncion
 
 # Crear usuario sin privilegios por seguridad

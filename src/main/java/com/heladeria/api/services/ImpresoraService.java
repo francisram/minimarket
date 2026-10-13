@@ -19,6 +19,7 @@ public class ImpresoraService {
 
     private static final int PUERTO_DEFAULT_RED = 9100;
     private static final int PUERTO_DEFAULT_CUPS = 631;
+    private static final int PUERTO_DEFAULT_WINDOWS = 445;
 
     private final ImpresoraRepository impresoraRepository;
     private final TicketeraRepository ticketeraRepository;
@@ -94,23 +95,42 @@ public class ImpresoraService {
         if (tipoConexion == TipoConexion.CUPS && !StringUtils.hasText(request.getCola())) {
             throw new IllegalArgumentException("cola es requerida para conexión CUPS");
         }
+        if (tipoConexion == TipoConexion.WINDOWS && !StringUtils.hasText(request.getCola())) {
+            throw new IllegalArgumentException("cola (recurso compartido) es requerida para conexión WINDOWS");
+        }
 
         Integer puerto = request.getPuerto() != null
                 ? request.getPuerto()
-                : (tipoConexion == TipoConexion.RED ? PUERTO_DEFAULT_RED : PUERTO_DEFAULT_CUPS);
+                : (tipoConexion == TipoConexion.RED ? PUERTO_DEFAULT_RED
+                        : (tipoConexion == TipoConexion.WINDOWS ? PUERTO_DEFAULT_WINDOWS : PUERTO_DEFAULT_CUPS));
+
+        String ipLimpia = request.getIp().trim().replaceFirst("^[\\\\/]+", "");
+        String colaLimpia = (tipoConexion == TipoConexion.CUPS || tipoConexion == TipoConexion.WINDOWS) && StringUtils.hasText(request.getCola())
+                ? request.getCola().trim().replaceFirst("^[\\\\/]+", "")
+                : null;
 
         impresora.setNombre(request.getNombre().trim());
         impresora.setTipoConexion(tipoConexion);
-        impresora.setIp(request.getIp().trim());
+        impresora.setIp(ipLimpia);
         impresora.setPuerto(puerto);
-        impresora.setCola(tipoConexion == TipoConexion.CUPS ? request.getCola().trim() : null);
+        impresora.setCola(colaLimpia);
+
+        if (tipoConexion == TipoConexion.WINDOWS) {
+            impresora.setUsuario(StringUtils.hasText(request.getUsuario()) ? request.getUsuario().trim() : null);
+            if (request.getPassword() != null) {
+                impresora.setPassword(StringUtils.hasText(request.getPassword()) ? request.getPassword().trim() : null);
+            }
+        } else {
+            impresora.setUsuario(null);
+            impresora.setPassword(null);
+        }
     }
 
     private TipoConexion parseTipoConexion(String valor) {
         try {
             return TipoConexion.valueOf(valor.trim().toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("tipoConexion debe ser RED o CUPS");
+            throw new IllegalArgumentException("tipoConexion debe ser RED, CUPS o WINDOWS");
         }
     }
 }

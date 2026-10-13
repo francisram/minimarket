@@ -11,6 +11,8 @@ public class ImpresoraDTO {
     private String ip;
     private Integer puerto;
     private String cola;
+    private String usuario;
+    private Boolean tienePassword;
 
     public ImpresoraDTO() {
     }
@@ -24,6 +26,12 @@ public class ImpresoraDTO {
         this.cola = cola;
     }
 
+    public ImpresoraDTO(Long id, String nombre, TipoConexion tipoConexion, String ip, Integer puerto, String cola, String usuario, Boolean tienePassword) {
+        this(id, nombre, tipoConexion, ip, puerto, cola);
+        this.usuario = usuario;
+        this.tienePassword = tienePassword;
+    }
+
     public static ImpresoraDTO from(Impresora impresora) {
         if (impresora == null) {
             return null;
@@ -34,7 +42,9 @@ public class ImpresoraDTO {
                 impresora.getTipoConexion(),
                 impresora.getIp(),
                 impresora.getPuerto(),
-                impresora.getCola()
+                impresora.getCola(),
+                impresora.getUsuario(),
+                impresora.getPassword() != null && !impresora.getPassword().isBlank()
         );
     }
 
@@ -84,5 +94,21 @@ public class ImpresoraDTO {
 
     public void setCola(String cola) {
         this.cola = cola;
+    }
+
+    public String getUsuario() {
+        return usuario;
+    }
+
+    public void setUsuario(String usuario) {
+        this.usuario = usuario;
+    }
+
+    public Boolean getTienePassword() {
+        return tienePassword;
+    }
+
+    public void setTienePassword(Boolean tienePassword) {
+        this.tienePassword = tienePassword;
     }
 }

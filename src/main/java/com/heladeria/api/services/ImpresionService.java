@@ -24,7 +24,9 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -61,6 +63,8 @@ public class ImpresionService {
     public void imprimir(Impresora impresora, byte[] job) {
         if (impresora.getTipoConexion() == TipoConexion.CUPS) {
             imprimirPorCups(impresora, job);
+        } else if (impresora.getTipoConexion() == TipoConexion.WINDOWS) {
+            imprimirPorWindows(impresora, job);
         } else {
             imprimirPorRed(impresora, job);
         }
@@ -259,6 +263,99 @@ public class ImpresionService {
             if (exitCode != 0) {
                 String mensaje = salida.toString(StandardCharsets.UTF_8).trim();
                 throw new ImpresionException("lp terminó con código " + exitCode + " para " + impresora.getNombre()
+                        + (mensaje.isEmpty() ? "" : ": " + mensaje));
+            }
+        } catch (IOException e) {
+            throw new ImpresionException("Error al preparar archivo de impresión para " + impresora.getNombre() + ": " + e.getMessage());
+        } finally {
+            if (tempFile != null) {
+                try {
+                    Files.deleteIfExists(tempFile);
+                } catch (IOException ignored) {
+                }
+            }
+        }
+    }
+
+    private void imprimirPorWindows(Impresora impresora, byte[] job) {
+        if (!StringUtils.hasText(impresora.getCola())) {
+            throw new ImpresionException("La impresora Windows " + impresora.getNombre() + " no tiene configurado el recurso compartido");
+        }
+
+        Path tempFile = null;
+        try {
+            tempFile = Files.createTempFile("escpos-win-", ".bin");
+            Files.write(tempFile, job);
+
+            String service = "//" + impresora.getIp() + "/" + impresora.getCola();
+            List<String> comando = new ArrayList<>();
+            comando.add("smbclient");
+            comando.add(service);
+
+            if (StringUtils.hasText(impresora.getUsuario())) {
+                String credencial = impresora.getUsuario();
+                if (StringUtils.hasText(impresora.getPassword())) {
+                    credencial += "%" + impresora.getPassword();
+                }
+                comando.add("-U");
+                comando.add(credencial);
+            } else {
+                comando.add("-N");
+            }
+
+            if (impresora.getPuerto() != null && impresora.getPuerto() > 0) {
+                comando.add("-p");
+                comando.add(String.valueOf(impresora.getPuerto()));
+            }
+
+            comando.add("-t");
+            comando.add("4");
+
+            comando.add("-c");
+            comando.add("print " + tempFile.toAbsolutePath());
+
+            ProcessBuilder pb = new ProcessBuilder(comando);
+            pb.redirectErrorStream(true);
+
+            Process process;
+            try {
+                process = pb.start();
+            } catch (IOException e) {
+                throw new ImpresionException("No se pudo ejecutar smbclient para " + impresora.getNombre() + ": " + e.getMessage());
+            }
+
+            ByteArrayOutputStream salida = new ByteArrayOutputStream();
+            Thread drenador = Thread.ofVirtual().start(() -> {
+                try (InputStream in = process.getInputStream()) {
+                    in.transferTo(salida);
+                } catch (IOException ignored) {
+                }
+            });
+
+            boolean termino;
+            try {
+                termino = process.waitFor(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                process.destroyForcibly();
+                throw new ImpresionException("Impresión interrumpida para " + impresora.getNombre());
+            }
+
+            if (!termino) {
+                process.destroyForcibly();
+                throw new ImpresionException("No se pudo imprimir en " + impresora.getNombre() + ": tiempo de espera agotado al conectar a Windows (" + impresora.getIp() + ")");
+            }
+
+            try {
+                drenador.join(TIMEOUT_MS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+
+            int exitCode = process.exitValue();
+            if (exitCode != 0) {
+                String mensaje = salida.toString(StandardCharsets.UTF_8).trim();
+                throw new ImpresionException("smbclient terminó con código " + exitCode + " para " + impresora.getNombre()
                         + (mensaje.isEmpty() ? "" : ": " + mensaje));
             }
         } catch (IOException e) {
