@@ -18,6 +18,10 @@ public class SesionCajaDTO {
     private BigDecimal montoEsperadoEfectivo;
     private BigDecimal montoRealEfectivo;
     private BigDecimal diferencia;
+    private BigDecimal montoRealTarjeta;
+    private BigDecimal diferenciaTarjeta;
+    private BigDecimal montoRealTransferenciaQr;
+    private BigDecimal diferenciaTransferenciaQr;
     private BigDecimal totalVentasEfectivo;
     private BigDecimal totalVentasTarjetaDebito;
     private BigDecimal totalVentasTarjetaCredito;
@@ -37,6 +41,22 @@ public class SesionCajaDTO {
                          BigDecimal totalVentasTarjetaCredito, BigDecimal totalVentasTransferenciaQr,
                          BigDecimal totalVentasGeneral, Integer cantidadPedidos,
                          String observacionesApertura, String observacionesCierre) {
+        this(id, estado, usuarioApertura, usuarioCierre, fechaApertura, fechaCierre, montoInicial,
+                montoEsperadoEfectivo, montoRealEfectivo, diferencia, null, null, null, null,
+                totalVentasEfectivo, totalVentasTarjetaDebito, totalVentasTarjetaCredito,
+                totalVentasTransferenciaQr, totalVentasGeneral, cantidadPedidos,
+                observacionesApertura, observacionesCierre);
+    }
+
+    public SesionCajaDTO(Long id, EstadoSesionCaja estado, String usuarioApertura, String usuarioCierre,
+                         LocalDateTime fechaApertura, LocalDateTime fechaCierre, BigDecimal montoInicial,
+                         BigDecimal montoEsperadoEfectivo, BigDecimal montoRealEfectivo, BigDecimal diferencia,
+                         BigDecimal montoRealTarjeta, BigDecimal diferenciaTarjeta,
+                         BigDecimal montoRealTransferenciaQr, BigDecimal diferenciaTransferenciaQr,
+                         BigDecimal totalVentasEfectivo, BigDecimal totalVentasTarjetaDebito,
+                         BigDecimal totalVentasTarjetaCredito, BigDecimal totalVentasTransferenciaQr,
+                         BigDecimal totalVentasGeneral, Integer cantidadPedidos,
+                         String observacionesApertura, String observacionesCierre) {
         this.id = id;
         this.estado = estado;
         this.usuarioApertura = usuarioApertura;
@@ -47,6 +67,10 @@ public class SesionCajaDTO {
         this.montoEsperadoEfectivo = montoEsperadoEfectivo;
         this.montoRealEfectivo = montoRealEfectivo;
         this.diferencia = diferencia;
+        this.montoRealTarjeta = montoRealTarjeta;
+        this.diferenciaTarjeta = diferenciaTarjeta;
+        this.montoRealTransferenciaQr = montoRealTransferenciaQr;
+        this.diferenciaTransferenciaQr = diferenciaTransferenciaQr;
         this.totalVentasEfectivo = totalVentasEfectivo;
         this.totalVentasTarjetaDebito = totalVentasTarjetaDebito;
         this.totalVentasTarjetaCredito = totalVentasTarjetaCredito;
@@ -72,6 +96,10 @@ public class SesionCajaDTO {
                 entity.getMontoEsperadoEfectivo(),
                 entity.getMontoRealEfectivo(),
                 entity.getDiferencia(),
+                entity.getMontoRealTarjeta(),
+                entity.getDiferenciaTarjeta(),
+                entity.getMontoRealTransferenciaQr(),
+                entity.getDiferenciaTransferenciaQr(),
                 entity.getTotalVentasEfectivo(),
                 entity.getTotalVentasTarjetaDebito(),
                 entity.getTotalVentasTarjetaCredito(),
@@ -112,6 +140,18 @@ public class SesionCajaDTO {
 
     public BigDecimal getDiferencia() { return diferencia; }
     public void setDiferencia(BigDecimal diferencia) { this.diferencia = diferencia; }
+
+    public BigDecimal getMontoRealTarjeta() { return montoRealTarjeta; }
+    public void setMontoRealTarjeta(BigDecimal montoRealTarjeta) { this.montoRealTarjeta = montoRealTarjeta; }
+
+    public BigDecimal getDiferenciaTarjeta() { return diferenciaTarjeta; }
+    public void setDiferenciaTarjeta(BigDecimal diferenciaTarjeta) { this.diferenciaTarjeta = diferenciaTarjeta; }
+
+    public BigDecimal getMontoRealTransferenciaQr() { return montoRealTransferenciaQr; }
+    public void setMontoRealTransferenciaQr(BigDecimal montoRealTransferenciaQr) { this.montoRealTransferenciaQr = montoRealTransferenciaQr; }
+
+    public BigDecimal getDiferenciaTransferenciaQr() { return diferenciaTransferenciaQr; }
+    public void setDiferenciaTransferenciaQr(BigDecimal diferenciaTransferenciaQr) { this.diferenciaTransferenciaQr = diferenciaTransferenciaQr; }
 
     public BigDecimal getTotalVentasEfectivo() { return totalVentasEfectivo; }
     public void setTotalVentasEfectivo(BigDecimal totalVentasEfectivo) { this.totalVentasEfectivo = totalVentasEfectivo; }

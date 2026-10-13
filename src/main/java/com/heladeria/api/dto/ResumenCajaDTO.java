@@ -18,7 +18,10 @@ public class ResumenCajaDTO {
     private BigDecimal totalTransferenciaQr;
     private BigDecimal totalVentas;
     private BigDecimal totalEsperadoEfectivo;
+    private BigDecimal totalEsperadoTarjeta;
     private Integer totalPedidos;
+    private Integer cantidadVouchers;
+    private Integer cantidadTransferencias;
 
     public ResumenCajaDTO() {
     }
@@ -28,6 +31,17 @@ public class ResumenCajaDTO {
                           BigDecimal totalTarjetaDebito, BigDecimal totalTarjetaCredito,
                           BigDecimal totalTransferenciaQr, BigDecimal totalVentas,
                           BigDecimal totalEsperadoEfectivo, Integer totalPedidos) {
+        this(sesionId, estado, usuarioApertura, fechaApertura, montoInicial, totalEfectivo,
+                totalTarjetaDebito, totalTarjetaCredito, totalTransferenciaQr, totalVentas,
+                totalEsperadoEfectivo, null, totalPedidos, 0, 0);
+    }
+
+    public ResumenCajaDTO(Long sesionId, EstadoSesionCaja estado, String usuarioApertura,
+                          LocalDateTime fechaApertura, BigDecimal montoInicial, BigDecimal totalEfectivo,
+                          BigDecimal totalTarjetaDebito, BigDecimal totalTarjetaCredito,
+                          BigDecimal totalTransferenciaQr, BigDecimal totalVentas,
+                          BigDecimal totalEsperadoEfectivo, BigDecimal totalEsperadoTarjeta,
+                          Integer totalPedidos, Integer cantidadVouchers, Integer cantidadTransferencias) {
         this.sesionId = sesionId;
         this.estado = estado;
         this.usuarioApertura = usuarioApertura;
@@ -39,7 +53,10 @@ public class ResumenCajaDTO {
         this.totalTransferenciaQr = totalTransferenciaQr;
         this.totalVentas = totalVentas;
         this.totalEsperadoEfectivo = totalEsperadoEfectivo;
+        this.totalEsperadoTarjeta = totalEsperadoTarjeta;
         this.totalPedidos = totalPedidos;
+        this.cantidadVouchers = cantidadVouchers;
+        this.cantidadTransferencias = cantidadTransferencias;
     }
 
     public static ResumenCajaDTOBuilder builder() {
@@ -134,12 +151,36 @@ public class ResumenCajaDTO {
         this.totalEsperadoEfectivo = totalEsperadoEfectivo;
     }
 
+    public BigDecimal getTotalEsperadoTarjeta() {
+        return totalEsperadoTarjeta;
+    }
+
+    public void setTotalEsperadoTarjeta(BigDecimal totalEsperadoTarjeta) {
+        this.totalEsperadoTarjeta = totalEsperadoTarjeta;
+    }
+
     public Integer getTotalPedidos() {
         return totalPedidos;
     }
 
     public void setTotalPedidos(Integer totalPedidos) {
         this.totalPedidos = totalPedidos;
+    }
+
+    public Integer getCantidadVouchers() {
+        return cantidadVouchers;
+    }
+
+    public void setCantidadVouchers(Integer cantidadVouchers) {
+        this.cantidadVouchers = cantidadVouchers;
+    }
+
+    public Integer getCantidadTransferencias() {
+        return cantidadTransferencias;
+    }
+
+    public void setCantidadTransferencias(Integer cantidadTransferencias) {
+        this.cantidadTransferencias = cantidadTransferencias;
     }
 
     public static class ResumenCajaDTOBuilder {
@@ -154,7 +195,10 @@ public class ResumenCajaDTO {
         private BigDecimal totalTransferenciaQr;
         private BigDecimal totalVentas;
         private BigDecimal totalEsperadoEfectivo;
+        private BigDecimal totalEsperadoTarjeta;
         private Integer totalPedidos;
+        private Integer cantidadVouchers;
+        private Integer cantidadTransferencias;
 
         public ResumenCajaDTOBuilder sesionId(Long sesionId) { this.sesionId = sesionId; return this; }
         public ResumenCajaDTOBuilder estado(EstadoSesionCaja estado) { this.estado = estado; return this; }
@@ -167,12 +211,16 @@ public class ResumenCajaDTO {
         public ResumenCajaDTOBuilder totalTransferenciaQr(BigDecimal totalTransferenciaQr) { this.totalTransferenciaQr = totalTransferenciaQr; return this; }
         public ResumenCajaDTOBuilder totalVentas(BigDecimal totalVentas) { this.totalVentas = totalVentas; return this; }
         public ResumenCajaDTOBuilder totalEsperadoEfectivo(BigDecimal totalEsperadoEfectivo) { this.totalEsperadoEfectivo = totalEsperadoEfectivo; return this; }
+        public ResumenCajaDTOBuilder totalEsperadoTarjeta(BigDecimal totalEsperadoTarjeta) { this.totalEsperadoTarjeta = totalEsperadoTarjeta; return this; }
         public ResumenCajaDTOBuilder totalPedidos(Integer totalPedidos) { this.totalPedidos = totalPedidos; return this; }
+        public ResumenCajaDTOBuilder cantidadVouchers(Integer cantidadVouchers) { this.cantidadVouchers = cantidadVouchers; return this; }
+        public ResumenCajaDTOBuilder cantidadTransferencias(Integer cantidadTransferencias) { this.cantidadTransferencias = cantidadTransferencias; return this; }
 
         public ResumenCajaDTO build() {
             return new ResumenCajaDTO(sesionId, estado, usuarioApertura, fechaApertura, montoInicial,
                     totalEfectivo, totalTarjetaDebito, totalTarjetaCredito, totalTransferenciaQr,
-                    totalVentas, totalEsperadoEfectivo, totalPedidos);
+                    totalVentas, totalEsperadoEfectivo, totalEsperadoTarjeta,
+                    totalPedidos, cantidadVouchers, cantidadTransferencias);
         }
     }
 }

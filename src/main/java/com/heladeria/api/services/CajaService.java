@@ -97,6 +97,8 @@ public class CajaService {
         BigDecimal totalTarjetaCredito = BigDecimal.ZERO;
         BigDecimal totalTransferenciaQr = BigDecimal.ZERO;
         BigDecimal totalVentas = BigDecimal.ZERO;
+        int cantidadVouchers = 0;
+        int cantidadTransferencias = 0;
 
         for (Pedido p : pedidos) {
             BigDecimal totalPedido = MonedaPyUtils.redondearGs(p.getTotal());
@@ -106,14 +108,18 @@ public class CajaService {
                 totalEfectivo = totalEfectivo.add(totalPedido);
             } else if (p.getMetodoPago() == MetodoPago.TARJETA_DEBITO) {
                 totalTarjetaDebito = totalTarjetaDebito.add(totalPedido);
+                cantidadVouchers++;
             } else if (p.getMetodoPago() == MetodoPago.TARJETA_CREDITO) {
                 totalTarjetaCredito = totalTarjetaCredito.add(totalPedido);
+                cantidadVouchers++;
             } else if (p.getMetodoPago() == MetodoPago.TRANSFERENCIA_QR) {
                 totalTransferenciaQr = totalTransferenciaQr.add(totalPedido);
+                cantidadTransferencias++;
             }
         }
 
         BigDecimal totalEsperadoEfectivo = MonedaPyUtils.redondearGs(sesion.getMontoInicial().add(totalEfectivo));
+        BigDecimal totalEsperadoTarjeta = MonedaPyUtils.redondearGs(totalTarjetaDebito.add(totalTarjetaCredito));
 
         return ResumenCajaDTO.builder()
                 .sesionId(sesion.getId())
@@ -127,7 +133,10 @@ public class CajaService {
                 .totalTransferenciaQr(totalTransferenciaQr)
                 .totalVentas(totalVentas)
                 .totalEsperadoEfectivo(totalEsperadoEfectivo)
+                .totalEsperadoTarjeta(totalEsperadoTarjeta)
                 .totalPedidos(pedidos.size())
+                .cantidadVouchers(cantidadVouchers)
+                .cantidadTransferencias(cantidadTransferencias)
                 .build();
     }
 
@@ -226,15 +235,34 @@ public class CajaService {
             }
         }
 
+        BigDecimal totalEsperadoTarjeta = MonedaPyUtils.redondearGs(totalTarjetaDebito.add(totalTarjetaCredito));
         BigDecimal montoEsperadoEfectivo = MonedaPyUtils.redondearGs(sesion.getMontoInicial().add(totalEfectivo));
         BigDecimal montoRealEfectivo = MonedaPyUtils.redondearGs(request.getMontoRealEfectivo());
         BigDecimal diferencia = MonedaPyUtils.redondearGs(montoRealEfectivo.subtract(montoEsperadoEfectivo));
+
+        BigDecimal montoRealTarjeta = request.getMontoRealTarjeta() != null
+                ? MonedaPyUtils.redondearGs(request.getMontoRealTarjeta())
+                : null;
+        BigDecimal diferenciaTarjeta = montoRealTarjeta != null
+                ? MonedaPyUtils.redondearGs(montoRealTarjeta.subtract(totalEsperadoTarjeta))
+                : null;
+
+        BigDecimal montoRealTransferenciaQr = request.getMontoRealTransferenciaQr() != null
+                ? MonedaPyUtils.redondearGs(request.getMontoRealTransferenciaQr())
+                : null;
+        BigDecimal diferenciaTransferenciaQr = montoRealTransferenciaQr != null
+                ? MonedaPyUtils.redondearGs(montoRealTransferenciaQr.subtract(totalTransferenciaQr))
+                : null;
 
         sesion.setUsuarioCierre(usuario);
         sesion.setFechaCierre(LocalDateTime.now());
         sesion.setMontoEsperadoEfectivo(montoEsperadoEfectivo);
         sesion.setMontoRealEfectivo(montoRealEfectivo);
         sesion.setDiferencia(diferencia);
+        sesion.setMontoRealTarjeta(montoRealTarjeta);
+        sesion.setDiferenciaTarjeta(diferenciaTarjeta);
+        sesion.setMontoRealTransferenciaQr(montoRealTransferenciaQr);
+        sesion.setDiferenciaTransferenciaQr(diferenciaTransferenciaQr);
         sesion.setTotalVentasEfectivo(totalEfectivo);
         sesion.setTotalVentasTarjetaDebito(totalTarjetaDebito);
         sesion.setTotalVentasTarjetaCredito(totalTarjetaCredito);

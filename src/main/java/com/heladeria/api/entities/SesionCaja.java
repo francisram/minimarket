@@ -44,6 +44,18 @@ public class SesionCaja {
     private BigDecimal diferencia;
 
     @Column(precision = 12, scale = 0)
+    private BigDecimal montoRealTarjeta;
+
+    @Column(precision = 12, scale = 0)
+    private BigDecimal diferenciaTarjeta;
+
+    @Column(precision = 12, scale = 0)
+    private BigDecimal montoRealTransferenciaQr;
+
+    @Column(precision = 12, scale = 0)
+    private BigDecimal diferenciaTransferenciaQr;
+
+    @Column(precision = 12, scale = 0)
     private BigDecimal totalVentasEfectivo;
 
     @Column(precision = 12, scale = 0)
@@ -80,6 +92,22 @@ public class SesionCaja {
                       BigDecimal totalVentasTarjetaDebito, BigDecimal totalVentasTarjetaCredito,
                       BigDecimal totalVentasTransferenciaQr, BigDecimal totalVentasGeneral, Integer cantidadPedidos,
                       EstadoSesionCaja estado, String observacionesApertura, String observacionesCierre) {
+        this(id, usuarioApertura, usuarioCierre, fechaApertura, fechaCierre, montoInicial,
+                montoEsperadoEfectivo, montoRealEfectivo, diferencia, null, null, null, null,
+                totalVentasEfectivo, totalVentasTarjetaDebito, totalVentasTarjetaCredito,
+                totalVentasTransferenciaQr, totalVentasGeneral, cantidadPedidos,
+                estado, observacionesApertura, observacionesCierre);
+    }
+
+    public SesionCaja(Long id, Usuario usuarioApertura, Usuario usuarioCierre, LocalDateTime fechaApertura,
+                      LocalDateTime fechaCierre, BigDecimal montoInicial, BigDecimal montoEsperadoEfectivo,
+                      BigDecimal montoRealEfectivo, BigDecimal diferencia,
+                      BigDecimal montoRealTarjeta, BigDecimal diferenciaTarjeta,
+                      BigDecimal montoRealTransferenciaQr, BigDecimal diferenciaTransferenciaQr,
+                      BigDecimal totalVentasEfectivo, BigDecimal totalVentasTarjetaDebito,
+                      BigDecimal totalVentasTarjetaCredito, BigDecimal totalVentasTransferenciaQr,
+                      BigDecimal totalVentasGeneral, Integer cantidadPedidos,
+                      EstadoSesionCaja estado, String observacionesApertura, String observacionesCierre) {
         this.id = id;
         this.usuarioApertura = usuarioApertura;
         this.usuarioCierre = usuarioCierre;
@@ -89,6 +117,10 @@ public class SesionCaja {
         this.montoEsperadoEfectivo = montoEsperadoEfectivo != null ? MonedaPyUtils.redondearGs(montoEsperadoEfectivo) : null;
         this.montoRealEfectivo = montoRealEfectivo != null ? MonedaPyUtils.redondearGs(montoRealEfectivo) : null;
         this.diferencia = diferencia != null ? MonedaPyUtils.redondearGs(diferencia) : null;
+        this.montoRealTarjeta = montoRealTarjeta != null ? MonedaPyUtils.redondearGs(montoRealTarjeta) : null;
+        this.diferenciaTarjeta = diferenciaTarjeta != null ? MonedaPyUtils.redondearGs(diferenciaTarjeta) : null;
+        this.montoRealTransferenciaQr = montoRealTransferenciaQr != null ? MonedaPyUtils.redondearGs(montoRealTransferenciaQr) : null;
+        this.diferenciaTransferenciaQr = diferenciaTransferenciaQr != null ? MonedaPyUtils.redondearGs(diferenciaTransferenciaQr) : null;
         this.totalVentasEfectivo = totalVentasEfectivo != null ? MonedaPyUtils.redondearGs(totalVentasEfectivo) : BigDecimal.ZERO;
         this.totalVentasTarjetaDebito = totalVentasTarjetaDebito != null ? MonedaPyUtils.redondearGs(totalVentasTarjetaDebito) : BigDecimal.ZERO;
         this.totalVentasTarjetaCredito = totalVentasTarjetaCredito != null ? MonedaPyUtils.redondearGs(totalVentasTarjetaCredito) : BigDecimal.ZERO;
@@ -152,6 +184,26 @@ public class SesionCaja {
         this.diferencia = diferencia != null ? MonedaPyUtils.redondearGs(diferencia) : null;
     }
 
+    public BigDecimal getMontoRealTarjeta() { return montoRealTarjeta; }
+    public void setMontoRealTarjeta(BigDecimal montoRealTarjeta) {
+        this.montoRealTarjeta = montoRealTarjeta != null ? MonedaPyUtils.redondearGs(montoRealTarjeta) : null;
+    }
+
+    public BigDecimal getDiferenciaTarjeta() { return diferenciaTarjeta; }
+    public void setDiferenciaTarjeta(BigDecimal diferenciaTarjeta) {
+        this.diferenciaTarjeta = diferenciaTarjeta != null ? MonedaPyUtils.redondearGs(diferenciaTarjeta) : null;
+    }
+
+    public BigDecimal getMontoRealTransferenciaQr() { return montoRealTransferenciaQr; }
+    public void setMontoRealTransferenciaQr(BigDecimal montoRealTransferenciaQr) {
+        this.montoRealTransferenciaQr = montoRealTransferenciaQr != null ? MonedaPyUtils.redondearGs(montoRealTransferenciaQr) : null;
+    }
+
+    public BigDecimal getDiferenciaTransferenciaQr() { return diferenciaTransferenciaQr; }
+    public void setDiferenciaTransferenciaQr(BigDecimal diferenciaTransferenciaQr) {
+        this.diferenciaTransferenciaQr = diferenciaTransferenciaQr != null ? MonedaPyUtils.redondearGs(diferenciaTransferenciaQr) : null;
+    }
+
     public BigDecimal getTotalVentasEfectivo() { return totalVentasEfectivo; }
     public void setTotalVentasEfectivo(BigDecimal totalVentasEfectivo) {
         this.totalVentasEfectivo = totalVentasEfectivo != null ? MonedaPyUtils.redondearGs(totalVentasEfectivo) : BigDecimal.ZERO;
@@ -199,6 +251,10 @@ public class SesionCaja {
         private BigDecimal montoEsperadoEfectivo;
         private BigDecimal montoRealEfectivo;
         private BigDecimal diferencia;
+        private BigDecimal montoRealTarjeta;
+        private BigDecimal diferenciaTarjeta;
+        private BigDecimal montoRealTransferenciaQr;
+        private BigDecimal diferenciaTransferenciaQr;
         private BigDecimal totalVentasEfectivo = BigDecimal.ZERO;
         private BigDecimal totalVentasTarjetaDebito = BigDecimal.ZERO;
         private BigDecimal totalVentasTarjetaCredito = BigDecimal.ZERO;
@@ -218,6 +274,10 @@ public class SesionCaja {
         public SesionCajaBuilder montoEsperadoEfectivo(BigDecimal montoEsperadoEfectivo) { this.montoEsperadoEfectivo = montoEsperadoEfectivo; return this; }
         public SesionCajaBuilder montoRealEfectivo(BigDecimal montoRealEfectivo) { this.montoRealEfectivo = montoRealEfectivo; return this; }
         public SesionCajaBuilder diferencia(BigDecimal diferencia) { this.diferencia = diferencia; return this; }
+        public SesionCajaBuilder montoRealTarjeta(BigDecimal montoRealTarjeta) { this.montoRealTarjeta = montoRealTarjeta; return this; }
+        public SesionCajaBuilder diferenciaTarjeta(BigDecimal diferenciaTarjeta) { this.diferenciaTarjeta = diferenciaTarjeta; return this; }
+        public SesionCajaBuilder montoRealTransferenciaQr(BigDecimal montoRealTransferenciaQr) { this.montoRealTransferenciaQr = montoRealTransferenciaQr; return this; }
+        public SesionCajaBuilder diferenciaTransferenciaQr(BigDecimal diferenciaTransferenciaQr) { this.diferenciaTransferenciaQr = diferenciaTransferenciaQr; return this; }
         public SesionCajaBuilder totalVentasEfectivo(BigDecimal totalVentasEfectivo) { this.totalVentasEfectivo = totalVentasEfectivo; return this; }
         public SesionCajaBuilder totalVentasTarjetaDebito(BigDecimal totalVentasTarjetaDebito) { this.totalVentasTarjetaDebito = totalVentasTarjetaDebito; return this; }
         public SesionCajaBuilder totalVentasTarjetaCredito(BigDecimal totalVentasTarjetaCredito) { this.totalVentasTarjetaCredito = totalVentasTarjetaCredito; return this; }
@@ -230,8 +290,9 @@ public class SesionCaja {
 
         public SesionCaja build() {
             return new SesionCaja(id, usuarioApertura, usuarioCierre, fechaApertura, fechaCierre, montoInicial,
-                    montoEsperadoEfectivo, montoRealEfectivo, diferencia, totalVentasEfectivo,
-                    totalVentasTarjetaDebito, totalVentasTarjetaCredito, totalVentasTransferenciaQr,
+                    montoEsperadoEfectivo, montoRealEfectivo, diferencia,
+                    montoRealTarjeta, diferenciaTarjeta, montoRealTransferenciaQr, diferenciaTransferenciaQr,
+                    totalVentasEfectivo, totalVentasTarjetaDebito, totalVentasTarjetaCredito, totalVentasTransferenciaQr,
                     totalVentasGeneral, cantidadPedidos, estado, observacionesApertura, observacionesCierre);
         }
     }

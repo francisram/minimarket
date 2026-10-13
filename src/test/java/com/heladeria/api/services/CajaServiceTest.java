@@ -383,4 +383,67 @@ class CajaServiceTest {
         assertEquals(s2.getId(), res2.getSesionId());
         assertEquals(0, new BigDecimal("90000").compareTo(res2.getMontoInicial()));
     }
+
+    @Test
+    @DisplayName("Cerrar caja con arqueo desglosado de vouchers y QR calcula diferencias individuales")
+    void testCerrarCajaConArqueoDesglosadoTarjetasYQr() {
+        SesionCajaDTO sesion = cajaService.abrirCaja(new AbrirCajaRequestDTO(new BigDecimal("100000"), "Turno MultiMetodo"), usuarioCajero.getUsername());
+        SesionCaja sesionEntity = sesionCajaRepository.findById(sesion.getId()).orElseThrow();
+
+        Pedido pEfectivo = new Pedido();
+        pEfectivo.setSesionCaja(sesionEntity);
+        pEfectivo.setMetodoPago(MetodoPago.EFECTIVO);
+        pEfectivo.setTotal(new BigDecimal("50000"));
+        pEfectivo.setEstado(EstadoPedido.ENTREGADO);
+        pEfectivo.setTipoEntrega(TipoEntrega.MOSTRADOR);
+        pedidoRepository.save(pEfectivo);
+
+        Pedido pDebito = new Pedido();
+        pDebito.setSesionCaja(sesionEntity);
+        pDebito.setMetodoPago(MetodoPago.TARJETA_DEBITO);
+        pDebito.setNumeroVoucher("VCH-001");
+        pDebito.setTotal(new BigDecimal("30000"));
+        pDebito.setEstado(EstadoPedido.ENTREGADO);
+        pDebito.setTipoEntrega(TipoEntrega.MOSTRADOR);
+        pedidoRepository.save(pDebito);
+
+        Pedido pCredito = new Pedido();
+        pCredito.setSesionCaja(sesionEntity);
+        pCredito.setMetodoPago(MetodoPago.TARJETA_CREDITO);
+        pCredito.setNumeroVoucher("VCH-002");
+        pCredito.setTotal(new BigDecimal("40000"));
+        pCredito.setEstado(EstadoPedido.ENTREGADO);
+        pCredito.setTipoEntrega(TipoEntrega.MOSTRADOR);
+        pedidoRepository.save(pCredito);
+
+        Pedido pQr = new Pedido();
+        pQr.setSesionCaja(sesionEntity);
+        pQr.setMetodoPago(MetodoPago.TRANSFERENCIA_QR);
+        pQr.setTotal(new BigDecimal("25000"));
+        pQr.setEstado(EstadoPedido.ENTREGADO);
+        pQr.setTipoEntrega(TipoEntrega.MOSTRADOR);
+        pedidoRepository.save(pQr);
+
+        ResumenCajaDTO resumen = cajaService.obtenerResumen(sesion.getId(), null);
+        assertEquals(0, new BigDecimal("150000").compareTo(resumen.getTotalEsperadoEfectivo()));
+        assertEquals(0, new BigDecimal("70000").compareTo(resumen.getTotalEsperadoTarjeta()));
+        assertEquals(2, resumen.getCantidadVouchers());
+        assertEquals(1, resumen.getCantidadTransferencias());
+
+        CerrarCajaRequestDTO reqCierre = new CerrarCajaRequestDTO(
+                sesion.getId(),
+                new BigDecimal("148000"),
+                new BigDecimal("70000"),
+                new BigDecimal("25000"),
+                "Arqueo detallado completado"
+        );
+
+        SesionCajaDTO cerrada = cajaService.cerrarCaja(reqCierre, usuarioCajero.getUsername());
+        assertEquals(EstadoSesionCaja.CERRADA, cerrada.getEstado());
+        assertEquals(0, new BigDecimal("-2000").compareTo(cerrada.getDiferencia()));
+        assertEquals(0, new BigDecimal("70000").compareTo(cerrada.getMontoRealTarjeta()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(cerrada.getDiferenciaTarjeta()));
+        assertEquals(0, new BigDecimal("25000").compareTo(cerrada.getMontoRealTransferenciaQr()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(cerrada.getDiferenciaTransferenciaQr()));
+    }
 }
