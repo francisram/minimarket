@@ -5,6 +5,7 @@ import com.heladeria.api.dto.PedidoRequestDTO;
 import com.heladeria.api.entities.*;
 import com.heladeria.api.entities.enums.CondicionVenta;
 import com.heladeria.api.entities.enums.EstadoPedido;
+import com.heladeria.api.entities.enums.MetodoPago;
 import com.heladeria.api.entities.enums.EstadoSesionCaja;
 import com.heladeria.api.entities.enums.TipoComprobante;
 import com.heladeria.api.entities.enums.TipoItemPedido;
@@ -84,6 +85,11 @@ public class PedidoService {
         TipoComprobante tipoComprobante = request.getTipoComprobante() != null ? request.getTipoComprobante() : TipoComprobante.TICKET;
         CondicionVenta condicionVenta = request.getCondicionVenta() != null ? request.getCondicionVenta() : CondicionVenta.CONTADO;
         String numeroFactura = null;
+
+        if ((request.getMetodoPago() == MetodoPago.TARJETA_DEBITO || request.getMetodoPago() == MetodoPago.TARJETA_CREDITO)
+                && (request.getNumeroVoucher() == null || request.getNumeroVoucher().trim().isEmpty())) {
+            throw new ReglaDeNegocioException("El número de voucher / boleta es obligatorio para pagos con tarjeta de débito o crédito.");
+        }
 
         if (tipoComprobante == TipoComprobante.FACTURA) {
             if (request.getClienteRuc() == null || request.getClienteRuc().trim().isEmpty()

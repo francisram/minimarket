@@ -735,6 +735,64 @@ class PedidoServiceTest {
     }
 
     @Test
+    @DisplayName("Crear pedido con TARJETA_DEBITO sin voucher lanza ReglaDeNegocioException")
+    void testCrearPedidoTarjetaDebitoSinVoucherLanzaExcepcion() {
+        DetallePedidoRequestDTO itemHelado = new DetallePedidoRequestDTO();
+        itemHelado.setTipoItem(TipoItemPedido.HELADO);
+        itemHelado.setPresentacionId(poteMedioKg.getId());
+        itemHelado.setSaborIds(List.of(dulceDeLeche.getId()));
+        itemHelado.setCantidad(1);
+
+        PedidoRequestDTO request = new PedidoRequestDTO();
+        request.setMetodoPago(MetodoPago.TARJETA_DEBITO);
+        request.setTipoEntrega(TipoEntrega.MOSTRADOR);
+        request.setNumeroVoucher(null);
+        request.setItems(List.of(itemHelado));
+
+        ReglaDeNegocioException ex = assertThrows(ReglaDeNegocioException.class, () -> pedidoService.crearPedido(request));
+        assertTrue(ex.getMessage().contains("voucher"), "El mensaje debe indicar que el voucher es obligatorio");
+    }
+
+    @Test
+    @DisplayName("Crear pedido con TARJETA_CREDITO con voucher en blanco lanza ReglaDeNegocioException")
+    void testCrearPedidoTarjetaCreditoConVoucherEnBlancoLanzaExcepcion() {
+        DetallePedidoRequestDTO itemHelado = new DetallePedidoRequestDTO();
+        itemHelado.setTipoItem(TipoItemPedido.HELADO);
+        itemHelado.setPresentacionId(poteMedioKg.getId());
+        itemHelado.setSaborIds(List.of(dulceDeLeche.getId()));
+        itemHelado.setCantidad(1);
+
+        PedidoRequestDTO request = new PedidoRequestDTO();
+        request.setMetodoPago(MetodoPago.TARJETA_CREDITO);
+        request.setTipoEntrega(TipoEntrega.MOSTRADOR);
+        request.setNumeroVoucher("   ");
+        request.setItems(List.of(itemHelado));
+
+        ReglaDeNegocioException ex = assertThrows(ReglaDeNegocioException.class, () -> pedidoService.crearPedido(request));
+        assertTrue(ex.getMessage().contains("voucher"), "El mensaje debe indicar que el voucher es obligatorio");
+    }
+
+    @Test
+    @DisplayName("Crear pedido con TARJETA_DEBITO y voucher válido es exitoso")
+    void testCrearPedidoTarjetaDebitoConVoucherExitoso() {
+        DetallePedidoRequestDTO itemHelado = new DetallePedidoRequestDTO();
+        itemHelado.setTipoItem(TipoItemPedido.HELADO);
+        itemHelado.setPresentacionId(poteMedioKg.getId());
+        itemHelado.setSaborIds(List.of(dulceDeLeche.getId()));
+        itemHelado.setCantidad(1);
+
+        PedidoRequestDTO request = new PedidoRequestDTO();
+        request.setMetodoPago(MetodoPago.TARJETA_DEBITO);
+        request.setTipoEntrega(TipoEntrega.MOSTRADOR);
+        request.setNumeroVoucher("POS-987654");
+        request.setItems(List.of(itemHelado));
+
+        Pedido pedido = pedidoService.crearPedido(request);
+        assertNotNull(pedido.getId());
+        assertEquals("POS-987654", pedido.getNumeroVoucher());
+    }
+
+    @Test
     @DisplayName("Crear pedido sin trxId genera automáticamente un trxId con formato TRX-YYYYMMDD-...")
     void testCrearPedidoGeneraTrxIdAutomatico() {
         DetallePedidoRequestDTO itemHelado = new DetallePedidoRequestDTO();
