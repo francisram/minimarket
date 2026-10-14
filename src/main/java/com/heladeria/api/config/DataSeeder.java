@@ -85,7 +85,8 @@ public class DataSeeder implements CommandLineRunner {
                 new Pagina(null, "roles", "Roles y Permisos", "/roles", null, "security", 70),
                 new Pagina(null, "impresoras", "Impresoras ESC/POS", "/impresoras", null, "printer", 75),
                 new Pagina(null, "institucion", "Datos del Negocio", "/institucion", null, "building", 78),
-                new Pagina(null, "licencia", "Licenciamiento", "/licencia", null, "verified", 80)
+                new Pagina(null, "licencia", "Licenciamiento", "/licencia", null, "verified", 80),
+                new Pagina(null, "backup", "Copias de Seguridad", "/backup", null, "database", 85)
         );
 
         for (Pagina p : paginasCatalogo) {
@@ -128,7 +129,7 @@ public class DataSeeder implements CommandLineRunner {
             p.setNombre("Premium");
             return planLicenciaRepository.save(p);
         });
-        premium.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "stock", "pedidos", "usuarios", "roles", "impresoras", "licencia", "caja", "clientes", "reportes", "institucion"));
+        premium.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "stock", "pedidos", "usuarios", "roles", "impresoras", "licencia", "caja", "clientes", "reportes", "institucion", "backup"));
         planLicenciaRepository.save(premium);
 
         // Licencia activa de esta instalacion (id=1)

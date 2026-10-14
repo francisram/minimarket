@@ -12,12 +12,13 @@ RUN mvn clean package -DskipTests
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-# Instalar cliente CUPS y Samba para impresión por red/Windows y tzdata para la zona horaria de Paraguay
-RUN apk add --no-cache cups-client samba-client tzdata
+# Instalar cliente CUPS, Samba, cliente PostgreSQL y tzdata para Paraguay
+RUN apk add --no-cache cups-client samba-client postgresql16-client tzdata
 ENV TZ=America/Asuncion
 
-# Crear usuario sin privilegios por seguridad
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+# Crear usuario sin privilegios por seguridad y directorio de backups con permisos
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup \
+    && mkdir -p /app/backups && chown -R appuser:appgroup /app/backups
 USER appuser
 
 # Copiar el artefacto compilado
