@@ -10,6 +10,8 @@ import com.heladeria.api.entities.enums.EstadoSesionCaja;
 import com.heladeria.api.entities.enums.TipoComprobante;
 import com.heladeria.api.entities.enums.TipoItemPedido;
 import com.heladeria.api.entities.enums.TipoIva;
+import com.heladeria.api.entities.enums.TipoItemStock;
+import com.heladeria.api.entities.enums.TipoMovimientoStock;
 import com.heladeria.api.exceptions.RecursoNoEncontradoException;
 import com.heladeria.api.exceptions.ReglaDeNegocioException;
 import com.heladeria.api.repositories.*;
@@ -38,6 +40,7 @@ public class PedidoService {
     private final SesionCajaRepository sesionCajaRepository;
     private final InstitucionRepository institucionRepository;
     private final ClienteService clienteService;
+    private final InventarioService inventarioService;
 
     public PedidoService(PedidoRepository pedidoRepository,
                          PresentacionRepository presentacionRepository,
@@ -47,7 +50,8 @@ public class PedidoService {
                          TicketPrinterService ticketPrinterService,
                          SesionCajaRepository sesionCajaRepository,
                          InstitucionRepository institucionRepository,
-                         ClienteService clienteService) {
+                         ClienteService clienteService,
+                         InventarioService inventarioService) {
         this.pedidoRepository = pedidoRepository;
         this.presentacionRepository = presentacionRepository;
         this.saborRepository = saborRepository;
@@ -57,6 +61,7 @@ public class PedidoService {
         this.sesionCajaRepository = sesionCajaRepository;
         this.institucionRepository = institucionRepository;
         this.clienteService = clienteService;
+        this.inventarioService = inventarioService;
     }
 
     @Transactional
@@ -192,7 +197,21 @@ public class PedidoService {
                         throw new ReglaDeNegocioException("Stock insuficiente de envases para '" + presentacion.getNombre() +
                                 "'. Disponible: " + presentacion.getStock() + ", Solicitado: " + itemDto.getCantidad());
                     }
-                    presentacion.setStock(presentacion.getStock() - itemDto.getCantidad());
+                    double stockAnt = presentacion.getStock().doubleValue();
+                    double stockPost = stockAnt - itemDto.getCantidad();
+                    presentacion.setStock((int) Math.round(stockPost));
+                    presentacionRepository.save(presentacion);
+                    inventarioService.registrarMovimientoInterno(
+                            TipoItemStock.ENVASE,
+                            presentacion.getId(),
+                            presentacion.getNombre(),
+                            TipoMovimientoStock.SALIDA_VENTA,
+                            itemDto.getCantidad().doubleValue(),
+                            stockAnt,
+                            stockPost,
+                            "Venta POS #" + (numeroFactura != null ? numeroFactura : trxId),
+                            username
+                    );
                     presentacionRepository.save(presentacion);
                 }
 
@@ -236,12 +255,24 @@ public class PedidoService {
                     // Descuento atómico
                     for (Sabor sabor : sabores) {
                         if (sabor.getStockKilos() != null) {
+                            double stockAnt = sabor.getStockKilos();
                             double nuevoStock = Math.max(0.0, Math.round((sabor.getStockKilos() - kilosPorSabor) * 1000.0) / 1000.0);
                             sabor.setStockKilos(nuevoStock);
                             if (nuevoStock <= 0.001) {
                                 sabor.setDisponible(false);
                             }
                             saborRepository.save(sabor);
+                            inventarioService.registrarMovimientoInterno(
+                                    TipoItemStock.SABOR,
+                                    sabor.getId(),
+                                    sabor.getNombre(),
+                                    TipoMovimientoStock.SALIDA_VENTA,
+                                    kilosPorSabor,
+                                    stockAnt,
+                                    nuevoStock,
+                                    "Venta POS #" + (numeroFactura != null ? numeroFactura : trxId),
+                                    username
+                            );
                         }
                     }
                 }
@@ -284,7 +315,21 @@ public class PedidoService {
                 }
 
                 if (prod.getStock() != null) {
-                    prod.setStock(prod.getStock() - itemDto.getCantidad());
+                    double stockAnt = prod.getStock().doubleValue();
+                    double stockPost = stockAnt - itemDto.getCantidad();
+                    prod.setStock((int) Math.round(stockPost));
+                    productoSimpleRepository.save(prod);
+                    inventarioService.registrarMovimientoInterno(
+                            TipoItemStock.PRODUCTO,
+                            prod.getId(),
+                            prod.getNombre(),
+                            TipoMovimientoStock.SALIDA_VENTA,
+                            itemDto.getCantidad().doubleValue(),
+                            stockAnt,
+                            stockPost,
+                            "Venta POS #" + (numeroFactura != null ? numeroFactura : trxId),
+                            username
+                    );
                     productoSimpleRepository.save(prod);
                 }
 
@@ -378,20 +423,50 @@ public class PedidoService {
             throw new ReglaDeNegocioException("El pedido ya se encuentra cancelado.");
         }
 
+        var authUser = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        String usuarioCancelacion = (authUser != null && authUser.getName() != null) ? authUser.getName() : "ADMIN";
+        String docRef = pedido.getNumeroFactura() != null ? pedido.getNumeroFactura() : (pedido.getTrxId() != null ? pedido.getTrxId() : String.valueOf(pedido.getId()));
+
         // Reintegrar stock de productos simples, envases y sabores si se cancela
         for (DetallePedido detalle : pedido.getDetalles()) {
             if (detalle.getTipoItem() == TipoItemPedido.PRODUCTO_SIMPLE && detalle.getProductoSimple() != null) {
                 ProductoSimple prod = detalle.getProductoSimple();
                 if (prod.getStock() != null) {
-                    prod.setStock(prod.getStock() + detalle.getCantidad());
+                    double stockAnt = prod.getStock().doubleValue();
+                    double stockPost = stockAnt + detalle.getCantidad();
+                    prod.setStock((int) Math.round(stockPost));
                     productoSimpleRepository.save(prod);
+                    inventarioService.registrarMovimientoInterno(
+                            TipoItemStock.PRODUCTO,
+                            prod.getId(),
+                            prod.getNombre(),
+                            TipoMovimientoStock.REINTEGRO_CANCELACION,
+                            detalle.getCantidad().doubleValue(),
+                            stockAnt,
+                            stockPost,
+                            "Cancelación Pedido #" + docRef,
+                            usuarioCancelacion
+                    );
                 }
             } else if (detalle.getTipoItem() == TipoItemPedido.HELADO) {
                 // Reintegrar envases/cucuruchos
                 if (detalle.getPresentacion() != null && detalle.getPresentacion().getStock() != null) {
                     Presentacion pres = detalle.getPresentacion();
-                    pres.setStock(pres.getStock() + detalle.getCantidad());
+                    double stockAnt = pres.getStock().doubleValue();
+                    double stockPost = stockAnt + detalle.getCantidad();
+                    pres.setStock((int) Math.round(stockPost));
                     presentacionRepository.save(pres);
+                    inventarioService.registrarMovimientoInterno(
+                            TipoItemStock.ENVASE,
+                            pres.getId(),
+                            pres.getNombre(),
+                            TipoMovimientoStock.REINTEGRO_CANCELACION,
+                            detalle.getCantidad().doubleValue(),
+                            stockAnt,
+                            stockPost,
+                            "Cancelación Pedido #" + docRef,
+                            usuarioCancelacion
+                    );
                 }
 
                 // Reintegrar kilos de sabores
@@ -403,12 +478,24 @@ public class PedidoService {
 
                     for (Sabor sabor : detalle.getSabores()) {
                         if (sabor.getStockKilos() != null) {
+                            double stockAnt = sabor.getStockKilos();
                             double nuevoStock = Math.round((sabor.getStockKilos() + kilosPorSabor) * 1000.0) / 1000.0;
                             sabor.setStockKilos(nuevoStock);
                             if (nuevoStock > 0.001 && !Boolean.TRUE.equals(sabor.getDisponible())) {
                                 sabor.setDisponible(true);
                             }
                             saborRepository.save(sabor);
+                            inventarioService.registrarMovimientoInterno(
+                                    TipoItemStock.SABOR,
+                                    sabor.getId(),
+                                    sabor.getNombre(),
+                                    TipoMovimientoStock.REINTEGRO_CANCELACION,
+                                    kilosPorSabor,
+                                    stockAnt,
+                                    nuevoStock,
+                                    "Cancelación Pedido #" + docRef,
+                                    usuarioCancelacion
+                            );
                         }
                     }
                 }
