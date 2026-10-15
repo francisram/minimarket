@@ -70,4 +70,26 @@ public class InventarioController {
     public ResponseEntity<List<ArticuloInventarioDTO>> listarArticulos() {
         return ResponseEntity.ok(inventarioService.listarArticulosDisponibles());
     }
+
+    @PostMapping("/tomas")
+    @Operation(summary = "Crear y aplicar una toma de inventario físico con ajuste automático de existencias")
+    public ResponseEntity<TomaInventarioDTO> crearTomaInventario(
+            @Valid @RequestBody CrearTomaInventarioDTO dto,
+            Authentication authentication) {
+        String username = (authentication != null && authentication.getName() != null) ? authentication.getName() : "AUDITOR";
+        TomaInventarioDTO resultado = inventarioService.crearYAplicarTomaInventario(dto, username);
+        return ResponseEntity.status(HttpStatus.CREATED).body(resultado);
+    }
+
+    @GetMapping("/tomas")
+    @Operation(summary = "Listar el histórico de auditorías y tomas de inventario físico")
+    public ResponseEntity<List<TomaInventarioDTO>> listarTomasInventario() {
+        return ResponseEntity.ok(inventarioService.listarTomasInventario());
+    }
+
+    @GetMapping("/tomas/{id}")
+    @Operation(summary = "Obtener el reporte comparativo detallado de una toma de inventario físico (Sistema vs Físico)")
+    public ResponseEntity<TomaInventarioDTO> obtenerTomaInventario(@PathVariable Long id) {
+        return ResponseEntity.ok(inventarioService.obtenerTomaInventario(id));
+    }
 }

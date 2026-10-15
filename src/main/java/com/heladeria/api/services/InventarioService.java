@@ -17,6 +17,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import com.heladeria.api.entities.enums.EstadoTomaInventario;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,15 +30,21 @@ public class InventarioService {
     private final ProductoSimpleRepository productoSimpleRepository;
     private final SaborRepository saborRepository;
     private final PresentacionRepository presentacionRepository;
+    private final TomaInventarioRepository tomaInventarioRepository;
+    private final DetalleTomaInventarioRepository detalleTomaInventarioRepository;
 
     public InventarioService(MovimientoStockRepository movimientoStockRepository,
                              ProductoSimpleRepository productoSimpleRepository,
                              SaborRepository saborRepository,
-                             PresentacionRepository presentacionRepository) {
+                             PresentacionRepository presentacionRepository,
+                             TomaInventarioRepository tomaInventarioRepository,
+                             DetalleTomaInventarioRepository detalleTomaInventarioRepository) {
         this.movimientoStockRepository = movimientoStockRepository;
         this.productoSimpleRepository = productoSimpleRepository;
         this.saborRepository = saborRepository;
         this.presentacionRepository = presentacionRepository;
+        this.tomaInventarioRepository = tomaInventarioRepository;
+        this.detalleTomaInventarioRepository = detalleTomaInventarioRepository;
     }
 
     @Transactional
@@ -271,6 +278,222 @@ public class InventarioService {
         }
 
         return lista;
+    }
+
+    @Transactional
+    public TomaInventarioDTO crearYAplicarTomaInventario(CrearTomaInventarioDTO dto, String usuarioAuditor) {
+        if (dto.getDetalles() == null || dto.getDetalles().isEmpty()) {
+            throw new ReglaDeNegocioException("La toma de inventario debe incluir al menos un artículo contado.");
+        }
+
+        String auditor = (usuarioAuditor != null && !usuarioAuditor.isBlank()) ? usuarioAuditor : "AUDITOR";
+        TomaInventario toma = new TomaInventario();
+        toma.setFecha(LocalDateTime.now());
+        toma.setUsuarioAuditor(auditor);
+        toma.setObservaciones(dto.getObservaciones() != null ? dto.getObservaciones().trim() : "Auditoría física de inventario");
+        toma.setEstado(EstadoTomaInventario.APLICADA);
+
+        int totalArticulos = 0;
+        int totalDiferencias = 0;
+        BigDecimal impactoNeto = BigDecimal.ZERO;
+
+        toma = tomaInventarioRepository.save(toma);
+
+        List<DetalleTomaInventario> detallesPersistidos = new ArrayList<>();
+
+        for (ItemConteoDTO item : dto.getDetalles()) {
+            if (item.getItemId() == null || item.getTipoItem() == null || item.getStockFisico() == null) {
+                continue;
+            }
+
+            totalArticulos++;
+            double stockSistema = 0.0;
+            String itemNombre = item.getItemNombre() != null ? item.getItemNombre() : "";
+            String unidad = "UNIDADES";
+            BigDecimal costoUnitario = item.getCostoUnitario() != null ? item.getCostoUnitario() : BigDecimal.ZERO;
+
+            if (item.getTipoItem() == TipoItemStock.PRODUCTO) {
+                var optProd = productoSimpleRepository.findById(item.getItemId());
+                if (optProd.isPresent()) {
+                    var prod = optProd.get();
+                    stockSistema = prod.getStock() != null ? prod.getStock().doubleValue() : 0.0;
+                    if (itemNombre.isBlank()) itemNombre = prod.getNombre();
+                    if (costoUnitario.compareTo(BigDecimal.ZERO) == 0 && prod.getPrecio() != null) {
+                        costoUnitario = prod.getPrecio();
+                    }
+                    double dif = item.getStockFisico() - stockSistema;
+                    if (Math.abs(dif) > 0.0001) {
+                        totalDiferencias++;
+                        prod.setStock((int) Math.round(item.getStockFisico()));
+                        productoSimpleRepository.save(prod);
+
+                        registrarMovimientoInterno(
+                                TipoItemStock.PRODUCTO,
+                                prod.getId(),
+                                prod.getNombre(),
+                                TipoMovimientoStock.AJUSTE_INVENTARIO,
+                                item.getStockFisico(),
+                                stockSistema,
+                                item.getStockFisico(),
+                                "Auditoría Física #" + toma.getId() + (toma.getObservaciones() != null ? " - " + toma.getObservaciones() : ""),
+                                auditor
+                        );
+                    }
+                }
+            } else if (item.getTipoItem() == TipoItemStock.SABOR) {
+                unidad = "KG";
+                var optSabor = saborRepository.findById(item.getItemId());
+                if (optSabor.isPresent()) {
+                    var sabor = optSabor.get();
+                    stockSistema = sabor.getStockKilos() != null ? sabor.getStockKilos() : 0.0;
+                    if (itemNombre.isBlank()) itemNombre = sabor.getNombre();
+                    if (costoUnitario.compareTo(BigDecimal.ZERO) == 0) {
+                        costoUnitario = new BigDecimal("45000");
+                    }
+                    double dif = Math.round((item.getStockFisico() - stockSistema) * 1000.0) / 1000.0;
+                    if (Math.abs(dif) > 0.001) {
+                        totalDiferencias++;
+                        double nuevoStock = Math.max(0.0, Math.round(item.getStockFisico() * 1000.0) / 1000.0);
+                        sabor.setStockKilos(nuevoStock);
+                        sabor.setDisponible(nuevoStock > 0.001);
+                        saborRepository.save(sabor);
+
+                        registrarMovimientoInterno(
+                                TipoItemStock.SABOR,
+                                sabor.getId(),
+                                sabor.getNombre(),
+                                TipoMovimientoStock.AJUSTE_INVENTARIO,
+                                nuevoStock,
+                                stockSistema,
+                                nuevoStock,
+                                "Auditoría Física #" + toma.getId() + (toma.getObservaciones() != null ? " - " + toma.getObservaciones() : ""),
+                                auditor
+                        );
+                    }
+                }
+            } else if (item.getTipoItem() == TipoItemStock.ENVASE) {
+                var optPres = presentacionRepository.findById(item.getItemId());
+                if (optPres.isPresent()) {
+                    var pres = optPres.get();
+                    stockSistema = pres.getStock() != null ? pres.getStock().doubleValue() : 0.0;
+                    if (itemNombre.isBlank()) itemNombre = pres.getNombre();
+                    if (costoUnitario.compareTo(BigDecimal.ZERO) == 0 && pres.getPrecio() != null) {
+                        costoUnitario = pres.getPrecio().multiply(new BigDecimal("0.35"));
+                    }
+                    double dif = item.getStockFisico() - stockSistema;
+                    if (Math.abs(dif) > 0.0001) {
+                        totalDiferencias++;
+                        pres.setStock((int) Math.round(item.getStockFisico()));
+                        presentacionRepository.save(pres);
+
+                        registrarMovimientoInterno(
+                                TipoItemStock.ENVASE,
+                                pres.getId(),
+                                pres.getNombre(),
+                                TipoMovimientoStock.AJUSTE_INVENTARIO,
+                                item.getStockFisico(),
+                                stockSistema,
+                                item.getStockFisico(),
+                                "Auditoría Física #" + toma.getId() + (toma.getObservaciones() != null ? " - " + toma.getObservaciones() : ""),
+                                auditor
+                        );
+                    }
+                }
+            }
+
+            double dif = item.getTipoItem() == TipoItemStock.SABOR
+                    ? (Math.round((item.getStockFisico() - stockSistema) * 1000.0) / 1000.0)
+                    : (item.getStockFisico() - stockSistema);
+
+            costoUnitario = MonedaPyUtils.redondearGs(costoUnitario);
+            BigDecimal difValorizada = MonedaPyUtils.redondearGs(costoUnitario.multiply(BigDecimal.valueOf(dif)));
+            impactoNeto = impactoNeto.add(difValorizada);
+
+            DetalleTomaInventario det = new DetalleTomaInventario();
+            det.setTomaInventario(toma);
+            det.setTipoItem(item.getTipoItem());
+            det.setItemId(item.getItemId());
+            det.setItemNombre(itemNombre);
+            det.setUnidad(unidad);
+            det.setStockSistema(stockSistema);
+            det.setStockFisico(item.getStockFisico());
+            det.setDiferencia(dif);
+            det.setCostoUnitario(costoUnitario);
+            det.setDiferenciaValorizada(difValorizada);
+
+            detallesPersistidos.add(detalleTomaInventarioRepository.save(det));
+        }
+
+        toma.setTotalArticulos(totalArticulos);
+        toma.setTotalDiferencias(totalDiferencias);
+        toma.setImpactoNeto(MonedaPyUtils.redondearGs(impactoNeto));
+        toma.setDetalles(detallesPersistidos);
+        toma = tomaInventarioRepository.save(toma);
+
+        log.info("Auditoría Física #{} aplicada: {} artículos contados, {} discrepancias, impacto neto: Gs. {}",
+                toma.getId(), totalArticulos, totalDiferencias, impactoNeto);
+
+        return toTomaDTO(toma);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TomaInventarioDTO> listarTomasInventario() {
+        return tomaInventarioRepository.findAllOrderByFechaDesc().stream()
+                .map(this::toTomaResumenDTO)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public TomaInventarioDTO obtenerTomaInventario(Long id) {
+        TomaInventario toma = tomaInventarioRepository.findById(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Toma de inventario #" + id + " no encontrada"));
+        return toTomaDTO(toma);
+    }
+
+    private TomaInventarioDTO toTomaResumenDTO(TomaInventario t) {
+        return new TomaInventarioDTO(
+                t.getId(),
+                t.getFecha(),
+                t.getUsuarioAuditor(),
+                t.getObservaciones(),
+                t.getEstado(),
+                t.getTotalArticulos(),
+                t.getTotalDiferencias(),
+                t.getImpactoNeto(),
+                new ArrayList<>()
+        );
+    }
+
+    private TomaInventarioDTO toTomaDTO(TomaInventario t) {
+        List<DetalleTomaInventarioDTO> detDTOs = (t.getDetalles() != null && !t.getDetalles().isEmpty()
+                ? t.getDetalles()
+                : detalleTomaInventarioRepository.findByTomaInventarioIdOrderByIdAsc(t.getId()))
+                .stream()
+                .map(d -> new DetalleTomaInventarioDTO(
+                        d.getId(),
+                        d.getTipoItem(),
+                        d.getItemId(),
+                        d.getItemNombre(),
+                        d.getUnidad(),
+                        d.getStockSistema(),
+                        d.getStockFisico(),
+                        d.getDiferencia(),
+                        d.getCostoUnitario(),
+                        d.getDiferenciaValorizada()
+                ))
+                .toList();
+
+        return new TomaInventarioDTO(
+                t.getId(),
+                t.getFecha(),
+                t.getUsuarioAuditor(),
+                t.getObservaciones(),
+                t.getEstado(),
+                t.getTotalArticulos(),
+                t.getTotalDiferencias(),
+                t.getImpactoNeto(),
+                detDTOs
+        );
     }
 
     private MovimientoStockDTO toDTO(MovimientoStock m, String unidad) {
