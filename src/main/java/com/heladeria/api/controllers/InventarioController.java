@@ -20,7 +20,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/inventario")
 @CrossOrigin(origins = "*")
-@PreAuthorize("hasRole('ADMIN') or hasRole('OWNER') or hasAuthority('PAGINA_stock')")
+@PreAuthorize("hasRole('ADMIN') or hasRole('OWNER') or hasAuthority('PAGINA_stock') or hasAuthority('PAGINA_auditoria')")
 @Tag(name = "Inventario y Kardex", description = "Control integral de movimientos de stock, auditoría, valorización y kardex")
 public class InventarioController {
 

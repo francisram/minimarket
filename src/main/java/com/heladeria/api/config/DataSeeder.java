@@ -80,6 +80,7 @@ public class DataSeeder implements CommandLineRunner {
                 new Pagina(null, "pedidos", "Punto de Venta / Pedidos", "/pedidos", null, "point_of_sale", 50),
                 new Pagina(null, "clientes", "Clientes", "/clientes", null, "users", 52),
                 new Pagina(null, "stock", "Control de Stock", "/stock", null, "warehouse", 55),
+                new Pagina(null, "auditoria", "Auditoría & Conteo Físico", "/auditoria", null, "clipboard-check", 56),
                 new Pagina(null, "reportes", "Reportes y Estadísticas", "/reportes", null, "bar_chart", 58),
                 new Pagina(null, "usuarios", "Usuarios", "/usuarios", null, "people", 60),
                 new Pagina(null, "roles", "Roles y Permisos", "/roles", null, "security", 70),
@@ -120,7 +121,7 @@ public class DataSeeder implements CommandLineRunner {
             p.setNombre("Estandar");
             return planLicenciaRepository.save(p);
         });
-        estandar.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "stock", "pedidos", "impresoras", "caja", "clientes", "reportes"));
+        estandar.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "stock", "pedidos", "impresoras", "caja", "clientes", "reportes", "auditoria"));
         planLicenciaRepository.save(estandar);
 
         // Plan Premium
@@ -129,7 +130,7 @@ public class DataSeeder implements CommandLineRunner {
             p.setNombre("Premium");
             return planLicenciaRepository.save(p);
         });
-        premium.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "stock", "pedidos", "usuarios", "roles", "impresoras", "licencia", "caja", "clientes", "reportes", "institucion", "backup"));
+        premium.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "stock", "pedidos", "usuarios", "roles", "impresoras", "licencia", "caja", "clientes", "reportes", "institucion", "backup", "auditoria"));
         planLicenciaRepository.save(premium);
 
         // Licencia activa de esta instalacion (id=1)
