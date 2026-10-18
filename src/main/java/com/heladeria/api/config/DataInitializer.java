@@ -24,19 +24,22 @@ public class DataInitializer implements CommandLineRunner {
     private final ProductoSimpleRepository productoSimpleRepository;
     private final ProductoRepository productoRepository;
     private final ProveedorRepository proveedorRepository;
+    private final CompraRepository compraRepository;
 
     public DataInitializer(SaborRepository saborRepository,
                            PresentacionRepository presentacionRepository,
                            ToppingRepository toppingRepository,
                            ProductoSimpleRepository productoSimpleRepository,
                            ProductoRepository productoRepository,
-                           ProveedorRepository proveedorRepository) {
+                           ProveedorRepository proveedorRepository,
+                           CompraRepository compraRepository) {
         this.saborRepository = saborRepository;
         this.presentacionRepository = presentacionRepository;
         this.toppingRepository = toppingRepository;
         this.productoSimpleRepository = productoSimpleRepository;
         this.productoRepository = productoRepository;
         this.proveedorRepository = proveedorRepository;
+        this.compraRepository = compraRepository;
     }
 
     @Override
@@ -204,6 +207,35 @@ public class DataInitializer implements CommandLineRunner {
             cucharas.setUnidadMedida(com.heladeria.api.entities.enums.UnidadMedida.UNIDAD);
             if (provSur != null) cucharas.agregarProveedor(provSur, "CUCH-100U", new BigDecimal("11500"), true);
             productoRepository.save(cucharas);
+        }
+
+        if (compraRepository.count() == 0) {
+            log.info("Precargando facturas de compra de prueba...");
+            Proveedor provValle = proveedorRepository.findByRucIgnoreCase("80012345-6").orElse(null);
+            Producto pote1k = productoRepository.findByCodigoBarraIgnoreCase("7840001000012").orElse(null);
+            if (provValle != null && pote1k != null) {
+                Compra c1 = new Compra();
+                c1.setProveedor(provValle);
+                c1.setNumeroFactura("001-001-0004589");
+                c1.setTimbrado("14892034");
+                c1.setFechaEmision(java.time.LocalDate.now().minusDays(3));
+                c1.setCondicionCompra(com.heladeria.api.entities.enums.CondicionCompra.CONTADO);
+                c1.setObservacion("Factura de reposición de potes térmicos");
+                c1.setUsuario("ADMIN");
+
+                DetalleCompra d1 = new DetalleCompra();
+                d1.setProducto(pote1k);
+                d1.setCantidad(new BigDecimal("10"));
+                d1.setCostoUnitario(new BigDecimal("18000"));
+                d1.setSubtotal(new BigDecimal("180000"));
+                d1.setTipoIva(com.heladeria.api.entities.enums.TipoIva.IVA_10);
+                d1.setMontoIva(com.heladeria.api.util.MonedaPyUtils.calcularIva10(new BigDecimal("180000")));
+                c1.agregarDetalle(d1);
+
+                c1.setTotalIva10(d1.getMontoIva());
+                c1.setTotal(new BigDecimal("180000"));
+                compraRepository.save(c1);
+            }
         }
 
         log.info("Catálogo inicial precargado exitosamente.");
