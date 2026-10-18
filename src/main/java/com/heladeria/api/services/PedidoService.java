@@ -215,27 +215,26 @@ public class PedidoService {
                     presentacionRepository.save(presentacion);
                 }
 
-                // Validar sabores
+                // Validar sabores (opcionales para venta ágil en POS)
                 List<Long> saborIds = itemDto.getSaborIds();
-                if (saborIds == null || saborIds.isEmpty()) {
-                    throw new ReglaDeNegocioException("Debe seleccionar al menos un sabor para " + presentacion.getNombre() + ".");
-                }
-
-                if (saborIds.size() > presentacion.getMaxSabores()) {
-                    throw new ReglaDeNegocioException("La presentación '" + presentacion.getNombre() +
-                            "' permite un máximo de " + presentacion.getMaxSabores() +
-                            " sabores, pero se enviaron " + saborIds.size() + ".");
-                }
-
                 List<Sabor> sabores = new ArrayList<>();
-                for (Long saborId : saborIds) {
-                    Sabor sabor = saborRepository.findById(saborId)
-                            .orElseThrow(() -> new RecursoNoEncontradoException("Sabor con id " + saborId + " no encontrado."));
 
-                    if (!Boolean.TRUE.equals(sabor.getDisponible())) {
-                        throw new ReglaDeNegocioException("El sabor '" + sabor.getNombre() + "' no se encuentra disponible actualmente.");
+                if (saborIds != null && !saborIds.isEmpty()) {
+                    if (saborIds.size() > presentacion.getMaxSabores()) {
+                        throw new ReglaDeNegocioException("La presentación '" + presentacion.getNombre() +
+                                "' permite un máximo de " + presentacion.getMaxSabores() +
+                                " sabores, pero se enviaron " + saborIds.size() + ".");
                     }
-                    sabores.add(sabor);
+
+                    for (Long saborId : saborIds) {
+                        Sabor sabor = saborRepository.findById(saborId)
+                                .orElseThrow(() -> new RecursoNoEncontradoException("Sabor con id " + saborId + " no encontrado."));
+
+                        if (!Boolean.TRUE.equals(sabor.getDisponible())) {
+                            throw new ReglaDeNegocioException("El sabor '" + sabor.getNombre() + "' no se encuentra disponible actualmente.");
+                        }
+                        sabores.add(sabor);
+                    }
                 }
 
                 // Control y descuento de stock en kilos para los sabores seleccionados
