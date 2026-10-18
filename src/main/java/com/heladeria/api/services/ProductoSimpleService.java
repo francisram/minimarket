@@ -43,6 +43,14 @@ public class ProductoSimpleService {
     }
 
     @Transactional(readOnly = true)
+    public List<ProductoSimple> listarPorProveedor(Long proveedorId) {
+        if (proveedorId == null) {
+            throw new ReglaDeNegocioException("El ID del proveedor no puede ser nulo");
+        }
+        return productoSimpleRepository.findByProveedorId(proveedorId);
+    }
+
+    @Transactional(readOnly = true)
     public ProductoSimple buscarPorCodigoBarra(String codigoBarra) {
         if (codigoBarra == null || codigoBarra.trim().isBlank()) {
             throw new ReglaDeNegocioException("El código de barra a buscar no puede estar vacío");

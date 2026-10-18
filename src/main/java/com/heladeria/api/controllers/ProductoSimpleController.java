@@ -16,7 +16,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/productos-simples")
 @CrossOrigin(origins = "*")
-@PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_productos') or hasAuthority('PAGINA_pedidos')")
+@PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_productos') or hasAuthority('PAGINA_proveedores') or hasAuthority('PAGINA_pedidos')")
 @Tag(name = "Productos Simples", description = "Bebidas, cafetería y helados envasados que no requieren armado")
 public class ProductoSimpleController {
 
@@ -44,6 +44,12 @@ public class ProductoSimpleController {
     @Operation(summary = "Buscar producto simple por su código de barra (para lector en POS)")
     public ResponseEntity<ProductoSimple> buscarPorCodigoBarra(@PathVariable String codigo) {
         return ResponseEntity.ok(productoSimpleService.buscarPorCodigoBarra(codigo));
+    }
+
+    @GetMapping("/proveedor/{proveedorId}")
+    @Operation(summary = "Listar productos simples asociados a un proveedor")
+    public ResponseEntity<List<ProductoSimple>> listarPorProveedor(@PathVariable Long proveedorId) {
+        return ResponseEntity.ok(productoSimpleService.listarPorProveedor(proveedorId));
     }
 
     @PostMapping

@@ -16,4 +16,6 @@ public interface ProductoSimpleRepository extends JpaRepository<ProductoSimple, 
     Optional<ProductoSimple> findByCodigoBarraIgnoreCase(String codigoBarra);
     boolean existsByCodigoBarraIgnoreCase(String codigoBarra);
     boolean existsByCodigoBarraIgnoreCaseAndIdNot(String codigoBarra, Long id);
+    List<ProductoSimple> findByProveedorId(Long proveedorId);
+    List<ProductoSimple> findByProveedorIdAndActivoTrue(Long proveedorId);
 }
