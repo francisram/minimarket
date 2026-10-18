@@ -22,15 +22,21 @@ public class DataInitializer implements CommandLineRunner {
     private final PresentacionRepository presentacionRepository;
     private final ToppingRepository toppingRepository;
     private final ProductoSimpleRepository productoSimpleRepository;
+    private final ProductoRepository productoRepository;
+    private final ProveedorRepository proveedorRepository;
 
     public DataInitializer(SaborRepository saborRepository,
                            PresentacionRepository presentacionRepository,
                            ToppingRepository toppingRepository,
-                           ProductoSimpleRepository productoSimpleRepository) {
+                           ProductoSimpleRepository productoSimpleRepository,
+                           ProductoRepository productoRepository,
+                           ProveedorRepository proveedorRepository) {
         this.saborRepository = saborRepository;
         this.presentacionRepository = presentacionRepository;
         this.toppingRepository = toppingRepository;
         this.productoSimpleRepository = productoSimpleRepository;
+        this.productoRepository = productoRepository;
+        this.proveedorRepository = proveedorRepository;
     }
 
     @Override
@@ -82,6 +88,124 @@ public class DataInitializer implements CommandLineRunner {
                     ProductoSimple.builder().nombre("Paleta Bombón Artesanal").precio(new BigDecimal("12000")).categoria("ENVASADOS").stock(30).stockMinimo(5).activo(true).codigoBarra("7840001004").build()
             ));
         }
+
+        if (productoRepository.count() == 0) {
+            log.info("Precargando Catálogo Maestro Unificado de Productos (Retail ERP)...");
+            List<Proveedor> proveedores = proveedorRepository.findAll();
+            Proveedor provSur = proveedores.stream().filter(p -> p.getRazonSocial().contains("Bebidas")).findFirst().orElse(null);
+            Proveedor provValle = proveedores.stream().filter(p -> p.getRazonSocial().contains("Valle")).findFirst().orElse(null);
+
+            // 1. Envases (con múltiples proveedores demostrativos)
+            Producto pote1kg = new Producto();
+            pote1kg.setNombre("Pote Térmico 1 Kg");
+            pote1kg.setTipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.ENVASE);
+            pote1kg.setPrecioVenta(new BigDecimal("80000"));
+            pote1kg.setPrecioCosto(new BigDecimal("1500"));
+            pote1kg.setStock(new BigDecimal("50"));
+            pote1kg.setMaxSabores(4);
+            pote1kg.setPesoGramosAprox(1000);
+            pote1kg.setUnidadMedida(com.heladeria.api.entities.enums.UnidadMedida.UNIDAD);
+            if (provSur != null) pote1kg.agregarProveedor(provSur, "POT-1KG-SUR", new BigDecimal("1400"), true);
+            if (provValle != null) pote1kg.agregarProveedor(provValle, "POT-1KG-VALLE", new BigDecimal("1550"), false);
+            productoRepository.save(pote1kg);
+
+            Producto poteMedio = new Producto();
+            poteMedio.setNombre("Pote Térmico 1/2 Kg");
+            poteMedio.setTipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.ENVASE);
+            poteMedio.setPrecioVenta(new BigDecimal("45000"));
+            poteMedio.setPrecioCosto(new BigDecimal("1000"));
+            poteMedio.setStock(new BigDecimal("60"));
+            poteMedio.setMaxSabores(3);
+            poteMedio.setPesoGramosAprox(500);
+            poteMedio.setUnidadMedida(com.heladeria.api.entities.enums.UnidadMedida.UNIDAD);
+            if (provSur != null) poteMedio.agregarProveedor(provSur, "POT-500G", new BigDecimal("980"), true);
+            productoRepository.save(poteMedio);
+
+            Producto cucuruchoDoble = new Producto();
+            cucuruchoDoble.setNombre("Cucurucho 2 Bochas");
+            cucuruchoDoble.setTipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.ENVASE);
+            cucuruchoDoble.setPrecioVenta(new BigDecimal("18000"));
+            cucuruchoDoble.setPrecioCosto(new BigDecimal("400"));
+            cucuruchoDoble.setStock(new BigDecimal("100"));
+            cucuruchoDoble.setMaxSabores(2);
+            cucuruchoDoble.setPesoGramosAprox(180);
+            cucuruchoDoble.setUnidadMedida(com.heladeria.api.entities.enums.UnidadMedida.UNIDAD);
+            if (provValle != null) cucuruchoDoble.agregarProveedor(provValle, "CUC-DOB", new BigDecimal("400"), true);
+            productoRepository.save(cucuruchoDoble);
+
+            // 2. Sabores
+            Producto ddl = new Producto();
+            ddl.setNombre("Dulce de Leche Granizado");
+            ddl.setTipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.SABOR);
+            ddl.setPrecioVenta(BigDecimal.ZERO);
+            ddl.setPrecioCosto(new BigDecimal("35000"));
+            ddl.setStock(new BigDecimal("10.0"));
+            ddl.setStockMinimo(new BigDecimal("2.0"));
+            ddl.setUnidadMedida(com.heladeria.api.entities.enums.UnidadMedida.KG);
+            ddl.setCategoriaSabor(CategoriaSabor.DULCE_DE_LECHE);
+            ddl.setAptoCeliaco(true);
+            if (provValle != null) ddl.agregarProveedor(provValle, "BASE-DDL-01", new BigDecimal("35000"), true);
+            productoRepository.save(ddl);
+
+            Producto chocoSuizo = new Producto();
+            chocoSuizo.setNombre("Chocolate Suizo");
+            chocoSuizo.setTipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.SABOR);
+            chocoSuizo.setPrecioVenta(BigDecimal.ZERO);
+            chocoSuizo.setPrecioCosto(new BigDecimal("42000"));
+            chocoSuizo.setStock(new BigDecimal("10.0"));
+            chocoSuizo.setStockMinimo(new BigDecimal("2.0"));
+            chocoSuizo.setUnidadMedida(com.heladeria.api.entities.enums.UnidadMedida.KG);
+            chocoSuizo.setCategoriaSabor(CategoriaSabor.CHOCOLATE);
+            chocoSuizo.setAptoCeliaco(false);
+            if (provValle != null) chocoSuizo.agregarProveedor(provValle, "BASE-CHOC-SUI", new BigDecimal("42000"), true);
+            productoRepository.save(chocoSuizo);
+
+            // 3. Toppings
+            Producto banoChoco = new Producto();
+            banoChoco.setNombre("Baño de Chocolate");
+            banoChoco.setTipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.TOPPING);
+            banoChoco.setPrecioVenta(new BigDecimal("3000"));
+            banoChoco.setPrecioCosto(new BigDecimal("600"));
+            banoChoco.setStock(new BigDecimal("100"));
+            banoChoco.setUnidadMedida(com.heladeria.api.entities.enums.UnidadMedida.UNIDAD);
+            if (provValle != null) banoChoco.agregarProveedor(provValle, "TOP-CHOC", new BigDecimal("600"), true);
+            productoRepository.save(banoChoco);
+
+            // 4. Venta Directa (con códigos de barra)
+            Producto aguaConGas = new Producto();
+            aguaConGas.setNombre("Agua Mineral con gas 500ml");
+            aguaConGas.setTipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.VENTA_DIRECTA);
+            aguaConGas.setCodigoBarra("7840001001");
+            aguaConGas.setPrecioVenta(new BigDecimal("10000"));
+            aguaConGas.setPrecioCosto(new BigDecimal("4500"));
+            aguaConGas.setStock(new BigDecimal("40"));
+            aguaConGas.setUnidadMedida(com.heladeria.api.entities.enums.UnidadMedida.UNIDAD);
+            if (provSur != null) aguaConGas.agregarProveedor(provSur, "AGUA-GAS-500", new BigDecimal("4500"), true);
+            productoRepository.save(aguaConGas);
+
+            Producto alfajor = new Producto();
+            alfajor.setNombre("Alfajor Helado");
+            alfajor.setTipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.VENTA_DIRECTA);
+            alfajor.setCodigoBarra("7840001003");
+            alfajor.setPrecioVenta(new BigDecimal("15000"));
+            alfajor.setPrecioCosto(new BigDecimal("8000"));
+            alfajor.setStock(new BigDecimal("25"));
+            alfajor.setUnidadMedida(com.heladeria.api.entities.enums.UnidadMedida.UNIDAD);
+            if (provValle != null) alfajor.agregarProveedor(provValle, "ALF-HEL-01", new BigDecimal("8000"), true);
+            productoRepository.save(alfajor);
+
+            // 5. Insumos
+            Producto cucharas = new Producto();
+            cucharas.setNombre("Cucharas Plásticas Reforzadas (Pack 100u)");
+            cucharas.setTipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.INSUMO);
+            cucharas.setPrecioVenta(BigDecimal.ZERO);
+            cucharas.setPrecioCosto(new BigDecimal("12000"));
+            cucharas.setStock(new BigDecimal("50"));
+            cucharas.setUnidadMedida(com.heladeria.api.entities.enums.UnidadMedida.UNIDAD);
+            if (provSur != null) cucharas.agregarProveedor(provSur, "CUCH-100U", new BigDecimal("11500"), true);
+            productoRepository.save(cucharas);
+        }
+
         log.info("Catálogo inicial precargado exitosamente.");
     }
 }
