@@ -52,8 +52,35 @@ public class CompraService {
 
     @Transactional(readOnly = true)
     public List<CompraDTO> listarCompras(Long proveedorId, LocalDate fechaDesde, LocalDate fechaHasta, String buscar) {
-        String queryBuscar = (buscar != null && !buscar.trim().isEmpty()) ? buscar.trim() : null;
-        List<Compra> compras = compraRepository.filtrarCompras(proveedorId, fechaDesde, fechaHasta, queryBuscar);
+        List<Compra> compras;
+        if (proveedorId != null) {
+            compras = compraRepository.findByProveedorIdOrderByFechaEmisionDescIdDesc(proveedorId);
+        } else {
+            compras = compraRepository.findAllByOrderByFechaEmisionDescIdDesc();
+        }
+
+        if (fechaDesde != null) {
+            compras = compras.stream()
+                    .filter(c -> c.getFechaEmision() != null && !c.getFechaEmision().isBefore(fechaDesde))
+                    .collect(Collectors.toList());
+        }
+
+        if (fechaHasta != null) {
+            compras = compras.stream()
+                    .filter(c -> c.getFechaEmision() != null && !c.getFechaEmision().isAfter(fechaHasta))
+                    .collect(Collectors.toList());
+        }
+
+        if (buscar != null && !buscar.trim().isEmpty()) {
+            String b = buscar.trim().toLowerCase();
+            compras = compras.stream()
+                    .filter(c -> (c.getNumeroFactura() != null && c.getNumeroFactura().toLowerCase().contains(b)) ||
+                                 (c.getTimbrado() != null && c.getTimbrado().toLowerCase().contains(b)) ||
+                                 (c.getProveedor() != null && c.getProveedor().getRazonSocial() != null && c.getProveedor().getRazonSocial().toLowerCase().contains(b)) ||
+                                 (c.getProveedor() != null && c.getProveedor().getRuc() != null && c.getProveedor().getRuc().toLowerCase().contains(b)))
+                    .collect(Collectors.toList());
+        }
+
         return compras.stream().map(CompraDTO::new).collect(Collectors.toList());
     }
 
