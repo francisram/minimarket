@@ -16,7 +16,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/productos-simples")
 @CrossOrigin(origins = "*")
-@PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_productos')")
+@PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_productos') or hasAuthority('PAGINA_pedidos')")
 @Tag(name = "Productos Simples", description = "Bebidas, cafetería y helados envasados que no requieren armado")
 public class ProductoSimpleController {
 
@@ -40,19 +40,28 @@ public class ProductoSimpleController {
         return ResponseEntity.ok(productoSimpleService.obtenerPorId(id));
     }
 
+    @GetMapping("/codigo-barra/{codigo}")
+    @Operation(summary = "Buscar producto simple por su código de barra (para lector en POS)")
+    public ResponseEntity<ProductoSimple> buscarPorCodigoBarra(@PathVariable String codigo) {
+        return ResponseEntity.ok(productoSimpleService.buscarPorCodigoBarra(codigo));
+    }
+
     @PostMapping
+    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_productos')")
     @Operation(summary = "Crear nuevo producto simple")
     public ResponseEntity<ProductoSimple> crear(@Valid @RequestBody ProductoSimpleRequestDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(productoSimpleService.crear(dto));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_productos')")
     @Operation(summary = "Actualizar producto simple")
     public ResponseEntity<ProductoSimple> actualizar(@PathVariable Long id, @Valid @RequestBody ProductoSimpleRequestDTO dto) {
         return ResponseEntity.ok(productoSimpleService.actualizar(id, dto));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_productos')")
     @Operation(summary = "Eliminar producto simple")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         productoSimpleService.eliminar(id);

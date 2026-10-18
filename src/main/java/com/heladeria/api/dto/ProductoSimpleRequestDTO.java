@@ -4,6 +4,7 @@ import com.heladeria.api.entities.enums.TipoIva;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 
@@ -21,6 +22,11 @@ public class ProductoSimpleRequestDTO {
     private Integer stockMinimo = 5;
     private Boolean activo = true;
     private TipoIva tipoIva = TipoIva.IVA_10;
+
+    @Size(max = 60, message = "El código de barra no puede superar 60 caracteres")
+    private String codigoBarra;
+
+    private Long proveedorId;
 
     public ProductoSimpleRequestDTO() {
     }
@@ -45,4 +51,10 @@ public class ProductoSimpleRequestDTO {
 
     public TipoIva getTipoIva() { return tipoIva; }
     public void setTipoIva(TipoIva tipoIva) { this.tipoIva = tipoIva; }
+
+    public String getCodigoBarra() { return codigoBarra; }
+    public void setCodigoBarra(String codigoBarra) { this.codigoBarra = codigoBarra; }
+
+    public Long getProveedorId() { return proveedorId; }
+    public void setProveedorId(Long proveedorId) { this.proveedorId = proveedorId; }
 }

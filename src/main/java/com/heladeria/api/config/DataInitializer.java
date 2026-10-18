@@ -76,10 +76,10 @@ public class DataInitializer implements CommandLineRunner {
         if (productoSimpleRepository.count() == 0) {
             log.info("Precargando productos simples (bebidas y envasados)...");
             productoSimpleRepository.saveAll(List.of(
-                    ProductoSimple.builder().nombre("Agua Mineral con gas 500ml").precio(new BigDecimal("10000")).categoria("BEBIDAS").stock(40).stockMinimo(5).activo(true).build(),
-                    ProductoSimple.builder().nombre("Agua Mineral sin gas 500ml").precio(new BigDecimal("10000")).categoria("BEBIDAS").stock(50).stockMinimo(5).activo(true).build(),
-                    ProductoSimple.builder().nombre("Alfajor Helado").precio(new BigDecimal("15000")).categoria("ENVASADOS").stock(25).stockMinimo(5).activo(true).build(),
-                    ProductoSimple.builder().nombre("Paleta Bombón Artesanal").precio(new BigDecimal("12000")).categoria("ENVASADOS").stock(30).stockMinimo(5).activo(true).build()
+                    ProductoSimple.builder().nombre("Agua Mineral con gas 500ml").precio(new BigDecimal("10000")).categoria("BEBIDAS").stock(40).stockMinimo(5).activo(true).codigoBarra("7840001001").build(),
+                    ProductoSimple.builder().nombre("Agua Mineral sin gas 500ml").precio(new BigDecimal("10000")).categoria("BEBIDAS").stock(50).stockMinimo(5).activo(true).codigoBarra("7840001002").build(),
+                    ProductoSimple.builder().nombre("Alfajor Helado").precio(new BigDecimal("15000")).categoria("ENVASADOS").stock(25).stockMinimo(5).activo(true).codigoBarra("7840001003").build(),
+                    ProductoSimple.builder().nombre("Paleta Bombón Artesanal").precio(new BigDecimal("12000")).categoria("ENVASADOS").stock(30).stockMinimo(5).activo(true).codigoBarra("7840001004").build()
             ));
         }
         log.info("Catálogo inicial precargado exitosamente.");

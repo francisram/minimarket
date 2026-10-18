@@ -31,6 +31,7 @@ public class DataSeeder implements CommandLineRunner {
     private final LicenciaService licenciaService;
     private final InstitucionRepository institucionRepository;
     private final ClienteRepository clienteRepository;
+    private final ProveedorRepository proveedorRepository;
 
     private final String defaultAdminPassword;
     private final String defaultOwnerPassword;
@@ -44,6 +45,7 @@ public class DataSeeder implements CommandLineRunner {
                       LicenciaService licenciaService,
                       InstitucionRepository institucionRepository,
                       ClienteRepository clienteRepository,
+                      ProveedorRepository proveedorRepository,
                       @Value("${app.security.default-admin-password:admin123}") String defaultAdminPassword,
                       @Value("${app.security.default-owner-password:owner123}") String defaultOwnerPassword) {
         this.paginaRepository = paginaRepository;
@@ -55,6 +57,7 @@ public class DataSeeder implements CommandLineRunner {
         this.licenciaService = licenciaService;
         this.institucionRepository = institucionRepository;
         this.clienteRepository = clienteRepository;
+        this.proveedorRepository = proveedorRepository;
         this.defaultAdminPassword = defaultAdminPassword;
         this.defaultOwnerPassword = defaultOwnerPassword;
     }
@@ -67,6 +70,7 @@ public class DataSeeder implements CommandLineRunner {
         sembrarRolesYUsuarios();
         sembrarInstitucion();
         sembrarClientes();
+        sembrarProveedores();
     }
 
     private void sembrarPaginas() {
@@ -79,6 +83,7 @@ public class DataSeeder implements CommandLineRunner {
                 new Pagina(null, "caja", "Control de Caja", "/caja", null, "payments", 45),
                 new Pagina(null, "pedidos", "Punto de Venta / Pedidos", "/pedidos", null, "point_of_sale", 50),
                 new Pagina(null, "clientes", "Clientes", "/clientes", null, "users", 52),
+                new Pagina(null, "proveedores", "Proveedores", "/proveedores", null, "truck", 53),
                 new Pagina(null, "stock", "Control de Stock", "/stock", null, "warehouse", 55),
                 new Pagina(null, "auditoria", "Auditoría & Conteo Físico", "/auditoria", null, "clipboard-check", 56),
                 new Pagina(null, "reportes", "Reportes y Estadísticas", "/reportes", null, "bar_chart", 58),
@@ -121,7 +126,7 @@ public class DataSeeder implements CommandLineRunner {
             p.setNombre("Estandar");
             return planLicenciaRepository.save(p);
         });
-        estandar.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "stock", "pedidos", "impresoras", "caja", "clientes", "reportes", "auditoria"));
+        estandar.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "stock", "pedidos", "impresoras", "caja", "clientes", "proveedores", "reportes", "auditoria"));
         planLicenciaRepository.save(estandar);
 
         // Plan Premium
@@ -130,7 +135,7 @@ public class DataSeeder implements CommandLineRunner {
             p.setNombre("Premium");
             return planLicenciaRepository.save(p);
         });
-        premium.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "stock", "pedidos", "usuarios", "roles", "impresoras", "licencia", "caja", "clientes", "reportes", "institucion", "backup", "auditoria"));
+        premium.setPaginas(obtenerPaginasPorClaves("dashboard", "sabores", "presentaciones", "toppings", "productos", "stock", "pedidos", "usuarios", "roles", "impresoras", "licencia", "caja", "clientes", "proveedores", "reportes", "institucion", "backup", "auditoria"));
         planLicenciaRepository.save(premium);
 
         // Licencia activa de esta instalacion (id=1)
@@ -274,6 +279,34 @@ public class DataSeeder implements CommandLineRunner {
             clienteRepository.save(distribuidora);
 
             log.info("[SEED] Clientes iniciales sembrados exitosamente.");
+        }
+    }
+
+    private void sembrarProveedores() {
+        if (proveedorRepository.count() == 0) {
+            Proveedor lacteos = new Proveedor();
+            lacteos.setRuc("80098765-4");
+            lacteos.setRazonSocial("Lácteos del Valle S.A.");
+            lacteos.setContacto("Carlos Benítez (Ventas)");
+            lacteos.setTelefono("021-987654");
+            lacteos.setEmail("ventas@lacteosdelvalle.com.py");
+            lacteos.setDireccion("Km 14 Ruta 2, San Lorenzo");
+            lacteos.setActivo(true);
+            lacteos.setFechaCreacion(LocalDateTime.now());
+            proveedorRepository.save(lacteos);
+
+            Proveedor bebidas = new Proveedor();
+            bebidas.setRuc("80054321-9");
+            bebidas.setRazonSocial("Distribuidora Bebidas del Sur");
+            bebidas.setContacto("Mariela Bogado");
+            bebidas.setTelefono("021-456789");
+            bebidas.setEmail("pedidos@bebidassur.com.py");
+            bebidas.setDireccion("Av. Fernando de la Mora 890");
+            bebidas.setActivo(true);
+            bebidas.setFechaCreacion(LocalDateTime.now());
+            proveedorRepository.save(bebidas);
+
+            log.info("[SEED] Proveedores iniciales sembrados exitosamente.");
         }
     }
 }

@@ -6,7 +6,9 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "productos_simples")
+@Table(name = "productos_simples", indexes = {
+    @Index(name = "idx_prod_simple_codigo_barra", columnList = "codigo_barra")
+})
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class ProductoSimple {
 
@@ -36,14 +38,25 @@ public class ProductoSimple {
     @Column(name = "tipo_iva", nullable = false, length = 20, columnDefinition = "varchar(20) default 'IVA_10'")
     private TipoIva tipoIva = TipoIva.IVA_10;
 
+    @Column(name = "codigo_barra", length = 60)
+    private String codigoBarra;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "proveedor_id")
+    private Proveedor proveedor;
+
     public ProductoSimple() {
     }
 
     public ProductoSimple(Long id, String nombre, BigDecimal precio, String categoria, Integer stock, Integer stockMinimo, Boolean activo) {
-        this(id, nombre, precio, categoria, stock, stockMinimo, activo, TipoIva.IVA_10);
+        this(id, nombre, precio, categoria, stock, stockMinimo, activo, TipoIva.IVA_10, null, null);
     }
 
     public ProductoSimple(Long id, String nombre, BigDecimal precio, String categoria, Integer stock, Integer stockMinimo, Boolean activo, TipoIva tipoIva) {
+        this(id, nombre, precio, categoria, stock, stockMinimo, activo, tipoIva, null, null);
+    }
+
+    public ProductoSimple(Long id, String nombre, BigDecimal precio, String categoria, Integer stock, Integer stockMinimo, Boolean activo, TipoIva tipoIva, String codigoBarra, Proveedor proveedor) {
         this.id = id;
         this.nombre = nombre;
         this.precio = precio != null ? precio.setScale(0, java.math.RoundingMode.HALF_UP) : null;
@@ -52,6 +65,8 @@ public class ProductoSimple {
         this.stockMinimo = stockMinimo != null ? stockMinimo : 5;
         this.activo = activo != null ? activo : true;
         this.tipoIva = tipoIva != null ? tipoIva : TipoIva.IVA_10;
+        this.codigoBarra = codigoBarra;
+        this.proveedor = proveedor;
     }
 
     public static ProductoSimpleBuilder builder() {
@@ -86,6 +101,12 @@ public class ProductoSimple {
         this.tipoIva = tipoIva != null ? tipoIva : TipoIva.IVA_10;
     }
 
+    public String getCodigoBarra() { return codigoBarra; }
+    public void setCodigoBarra(String codigoBarra) { this.codigoBarra = codigoBarra; }
+
+    public Proveedor getProveedor() { return proveedor; }
+    public void setProveedor(Proveedor proveedor) { this.proveedor = proveedor; }
+
     public static class ProductoSimpleBuilder {
         private Long id;
         private String nombre;
@@ -95,6 +116,8 @@ public class ProductoSimple {
         private Integer stockMinimo = 5;
         private Boolean activo = true;
         private TipoIva tipoIva = TipoIva.IVA_10;
+        private String codigoBarra;
+        private Proveedor proveedor;
 
         public ProductoSimpleBuilder id(Long id) { this.id = id; return this; }
         public ProductoSimpleBuilder nombre(String nombre) { this.nombre = nombre; return this; }
@@ -104,9 +127,11 @@ public class ProductoSimple {
         public ProductoSimpleBuilder stockMinimo(Integer stockMinimo) { this.stockMinimo = stockMinimo; return this; }
         public ProductoSimpleBuilder activo(Boolean activo) { this.activo = activo; return this; }
         public ProductoSimpleBuilder tipoIva(TipoIva tipoIva) { this.tipoIva = tipoIva; return this; }
+        public ProductoSimpleBuilder codigoBarra(String codigoBarra) { this.codigoBarra = codigoBarra; return this; }
+        public ProductoSimpleBuilder proveedor(Proveedor proveedor) { this.proveedor = proveedor; return this; }
 
         public ProductoSimple build() {
-            return new ProductoSimple(id, nombre, precio, categoria, stock, stockMinimo, activo, tipoIva);
+            return new ProductoSimple(id, nombre, precio, categoria, stock, stockMinimo, activo, tipoIva, codigoBarra, proveedor);
         }
     }
 }
