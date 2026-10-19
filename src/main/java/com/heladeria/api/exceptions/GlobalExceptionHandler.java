@@ -84,11 +84,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, Object>> handleDataIntegrity(org.springframework.dao.DataIntegrityViolationException ex) {
+        log.error("Violación de integridad de datos: {}", ex.getMessage(), ex);
+        String detalle = ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : ex.getMessage();
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.CONFLICT.value());
         body.put("error", "Conflicto de integridad de datos");
-        body.put("mensaje", "La operación no se pudo completar debido a una restricción de integridad");
+        body.put("mensaje", "La operación no se pudo completar debido a una restricción de integridad (" + detalle + ")");
         return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
     }
 

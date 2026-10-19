@@ -128,13 +128,34 @@ public class PedidoService {
             inst.setUltimoNumeroFactura(sig);
             institucionRepository.save(inst);
         }
+ 
+        String clienteRuc = (request.getClienteRuc() != null && !request.getClienteRuc().trim().isEmpty())
+                ? request.getClienteRuc().trim()
+                : null;
+        if (clienteRuc != null && clienteRuc.length() > 30) {
+            clienteRuc = clienteRuc.substring(0, 30);
+        }
+
+        String clienteNombre = (request.getClienteNombre() != null && !request.getClienteNombre().trim().isEmpty())
+                ? request.getClienteNombre().trim()
+                : null;
+        if (clienteNombre != null && clienteNombre.length() > 100) {
+            clienteNombre = clienteNombre.substring(0, 100);
+        }
+
+        String clienteDireccion = (request.getClienteDireccion() != null && !request.getClienteDireccion().trim().isEmpty())
+                ? request.getClienteDireccion().trim()
+                : null;
+        if (clienteDireccion != null && clienteDireccion.length() > 150) {
+            clienteDireccion = clienteDireccion.substring(0, 150);
+        }
 
         // Auto-guardado o actualización del cliente en la base de datos si se provee RUC
-        if (request.getClienteRuc() != null && !request.getClienteRuc().trim().isEmpty()) {
+        if (clienteRuc != null) {
             clienteService.obtenerOCrearClienteDesdeVenta(
-                    request.getClienteRuc(),
-                    request.getClienteNombre(),
-                    request.getClienteDireccion()
+                    clienteRuc,
+                    clienteNombre,
+                    clienteDireccion
             );
         }
 
@@ -146,9 +167,9 @@ public class PedidoService {
                 .sesionCaja(sesionActiva)
                 .tipoComprobante(tipoComprobante)
                 .condicionVenta(condicionVenta)
-                .clienteNombre(request.getClienteNombre() != null ? request.getClienteNombre().trim() : null)
-                .clienteRuc(request.getClienteRuc() != null ? request.getClienteRuc().trim() : null)
-                .clienteDireccion(request.getClienteDireccion() != null ? request.getClienteDireccion().trim() : null)
+                .clienteNombre(clienteNombre)
+                .clienteRuc(clienteRuc)
+                .clienteDireccion(clienteDireccion)
                 .numeroFactura(numeroFactura)
                 .numeroVoucher(request.getNumeroVoucher() != null ? request.getNumeroVoucher().trim() : null)
                 .trxId(trxId)

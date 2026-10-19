@@ -98,15 +98,30 @@ public class ClienteService {
             return null;
         }
         String rucLimpio = ruc.trim();
-        return clienteRepository.findByRucIgnoreCase(rucLimpio)
+        if (rucLimpio.length() > 30) {
+            rucLimpio = rucLimpio.substring(0, 30);
+        }
+        String finalRuc = rucLimpio;
+        String finalRazon = (razonSocial != null && !razonSocial.isBlank()) ? razonSocial.trim() : "Cliente Ocasional";
+        if (finalRazon.length() > 120) {
+            finalRazon = finalRazon.substring(0, 120);
+        }
+        String finalDir = (direccion != null && !direccion.isBlank()) ? direccion.trim() : null;
+        if (finalDir != null && finalDir.length() > 150) {
+            finalDir = finalDir.substring(0, 150);
+        }
+        final String fRazon = finalRazon;
+        final String fDir = finalDir;
+
+        return clienteRepository.findByRucIgnoreCase(finalRuc)
                 .map(existente -> {
                     boolean modificado = false;
-                    if (razonSocial != null && !razonSocial.isBlank() && !razonSocial.equalsIgnoreCase(existente.getRazonSocial())) {
-                        existente.setRazonSocial(razonSocial.trim());
+                    if (!fRazon.equalsIgnoreCase(existente.getRazonSocial())) {
+                        existente.setRazonSocial(fRazon);
                         modificado = true;
                     }
-                    if (direccion != null && !direccion.isBlank() && !direccion.equalsIgnoreCase(existente.getDireccion())) {
-                        existente.setDireccion(direccion.trim());
+                    if (fDir != null && !fDir.equalsIgnoreCase(existente.getDireccion())) {
+                        existente.setDireccion(fDir);
                         modificado = true;
                     }
                     if (modificado) {
@@ -117,9 +132,9 @@ public class ClienteService {
                 })
                 .orElseGet(() -> {
                     Cliente nuevo = new Cliente();
-                    nuevo.setRuc(rucLimpio);
-                    nuevo.setRazonSocial((razonSocial != null && !razonSocial.isBlank()) ? razonSocial.trim() : "Cliente Ocasional");
-                    nuevo.setDireccion((direccion != null && !direccion.isBlank()) ? direccion.trim() : null);
+                    nuevo.setRuc(finalRuc);
+                    nuevo.setRazonSocial(fRazon);
+                    nuevo.setDireccion(fDir);
                     nuevo.setActivo(true);
                     nuevo.setFechaCreacion(LocalDateTime.now());
                     return clienteRepository.save(nuevo);

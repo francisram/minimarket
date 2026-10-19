@@ -25,6 +25,7 @@ public class DataInitializer implements CommandLineRunner {
     private final ProductoRepository productoRepository;
     private final ProveedorRepository proveedorRepository;
     private final CompraRepository compraRepository;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     public DataInitializer(SaborRepository saborRepository,
                            PresentacionRepository presentacionRepository,
@@ -32,7 +33,8 @@ public class DataInitializer implements CommandLineRunner {
                            ProductoSimpleRepository productoSimpleRepository,
                            ProductoRepository productoRepository,
                            ProveedorRepository proveedorRepository,
-                           CompraRepository compraRepository) {
+                           CompraRepository compraRepository,
+                           org.springframework.jdbc.core.JdbcTemplate jdbcTemplate) {
         this.saborRepository = saborRepository;
         this.presentacionRepository = presentacionRepository;
         this.toppingRepository = toppingRepository;
@@ -40,10 +42,18 @@ public class DataInitializer implements CommandLineRunner {
         this.productoRepository = productoRepository;
         this.proveedorRepository = proveedorRepository;
         this.compraRepository = compraRepository;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Override
     public void run(String... args) {
+        try {
+            jdbcTemplate.execute("ALTER TABLE detalles_pedido DROP CONSTRAINT IF EXISTS detalles_pedido_tipo_item_check");
+            jdbcTemplate.execute("ALTER TABLE detalles_pedido ADD CONSTRAINT detalles_pedido_tipo_item_check CHECK (tipo_item IN ('HELADO', 'PRODUCTO_SIMPLE', 'TOPPING'))");
+        } catch (Exception e) {
+            log.warn("Verificación de constraint detalles_pedido_tipo_item_check: {}", e.getMessage());
+        }
+
         if (saborRepository.count() == 0) {
             log.info("Precargando catálogo inicial de sabores de heladería...");
             saborRepository.saveAll(List.of(
