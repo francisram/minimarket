@@ -35,19 +35,22 @@ public class CompraService {
     private final ProductoRepository productoRepository;
     private final ProductoProveedorRepository productoProveedorRepository;
     private final MovimientoStockRepository movimientoStockRepository;
+    private final AuditoriaService auditoriaService;
 
     public CompraService(CompraRepository compraRepository,
                          DetalleCompraRepository detalleCompraRepository,
                          ProveedorRepository proveedorRepository,
                          ProductoRepository productoRepository,
                          ProductoProveedorRepository productoProveedorRepository,
-                         MovimientoStockRepository movimientoStockRepository) {
+                         MovimientoStockRepository movimientoStockRepository,
+                         AuditoriaService auditoriaService) {
         this.compraRepository = compraRepository;
         this.detalleCompraRepository = detalleCompraRepository;
         this.proveedorRepository = proveedorRepository;
         this.productoRepository = productoRepository;
         this.productoProveedorRepository = productoProveedorRepository;
         this.movimientoStockRepository = movimientoStockRepository;
+        this.auditoriaService = auditoriaService;
     }
 
     @Transactional(readOnly = true)
@@ -217,6 +220,19 @@ public class CompraService {
         log.info("Factura de compra registrada con éxito ID {} N° {} Proveedor {}",
                 guardada.getId(), guardada.getNumeroFactura(), proveedor.getRazonSocial());
 
+        auditoriaService.registrarLog(
+                usuario,
+                "COMPRAS",
+                "CREACION",
+                guardada.getId(),
+                "Factura N° " + guardada.getNumeroFactura(),
+                "Factura de Compra registrada a '" + proveedor.getRazonSocial() +
+                "'. Condición: " + guardada.getCondicionCompra() +
+                ", Total: Gs. " + guardada.getTotal() +
+                " (" + guardada.getDetalles().size() + " ítems ingresados a stock)",
+                null
+        );
+
         return new CompraDTO(guardada);
     }
 
@@ -264,6 +280,19 @@ public class CompraService {
 
         Compra actualizada = compraRepository.save(compra);
         log.warn("Factura de compra anulada ID {} N° {}. Stock revertido.", actualizada.getId(), actualizada.getNumeroFactura());
+
+        auditoriaService.registrarLog(
+                usuario,
+                "COMPRAS",
+                "ANULACION",
+                actualizada.getId(),
+                "Factura N° " + actualizada.getNumeroFactura(),
+                "Factura de Compra ANULADA. Total: Gs. " + actualizada.getTotal() +
+                ". Motivo: " + (motivo != null && !motivo.isBlank() ? motivo.trim() : "Sin motivo especificado") +
+                ". Se ejecutó reversión automática de stock.",
+                null
+        );
+
         return new CompraDTO(actualizada);
     }
 }

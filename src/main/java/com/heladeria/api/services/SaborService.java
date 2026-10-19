@@ -16,9 +16,11 @@ import java.util.stream.Collectors;
 public class SaborService {
 
     private final SaborRepository saborRepository;
+    private final AuditoriaService auditoriaService;
 
-    public SaborService(SaborRepository saborRepository) {
+    public SaborService(SaborRepository saborRepository, AuditoriaService auditoriaService) {
         this.saborRepository = saborRepository;
+        this.auditoriaService = auditoriaService;
     }
 
     @Transactional(readOnly = true)
@@ -58,7 +60,16 @@ public class SaborService {
                 .stockMinimoKilos(dto.getStockMinimoKilos() != null ? dto.getStockMinimoKilos() : 2.0)
                 .build();
 
-        return saborRepository.save(sabor);
+        Sabor guardado = saborRepository.save(sabor);
+        auditoriaService.registrar(
+                "SABORES",
+                "CREACION",
+                guardado.getId(),
+                guardado.getNombre(),
+                "Creado sabor '" + guardado.getNombre() + "' (" + guardado.getCategoria() +
+                "), Stock inicial: " + (guardado.getStockKilos() != null ? guardado.getStockKilos() : 0.0) + " kg"
+        );
+        return guardado;
     }
 
     @Transactional
@@ -68,6 +79,21 @@ public class SaborService {
         if (!sabor.getNombre().equalsIgnoreCase(dto.getNombre()) &&
                 saborRepository.existsByNombreIgnoreCase(dto.getNombre())) {
             throw new ReglaDeNegocioException("Ya existe un sabor registrado con el nombre: " + dto.getNombre());
+        }
+
+        StringBuilder cambios = new StringBuilder();
+        if (dto.getStockKilos() != null && !dto.getStockKilos().equals(sabor.getStockKilos())) {
+            cambios.append("Stock: ").append(sabor.getStockKilos()).append(" kg ➔ ").append(dto.getStockKilos()).append(" kg; ");
+        }
+        if (dto.getDisponible() != null && !dto.getDisponible().equals(sabor.getDisponible())) {
+            cambios.append("Disponibilidad: ").append(Boolean.TRUE.equals(sabor.getDisponible()) ? "Disponible" : "Agotado")
+                   .append(" ➔ ").append(Boolean.TRUE.equals(dto.getDisponible()) ? "Disponible" : "Agotado").append("; ");
+        }
+        if (!sabor.getNombre().equalsIgnoreCase(dto.getNombre())) {
+            cambios.append("Nombre: ").append(sabor.getNombre()).append(" ➔ ").append(dto.getNombre()).append("; ");
+        }
+        if (cambios.length() == 0) {
+            cambios.append("Modificación de detalles del sabor.");
         }
 
         sabor.setNombre(dto.getNombre());
@@ -86,19 +112,43 @@ public class SaborService {
             sabor.setStockMinimoKilos(dto.getStockMinimoKilos());
         }
 
-        return saborRepository.save(sabor);
+        Sabor actualizado = saborRepository.save(sabor);
+        auditoriaService.registrar(
+                "SABORES",
+                "MODIFICACION",
+                actualizado.getId(),
+                actualizado.getNombre(),
+                cambios.toString().trim()
+        );
+        return actualizado;
     }
 
     @Transactional
     public Sabor cambiarDisponibilidad(Long id, boolean disponible) {
         Sabor sabor = obtenerPorId(id);
         sabor.setDisponible(disponible);
-        return saborRepository.save(sabor);
+        Sabor actualizado = saborRepository.save(sabor);
+
+        auditoriaService.registrar(
+                "SABORES",
+                "MODIFICACION",
+                actualizado.getId(),
+                actualizado.getNombre(),
+                "Disponibilidad cambiada a: " + (disponible ? "Disponible para venta" : "Agotado en bacha")
+        );
+        return actualizado;
     }
 
     @Transactional
     public void eliminar(Long id) {
         Sabor sabor = obtenerPorId(id);
         saborRepository.delete(sabor);
+        auditoriaService.registrar(
+                "SABORES",
+                "ELIMINACION",
+                id,
+                sabor.getNombre(),
+                "Eliminado sabor: '" + sabor.getNombre() + "'"
+        );
     }
 }

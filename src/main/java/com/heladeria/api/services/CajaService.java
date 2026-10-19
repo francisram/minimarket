@@ -26,13 +26,16 @@ public class CajaService {
     private final SesionCajaRepository sesionCajaRepository;
     private final PedidoRepository pedidoRepository;
     private final UsuarioRepository usuarioRepository;
+    private final AuditoriaService auditoriaService;
 
     public CajaService(SesionCajaRepository sesionCajaRepository,
                        PedidoRepository pedidoRepository,
-                       UsuarioRepository usuarioRepository) {
+                       UsuarioRepository usuarioRepository,
+                       AuditoriaService auditoriaService) {
         this.sesionCajaRepository = sesionCajaRepository;
         this.pedidoRepository = pedidoRepository;
         this.usuarioRepository = usuarioRepository;
+        this.auditoriaService = auditoriaService;
     }
 
     @Transactional(readOnly = true)
@@ -164,6 +167,18 @@ public class CajaService {
                 .build();
 
         SesionCaja guardada = sesionCajaRepository.save(sesion);
+
+        auditoriaService.registrarLog(
+                username,
+                "CAJA",
+                "APERTURA_CAJA",
+                guardada.getId(),
+                "Sesión de Caja #" + guardada.getId(),
+                "Apertura de turno de caja. Fondo inicial: Gs. " + guardada.getMontoInicial() +
+                (request.getObservaciones() != null && !request.getObservaciones().isBlank() ? " (" + request.getObservaciones().trim() + ")" : ""),
+                null
+        );
+
         return SesionCajaDTO.fromEntity(guardada);
     }
 
@@ -273,6 +288,26 @@ public class CajaService {
         sesion.setObservacionesCierre(request.getObservaciones());
 
         SesionCaja guardada = sesionCajaRepository.save(sesion);
+
+        String detalleCierre = String.format(
+                "Cierre de caja. Efectivo declarado: Gs. %s (Esperado: Gs. %s, Diferencia: Gs. %s). Ventas totales: Gs. %s (%d pedidos)",
+                guardada.getMontoRealEfectivo(),
+                guardada.getMontoEsperadoEfectivo(),
+                guardada.getDiferencia(),
+                guardada.getTotalVentasGeneral(),
+                guardada.getCantidadPedidos()
+        );
+
+        auditoriaService.registrarLog(
+                username,
+                "CAJA",
+                "CIERRE_CAJA",
+                guardada.getId(),
+                "Sesión de Caja #" + guardada.getId(),
+                detalleCierre,
+                null
+        );
+
         return SesionCajaDTO.fromEntity(guardada);
     }
 

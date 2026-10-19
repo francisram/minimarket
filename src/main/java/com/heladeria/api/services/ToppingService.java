@@ -14,9 +14,11 @@ import java.util.List;
 public class ToppingService {
 
     private final ToppingRepository toppingRepository;
+    private final AuditoriaService auditoriaService;
 
-    public ToppingService(ToppingRepository toppingRepository) {
+    public ToppingService(ToppingRepository toppingRepository, AuditoriaService auditoriaService) {
         this.toppingRepository = toppingRepository;
+        this.auditoriaService = auditoriaService;
     }
 
     @Transactional(readOnly = true)
@@ -45,7 +47,15 @@ public class ToppingService {
                 .disponible(dto.getDisponible() == null || dto.getDisponible())
                 .build();
 
-        return toppingRepository.save(topping);
+        Topping guardado = toppingRepository.save(topping);
+        auditoriaService.registrar(
+                "TOPPINGS",
+                "CREACION",
+                guardado.getId(),
+                guardado.getNombre(),
+                "Creado topping '" + guardado.getNombre() + "', Precio extra: Gs. " + guardado.getPrecioExtra()
+        );
+        return guardado;
     }
 
     @Transactional
@@ -57,25 +67,64 @@ public class ToppingService {
             throw new ReglaDeNegocioException("Ya existe un topping con el nombre: " + dto.getNombre());
         }
 
+        StringBuilder cambios = new StringBuilder();
+        if (dto.getPrecioExtra() != null && (topping.getPrecioExtra() == null || dto.getPrecioExtra().compareTo(topping.getPrecioExtra()) != 0)) {
+            cambios.append("Precio extra: Gs. ").append(topping.getPrecioExtra()).append(" ➔ Gs. ").append(dto.getPrecioExtra()).append("; ");
+        }
+        if (dto.getDisponible() != null && !dto.getDisponible().equals(topping.getDisponible())) {
+            cambios.append("Disponibilidad: ").append(Boolean.TRUE.equals(topping.getDisponible()) ? "Disponible" : "No disponible")
+                   .append(" ➔ ").append(Boolean.TRUE.equals(dto.getDisponible()) ? "Disponible" : "No disponible").append("; ");
+        }
+        if (!topping.getNombre().equalsIgnoreCase(dto.getNombre())) {
+            cambios.append("Nombre: ").append(topping.getNombre()).append(" ➔ ").append(dto.getNombre()).append("; ");
+        }
+        if (cambios.length() == 0) {
+            cambios.append("Modificación de detalles del topping.");
+        }
+
         topping.setNombre(dto.getNombre());
         topping.setPrecioExtra(dto.getPrecioExtra());
         if (dto.getDisponible() != null) {
             topping.setDisponible(dto.getDisponible());
         }
 
-        return toppingRepository.save(topping);
+        Topping actualizado = toppingRepository.save(topping);
+        auditoriaService.registrar(
+                "TOPPINGS",
+                "MODIFICACION",
+                actualizado.getId(),
+                actualizado.getNombre(),
+                cambios.toString().trim()
+        );
+        return actualizado;
     }
 
     @Transactional
     public Topping cambiarDisponibilidad(Long id, boolean disponible) {
         Topping topping = obtenerPorId(id);
         topping.setDisponible(disponible);
-        return toppingRepository.save(topping);
+        Topping actualizado = toppingRepository.save(topping);
+
+        auditoriaService.registrar(
+                "TOPPINGS",
+                "MODIFICACION",
+                actualizado.getId(),
+                actualizado.getNombre(),
+                "Disponibilidad cambiada a: " + (disponible ? "Disponible" : "Agotado")
+        );
+        return actualizado;
     }
 
     @Transactional
     public void eliminar(Long id) {
         Topping topping = obtenerPorId(id);
         toppingRepository.delete(topping);
+        auditoriaService.registrar(
+                "TOPPINGS",
+                "ELIMINACION",
+                id,
+                topping.getNombre(),
+                "Eliminado topping: '" + topping.getNombre() + "'"
+        );
     }
 }

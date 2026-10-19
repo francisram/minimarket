@@ -27,13 +27,16 @@ public class ProductoService {
     private final ProductoRepository productoRepository;
     private final ProductoProveedorRepository productoProveedorRepository;
     private final ProveedorRepository proveedorRepository;
+    private final AuditoriaService auditoriaService;
 
     public ProductoService(ProductoRepository productoRepository,
                            ProductoProveedorRepository productoProveedorRepository,
-                           ProveedorRepository proveedorRepository) {
+                           ProveedorRepository proveedorRepository,
+                           AuditoriaService auditoriaService) {
         this.productoRepository = productoRepository;
         this.productoProveedorRepository = productoProveedorRepository;
         this.proveedorRepository = proveedorRepository;
+        this.auditoriaService = auditoriaService;
     }
 
     @Transactional(readOnly = true)
@@ -100,19 +103,26 @@ public class ProductoService {
 
         Producto producto = new Producto();
         mapearDatos(producto, dto);
-        producto = productoRepository.save(producto);
-
-        // Asociar proveedores si vienen en el request
+        Producto guardado = productoRepository.save(producto);
         if (dto.getProveedores() != null && !dto.getProveedores().isEmpty()) {
             for (AsignarProveedorRequestDTO provDto : dto.getProveedores()) {
                 Proveedor prov = proveedorRepository.findById(provDto.getProveedorId())
                         .orElseThrow(() -> new RecursoNoEncontradoException("Proveedor ID " + provDto.getProveedorId() + " no encontrado"));
-                producto.agregarProveedor(prov, provDto.getCodigoReferencia(), provDto.getCostoCompra(), provDto.getEsPrincipal());
+                guardado.agregarProveedor(prov, provDto.getCodigoReferencia(), provDto.getCostoCompra(), provDto.getEsPrincipal());
             }
-            producto = productoRepository.save(producto);
+            guardado = productoRepository.save(guardado);
         }
 
-        return mapToDTO(producto);
+        auditoriaService.registrar(
+                "CATALOGO_MAESTRO",
+                "CREACION",
+                guardado.getId(),
+                guardado.getNombre(),
+                "Creado producto maestro '" + guardado.getNombre() + "', Tipo: " + guardado.getTipoArticulo() +
+                ", Precio Venta: Gs. " + guardado.getPrecioVenta() + ", Costo: Gs. " + guardado.getPrecioCosto()
+        );
+
+        return mapToDTO(guardado);
     }
 
     @Transactional
@@ -121,6 +131,24 @@ public class ProductoService {
                 .orElseThrow(() -> new RecursoNoEncontradoException("Producto con ID " + id + " no encontrado"));
 
         validarUnicidad(dto.getNombre(), dto.getCodigoBarra(), id);
+
+        StringBuilder cambios = new StringBuilder();
+        if (dto.getPrecioVenta() != null && (producto.getPrecioVenta() == null || dto.getPrecioVenta().compareTo(producto.getPrecioVenta()) != 0)) {
+            cambios.append("Precio venta: Gs. ").append(producto.getPrecioVenta()).append(" ➔ Gs. ").append(dto.getPrecioVenta()).append("; ");
+        }
+        if (dto.getPrecioCosto() != null && (producto.getPrecioCosto() == null || dto.getPrecioCosto().compareTo(producto.getPrecioCosto()) != 0)) {
+            cambios.append("Costo: Gs. ").append(producto.getPrecioCosto()).append(" ➔ Gs. ").append(dto.getPrecioCosto()).append("; ");
+        }
+        if (dto.getStock() != null && (producto.getStock() == null || dto.getStock().compareTo(producto.getStock()) != 0)) {
+            cambios.append("Stock: ").append(producto.getStock()).append(" ➔ ").append(dto.getStock()).append("; ");
+        }
+        if (!producto.getNombre().equalsIgnoreCase(dto.getNombre().trim())) {
+            cambios.append("Nombre: ").append(producto.getNombre()).append(" ➔ ").append(dto.getNombre().trim()).append("; ");
+        }
+        if (cambios.length() == 0) {
+            cambios.append("Modificación de datos generales del artículo maestro.");
+        }
+
         mapearDatos(producto, dto);
 
         // Sincronizar proveedores si la lista no es nula
@@ -134,6 +162,15 @@ public class ProductoService {
         }
 
         producto = productoRepository.save(producto);
+
+        auditoriaService.registrar(
+                "CATALOGO_MAESTRO",
+                "MODIFICACION",
+                producto.getId(),
+                producto.getNombre(),
+                cambios.toString().trim()
+        );
+
         return mapToDTO(producto);
     }
 
@@ -142,6 +179,13 @@ public class ProductoService {
         Producto producto = productoRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Producto con ID " + id + " no encontrado"));
         productoRepository.delete(producto);
+        auditoriaService.registrar(
+                "CATALOGO_MAESTRO",
+                "ELIMINACION",
+                id,
+                producto.getNombre(),
+                "Eliminado producto maestro: '" + producto.getNombre() + "'"
+        );
     }
 
     @Transactional
@@ -149,7 +193,15 @@ public class ProductoService {
         Producto producto = productoRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Producto con ID " + id + " no encontrado"));
         producto.setActivo(activo);
-        return mapToDTO(productoRepository.save(producto));
+        Producto guardado = productoRepository.save(producto);
+        auditoriaService.registrar(
+                "CATALOGO_MAESTRO",
+                "MODIFICACION",
+                guardado.getId(),
+                guardado.getNombre(),
+                "Estado cambiado a: " + (activo ? "Activo" : "Inactivo")
+        );
+        return mapToDTO(guardado);
     }
 
     @Transactional

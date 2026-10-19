@@ -15,9 +15,11 @@ import java.util.List;
 public class PresentacionService {
 
     private final PresentacionRepository presentacionRepository;
+    private final AuditoriaService auditoriaService;
 
-    public PresentacionService(PresentacionRepository presentacionRepository) {
+    public PresentacionService(PresentacionRepository presentacionRepository, AuditoriaService auditoriaService) {
         this.presentacionRepository = presentacionRepository;
+        this.auditoriaService = auditoriaService;
     }
 
     @Transactional(readOnly = true)
@@ -51,7 +53,16 @@ public class PresentacionService {
                 .tipoIva(dto.getTipoIva() != null ? dto.getTipoIva() : TipoIva.IVA_10)
                 .build();
 
-        return presentacionRepository.save(presentacion);
+        Presentacion guardada = presentacionRepository.save(presentacion);
+        auditoriaService.registrar(
+                "PRESENTACIONES_ENVASES",
+                "CREACION",
+                guardada.getId(),
+                guardada.getNombre(),
+                "Creada presentación/envase '" + guardada.getNombre() + "', Precio: Gs. " + guardada.getPrecio() +
+                ", Stock: " + guardada.getStock() + ", Máx sabores: " + guardada.getMaxSabores()
+        );
+        return guardada;
     }
 
     @Transactional
@@ -61,6 +72,24 @@ public class PresentacionService {
         if (!presentacion.getNombre().equalsIgnoreCase(dto.getNombre()) &&
                 presentacionRepository.existsByNombreIgnoreCase(dto.getNombre())) {
             throw new ReglaDeNegocioException("Ya existe una presentación con el nombre: " + dto.getNombre());
+        }
+
+        StringBuilder cambios = new StringBuilder();
+        if (dto.getPrecio() != null && (presentacion.getPrecio() == null || dto.getPrecio().compareTo(presentacion.getPrecio()) != 0)) {
+            cambios.append("Precio: Gs. ").append(presentacion.getPrecio()).append(" ➔ Gs. ").append(dto.getPrecio()).append("; ");
+        }
+        if (dto.getStock() != null && !dto.getStock().equals(presentacion.getStock())) {
+            cambios.append("Stock: ").append(presentacion.getStock()).append(" ➔ ").append(dto.getStock()).append("; ");
+        }
+        if (!presentacion.getNombre().equalsIgnoreCase(dto.getNombre())) {
+            cambios.append("Nombre: ").append(presentacion.getNombre()).append(" ➔ ").append(dto.getNombre()).append("; ");
+        }
+        if (dto.getActivo() != null && !dto.getActivo().equals(presentacion.getActivo())) {
+            cambios.append("Estado: ").append(Boolean.TRUE.equals(presentacion.getActivo()) ? "Activo" : "Inactivo")
+                   .append(" ➔ ").append(Boolean.TRUE.equals(dto.getActivo()) ? "Activo" : "Inactivo").append("; ");
+        }
+        if (cambios.length() == 0) {
+            cambios.append("Modificación de datos generales del envase.");
         }
 
         presentacion.setNombre(dto.getNombre());
@@ -80,12 +109,27 @@ public class PresentacionService {
             presentacion.setTipoIva(dto.getTipoIva());
         }
 
-        return presentacionRepository.save(presentacion);
+        Presentacion actualizada = presentacionRepository.save(presentacion);
+        auditoriaService.registrar(
+                "PRESENTACIONES_ENVASES",
+                "MODIFICACION",
+                actualizada.getId(),
+                actualizada.getNombre(),
+                cambios.toString().trim()
+        );
+        return actualizada;
     }
 
     @Transactional
     public void eliminar(Long id) {
         Presentacion presentacion = obtenerPorId(id);
         presentacionRepository.delete(presentacion);
+        auditoriaService.registrar(
+                "PRESENTACIONES_ENVASES",
+                "ELIMINACION",
+                id,
+                presentacion.getNombre(),
+                "Eliminada presentación/envase: '" + presentacion.getNombre() + "'"
+        );
     }
 }

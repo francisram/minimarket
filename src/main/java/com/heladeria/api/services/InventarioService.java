@@ -32,19 +32,22 @@ public class InventarioService {
     private final PresentacionRepository presentacionRepository;
     private final TomaInventarioRepository tomaInventarioRepository;
     private final DetalleTomaInventarioRepository detalleTomaInventarioRepository;
+    private final AuditoriaService auditoriaService;
 
     public InventarioService(MovimientoStockRepository movimientoStockRepository,
                              ProductoSimpleRepository productoSimpleRepository,
                              SaborRepository saborRepository,
                              PresentacionRepository presentacionRepository,
                              TomaInventarioRepository tomaInventarioRepository,
-                             DetalleTomaInventarioRepository detalleTomaInventarioRepository) {
+                             DetalleTomaInventarioRepository detalleTomaInventarioRepository,
+                             AuditoriaService auditoriaService) {
         this.movimientoStockRepository = movimientoStockRepository;
         this.productoSimpleRepository = productoSimpleRepository;
         this.saborRepository = saborRepository;
         this.presentacionRepository = presentacionRepository;
         this.tomaInventarioRepository = tomaInventarioRepository;
         this.detalleTomaInventarioRepository = detalleTomaInventarioRepository;
+        this.auditoriaService = auditoriaService;
     }
 
     @Transactional
@@ -110,6 +113,18 @@ public class InventarioService {
         movimiento = movimientoStockRepository.save(movimiento);
         log.info("Movimiento registrado: [{}] {} - Cant: {} (Ant: {}, Post: {}) por {}",
                 dto.getTipoMovimiento(), itemNombre, dto.getCantidad(), stockAnterior, stockPosterior, usuario);
+
+        auditoriaService.registrarLog(
+                usuario,
+                "STOCK",
+                dto.getTipoMovimiento() != null ? dto.getTipoMovimiento().name() : "MOVIMIENTO_MANUAL",
+                dto.getItemId(),
+                itemNombre,
+                String.format("Movimiento manual de stock: %s de %s %s (Stock: %s ➔ %s). Motivo: %s",
+                        dto.getTipoMovimiento(), dto.getCantidad(), unidad, stockAnterior, stockPosterior,
+                        (dto.getMotivo() != null && !dto.getMotivo().isBlank() ? dto.getMotivo().trim() : "Sin motivo")),
+                null
+        );
 
         return toDTO(movimiento, unidad);
     }
@@ -432,6 +447,17 @@ public class InventarioService {
 
         log.info("Auditoría Física #{} aplicada: {} artículos contados, {} discrepancias, impacto neto: Gs. {}",
                 toma.getId(), totalArticulos, totalDiferencias, impactoNeto);
+
+        auditoriaService.registrarLog(
+                auditor,
+                "STOCK",
+                "AJUSTE_INVENTARIO",
+                toma.getId(),
+                "Toma Física #" + toma.getId(),
+                String.format("Cierre de auditoría física de inventario. %d artículos relevados, %d diferencias detectadas. Impacto neto valorizado: Gs. %s",
+                        totalArticulos, totalDiferencias, toma.getImpactoNeto()),
+                null
+        );
 
         return toTomaDTO(toma);
     }
