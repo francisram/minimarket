@@ -134,6 +134,12 @@ public class ReporteService {
                                 new ItemRankingDTO(d.getProductoSimple().getId(), d.getProductoSimple().getNombre(), "PRODUCTO_SIMPLE", 0, BigDecimal.ZERO));
                         ir.setCantidad(ir.getCantidad() + d.getCantidad());
                         ir.setTotalRecaudado(ir.getTotalRecaudado().add(d.getSubtotal() != null ? d.getSubtotal() : BigDecimal.ZERO));
+                    } else if (d.getTipoItem() == TipoItemPedido.TOPPING && d.getToppings() != null && !d.getToppings().isEmpty()) {
+                        String clave = "TOP_" + d.getToppings().get(0).getId();
+                        ItemRankingDTO ir = productosMap.computeIfAbsent(clave, k ->
+                                new ItemRankingDTO(d.getToppings().get(0).getId(), d.getToppings().get(0).getNombre(), "TOPPING", 0, BigDecimal.ZERO));
+                        ir.setCantidad(ir.getCantidad() + d.getCantidad());
+                        ir.setTotalRecaudado(ir.getTotalRecaudado().add(d.getSubtotal() != null ? d.getSubtotal() : BigDecimal.ZERO));
                     }
                 }
             }
@@ -487,6 +493,13 @@ public class ReporteService {
                             new ItemRankingDTO(id, d.getProductoSimple().getNombre(), "PRODUCTO_SIMPLE", 0, BigDecimal.ZERO));
                     ir.setCantidad(ir.getCantidad() + d.getCantidad());
                     ir.setTotalRecaudado(ir.getTotalRecaudado().add(d.getSubtotal() != null ? d.getSubtotal() : BigDecimal.ZERO));
+                } else if (d.getTipoItem() == TipoItemPedido.TOPPING && d.getToppings() != null) {
+                    for (Topping t : d.getToppings()) {
+                        ItemRankingDTO tr = toppingsMap.computeIfAbsent(t.getId(), id ->
+                                new ItemRankingDTO(id, t.getNombre(), "TOPPING", 0, BigDecimal.ZERO));
+                        tr.setCantidad(tr.getCantidad() + d.getCantidad());
+                        tr.setTotalRecaudado(tr.getTotalRecaudado().add(d.getSubtotal() != null ? d.getSubtotal() : BigDecimal.ZERO));
+                    }
                 }
             }
         }

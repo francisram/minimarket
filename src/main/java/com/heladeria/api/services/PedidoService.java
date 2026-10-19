@@ -335,6 +335,23 @@ public class PedidoService {
                 detalle.setProductoSimple(prod);
                 detalle.setTipoIva(prod.getTipoIva() != null ? prod.getTipoIva() : TipoIva.IVA_10);
                 precioUnitario = prod.getPrecio();
+            } else if (itemDto.getTipoItem() == TipoItemPedido.TOPPING) {
+                Long toppingId = (itemDto.getToppingIds() != null && !itemDto.getToppingIds().isEmpty())
+                        ? itemDto.getToppingIds().get(0)
+                        : null;
+                if (toppingId == null) {
+                    throw new ReglaDeNegocioException("Debe especificar el id del topping.");
+                }
+                Topping topping = toppingRepository.findById(toppingId)
+                        .orElseThrow(() -> new RecursoNoEncontradoException("Topping con id " + toppingId + " no encontrado."));
+
+                if (!Boolean.TRUE.equals(topping.getDisponible())) {
+                    throw new ReglaDeNegocioException("El topping '" + topping.getNombre() + "' no está disponible actualmente.");
+                }
+
+                detalle.setToppings(List.of(topping));
+                detalle.setTipoIva(TipoIva.IVA_10);
+                precioUnitario = topping.getPrecioExtra();
             }
 
             BigDecimal subtotal = MonedaPyUtils.redondearGs(precioUnitario.multiply(BigDecimal.valueOf(itemDto.getCantidad())));

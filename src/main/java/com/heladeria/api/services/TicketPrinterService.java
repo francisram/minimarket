@@ -233,6 +233,9 @@ public class TicketPrinterService {
                 } else if (d.getTipoItem() == TipoItemPedido.PRODUCTO_SIMPLE && d.getProductoSimple() != null) {
                     desc = d.getProductoSimple().getNombre();
                     precioUnit = d.getProductoSimple().getPrecio();
+                } else if (d.getTipoItem() == TipoItemPedido.TOPPING && d.getToppings() != null && !d.getToppings().isEmpty()) {
+                    desc = d.getToppings().get(0).getNombre();
+                    precioUnit = d.getToppings().get(0).getPrecioExtra();
                 } else {
                     desc = "Item";
                 }
