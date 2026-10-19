@@ -15,9 +15,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import jakarta.persistence.criteria.Predicate;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -87,7 +91,36 @@ public class AuditoriaService {
         String accFiltro = (accion != null && !accion.isBlank() && !"TODOS".equalsIgnoreCase(accion)) ? accion.trim() : null;
         String buscarFiltro = (buscar != null && !buscar.isBlank()) ? buscar.trim() : null;
 
-        List<AuditoriaLog> logs = auditoriaLogRepository.filtrarLogs(desde, hasta, userFiltro, modFiltro, accFiltro, buscarFiltro);
+        Specification<AuditoriaLog> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (desde != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("fecha"), desde));
+            }
+            if (hasta != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("fecha"), hasta));
+            }
+            if (userFiltro != null && !userFiltro.isBlank()) {
+                predicates.add(cb.equal(cb.lower(root.get("usuario")), userFiltro.toLowerCase()));
+            }
+            if (modFiltro != null && !modFiltro.isBlank()) {
+                predicates.add(cb.equal(root.get("modulo"), modFiltro));
+            }
+            if (accFiltro != null && !accFiltro.isBlank()) {
+                predicates.add(cb.equal(root.get("accion"), accFiltro));
+            }
+            if (buscarFiltro != null && !buscarFiltro.isBlank()) {
+                String pattern = "%" + buscarFiltro.toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("detalle")), pattern),
+                        cb.like(cb.lower(root.get("entidadNombre")), pattern),
+                        cb.like(cb.lower(root.get("usuario")), pattern)
+                ));
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        Sort sort = Sort.by(Sort.Direction.DESC, "fecha", "id");
+        List<AuditoriaLog> logs = auditoriaLogRepository.findAll(spec, sort);
 
         return logs.stream().map(AuditoriaLogDTO::new).collect(Collectors.toList());
     }
