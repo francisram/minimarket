@@ -3,6 +3,7 @@ package com.heladeria.api.config;
 import com.heladeria.api.entities.*;
 import com.heladeria.api.entities.enums.CategoriaSabor;
 import com.heladeria.api.repositories.*;
+import com.heladeria.api.services.ProductoService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -25,6 +26,7 @@ public class DataInitializer implements CommandLineRunner {
     private final ProductoRepository productoRepository;
     private final ProveedorRepository proveedorRepository;
     private final CompraRepository compraRepository;
+    private final ProductoService productoService;
     private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     public DataInitializer(SaborRepository saborRepository,
@@ -34,6 +36,7 @@ public class DataInitializer implements CommandLineRunner {
                            ProductoRepository productoRepository,
                            ProveedorRepository proveedorRepository,
                            CompraRepository compraRepository,
+                           ProductoService productoService,
                            org.springframework.jdbc.core.JdbcTemplate jdbcTemplate) {
         this.saborRepository = saborRepository;
         this.presentacionRepository = presentacionRepository;
@@ -42,6 +45,7 @@ public class DataInitializer implements CommandLineRunner {
         this.productoRepository = productoRepository;
         this.proveedorRepository = proveedorRepository;
         this.compraRepository = compraRepository;
+        this.productoService = productoService;
         this.jdbcTemplate = jdbcTemplate;
     }
 
@@ -249,5 +253,96 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         log.info("Catálogo inicial precargado exitosamente.");
+        sincronizarCatalogosExistentes();
+    }
+
+    private void sincronizarCatalogosExistentes() {
+        log.info("Verificando homologación de catálogos existentes con Maestro ERP...");
+        try {
+            // 1. Sabor -> Producto
+            for (Sabor s : saborRepository.findAll()) {
+                if (productoRepository.findByNombreIgnoreCase(s.getNombre().trim()).isEmpty()) {
+                    Producto p = new Producto();
+                    p.setNombre(s.getNombre().trim());
+                    p.setDescripcion(s.getDescripcion());
+                    p.setTipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.SABOR);
+                    p.setCategoriaSabor(s.getCategoria());
+                    p.setAptoCeliaco(Boolean.TRUE.equals(s.getAptoCeliaco()));
+                    p.setEsVegano(Boolean.TRUE.equals(s.getEsVegano()));
+                    p.setSinAzucar(Boolean.TRUE.equals(s.getSinAzucar()));
+                    p.setActivo(Boolean.TRUE.equals(s.getDisponible()));
+                    p.setStock(s.getStockKilos() != null ? BigDecimal.valueOf(s.getStockKilos()) : BigDecimal.ZERO);
+                    p.setStockMinimo(s.getStockMinimoKilos() != null ? BigDecimal.valueOf(s.getStockMinimoKilos()) : BigDecimal.valueOf(2.0));
+                    p.setUnidadMedida(com.heladeria.api.entities.enums.UnidadMedida.KG);
+                    p.setPrecioVenta(BigDecimal.ZERO);
+                    p.setPrecioCosto(BigDecimal.ZERO);
+                    productoRepository.save(p);
+                }
+            }
+
+            // 2. Presentacion -> Producto
+            for (Presentacion pres : presentacionRepository.findAll()) {
+                if (productoRepository.findByNombreIgnoreCase(pres.getNombre().trim()).isEmpty()) {
+                    Producto p = new Producto();
+                    p.setNombre(pres.getNombre().trim());
+                    p.setTipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.ENVASE);
+                    p.setPrecioVenta(pres.getPrecio() != null ? pres.getPrecio() : BigDecimal.ZERO);
+                    p.setMaxSabores(pres.getMaxSabores() != null ? pres.getMaxSabores() : 1);
+                    p.setPesoGramosAprox(pres.getPesoGramosAprox() != null ? pres.getPesoGramosAprox() : 250);
+                    p.setActivo(Boolean.TRUE.equals(pres.getActivo()));
+                    p.setStock(pres.getStock() != null ? BigDecimal.valueOf(pres.getStock()) : BigDecimal.ZERO);
+                    p.setStockMinimo(pres.getStockMinimo() != null ? BigDecimal.valueOf(pres.getStockMinimo()) : BigDecimal.valueOf(5));
+                    p.setUnidadMedida(com.heladeria.api.entities.enums.UnidadMedida.UNIDAD);
+                    p.setPrecioCosto(BigDecimal.ZERO);
+                    if (pres.getTipoIva() != null) p.setTipoIva(pres.getTipoIva());
+                    productoRepository.save(p);
+                }
+            }
+
+            // 3. Topping -> Producto
+            for (Topping t : toppingRepository.findAll()) {
+                if (productoRepository.findByNombreIgnoreCase(t.getNombre().trim()).isEmpty()) {
+                    Producto p = new Producto();
+                    p.setNombre(t.getNombre().trim());
+                    p.setTipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.TOPPING);
+                    p.setPrecioVenta(t.getPrecioExtra() != null ? t.getPrecioExtra() : BigDecimal.ZERO);
+                    p.setActivo(Boolean.TRUE.equals(t.getDisponible()));
+                    p.setUnidadMedida(com.heladeria.api.entities.enums.UnidadMedida.UNIDAD);
+                    p.setStock(BigDecimal.ZERO);
+                    p.setStockMinimo(BigDecimal.ZERO);
+                    p.setPrecioCosto(BigDecimal.ZERO);
+                    productoRepository.save(p);
+                }
+            }
+
+            // 4. ProductoSimple -> Producto
+            for (ProductoSimple ps : productoSimpleRepository.findAll()) {
+                if (productoRepository.findByNombreIgnoreCase(ps.getNombre().trim()).isEmpty()) {
+                    Producto p = new Producto();
+                    p.setNombre(ps.getNombre().trim());
+                    p.setTipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.VENTA_DIRECTA);
+                    p.setPrecioVenta(ps.getPrecio() != null ? ps.getPrecio() : BigDecimal.ZERO);
+                    p.setCodigoBarra(ps.getCodigoBarra() != null && !ps.getCodigoBarra().isBlank() ? ps.getCodigoBarra().trim() : null);
+                    p.setActivo(Boolean.TRUE.equals(ps.getActivo()));
+                    p.setStock(ps.getStock() != null ? BigDecimal.valueOf(ps.getStock()) : BigDecimal.ZERO);
+                    p.setStockMinimo(ps.getStockMinimo() != null ? BigDecimal.valueOf(ps.getStockMinimo()) : BigDecimal.valueOf(5));
+                    p.setUnidadMedida(com.heladeria.api.entities.enums.UnidadMedida.UNIDAD);
+                    p.setPrecioCosto(BigDecimal.ZERO);
+                    if (ps.getTipoIva() != null) p.setTipoIva(ps.getTipoIva());
+                    if (ps.getProveedor() != null) {
+                        p.agregarProveedor(ps.getProveedor(), ps.getCodigoBarra(), BigDecimal.ZERO, true);
+                    }
+                    productoRepository.save(p);
+                }
+            }
+
+            // 5. Todo Producto en Maestro que no esté en operativo, sincronizarlo
+            for (Producto prod : productoRepository.findAll()) {
+                productoService.sincronizarConCatalogoOperativo(prod);
+            }
+            log.info("Homologación de catálogos existentes completada.");
+        } catch (Exception e) {
+            log.warn("Advertencia durante homologación inicial de catálogos: {}", e.getMessage());
+        }
     }
 }
