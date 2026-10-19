@@ -12,6 +12,7 @@ public interface ProductoSimpleRepository extends JpaRepository<ProductoSimple, 
     List<ProductoSimple> findByActivoTrue();
     List<ProductoSimple> findByCategoriaIgnoreCase(String categoria);
     boolean existsByNombreIgnoreCase(String nombre);
+    Optional<ProductoSimple> findByNombreIgnoreCase(String nombre);
     Optional<ProductoSimple> findByCodigoBarra(String codigoBarra);
     Optional<ProductoSimple> findByCodigoBarraIgnoreCase(String codigoBarra);
     boolean existsByCodigoBarraIgnoreCase(String codigoBarra);

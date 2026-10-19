@@ -1,30 +1,39 @@
 package com.heladeria.api.services;
 
 import com.heladeria.api.dto.ProductoSimpleRequestDTO;
+import com.heladeria.api.entities.Producto;
 import com.heladeria.api.entities.ProductoSimple;
 import com.heladeria.api.entities.Proveedor;
+import com.heladeria.api.entities.enums.TipoArticulo;
 import com.heladeria.api.entities.enums.TipoIva;
+import com.heladeria.api.entities.enums.UnidadMedida;
 import com.heladeria.api.exceptions.RecursoNoEncontradoException;
 import com.heladeria.api.exceptions.ReglaDeNegocioException;
+import com.heladeria.api.repositories.ProductoRepository;
 import com.heladeria.api.repositories.ProductoSimpleRepository;
 import com.heladeria.api.repositories.ProveedorRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class ProductoSimpleService {
 
     private final ProductoSimpleRepository productoSimpleRepository;
     private final ProveedorRepository proveedorRepository;
+    private final ProductoRepository productoRepository;
     private final AuditoriaService auditoriaService;
 
     public ProductoSimpleService(ProductoSimpleRepository productoSimpleRepository,
                                  ProveedorRepository proveedorRepository,
+                                 ProductoRepository productoRepository,
                                  AuditoriaService auditoriaService) {
         this.productoSimpleRepository = productoSimpleRepository;
         this.proveedorRepository = proveedorRepository;
+        this.productoRepository = productoRepository;
         this.auditoriaService = auditoriaService;
     }
 
@@ -103,6 +112,7 @@ public class ProductoSimpleService {
                 "Creado producto simple '" + guardado.getNombre() + "', Categoría: " + guardado.getCategoria() +
                 ", Precio: Gs. " + guardado.getPrecio() + ", Stock inicial: " + guardado.getStock()
         );
+        sincronizarConCatalogoMaestro(guardado);
         return guardado;
     }
 
@@ -173,12 +183,14 @@ public class ProductoSimpleService {
                 actualizado.getNombre(),
                 cambios.toString().trim()
         );
+        sincronizarConCatalogoMaestro(actualizado);
         return actualizado;
     }
 
     @Transactional
     public void eliminar(Long id) {
         ProductoSimple producto = obtenerPorId(id);
+        sincronizarEliminacionMaestro(producto);
         productoSimpleRepository.delete(producto);
         auditoriaService.registrar(
                 "PRODUCTOS_CAFETERIA",
@@ -187,5 +199,65 @@ public class ProductoSimpleService {
                 producto.getNombre(),
                 "Eliminado producto simple: '" + producto.getNombre() + "'"
         );
+    }
+
+    private void sincronizarConCatalogoMaestro(ProductoSimple prod) {
+        if (prod == null || prod.getNombre() == null) {
+            return;
+        }
+        try {
+            Optional<Producto> opt = productoRepository.findByNombreIgnoreCase(prod.getNombre().trim());
+            if (opt.isEmpty() && prod.getCodigoBarra() != null && !prod.getCodigoBarra().isBlank()) {
+                opt = productoRepository.findByCodigoBarraIgnoreCase(prod.getCodigoBarra().trim());
+            }
+            Producto p = opt.orElseGet(Producto::new);
+            p.setNombre(prod.getNombre().trim());
+            p.setTipoArticulo(TipoArticulo.VENTA_DIRECTA);
+            p.setPrecioVenta(prod.getPrecio() != null ? prod.getPrecio() : BigDecimal.ZERO);
+            p.setCodigoBarra(prod.getCodigoBarra() != null && !prod.getCodigoBarra().isBlank() ? prod.getCodigoBarra().trim() : null);
+            p.setActivo(Boolean.TRUE.equals(prod.getActivo()));
+            if (prod.getTipoIva() != null) {
+                p.setTipoIva(prod.getTipoIva());
+            }
+            if (prod.getStock() != null) {
+                p.setStock(BigDecimal.valueOf(prod.getStock()));
+            }
+            if (prod.getStockMinimo() != null) {
+                p.setStockMinimo(BigDecimal.valueOf(prod.getStockMinimo()));
+            }
+            if (p.getUnidadMedida() == null) {
+                p.setUnidadMedida(UnidadMedida.UNIDAD);
+            }
+            if (p.getPrecioCosto() == null) {
+                p.setPrecioCosto(BigDecimal.ZERO);
+            }
+            if (prod.getProveedor() != null) {
+                boolean yaAsociado = p.getProveedores().stream()
+                        .anyMatch(pp -> pp.getProveedor() != null && pp.getProveedor().getId().equals(prod.getProveedor().getId()));
+                if (!yaAsociado) {
+                    p.agregarProveedor(prod.getProveedor(), prod.getCodigoBarra(), BigDecimal.ZERO, true);
+                }
+            }
+            productoRepository.save(p);
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(ProductoSimpleService.class)
+                    .warn("Advertencia al sincronizar ProductoSimple '{}' con Maestro ERP: {}", prod.getNombre(), e.getMessage());
+        }
+    }
+
+    private void sincronizarEliminacionMaestro(ProductoSimple prod) {
+        if (prod == null || prod.getNombre() == null) {
+            return;
+        }
+        try {
+            Optional<Producto> opt = productoRepository.findByNombreIgnoreCase(prod.getNombre().trim());
+            if (opt.isEmpty() && prod.getCodigoBarra() != null && !prod.getCodigoBarra().isBlank()) {
+                opt = productoRepository.findByCodigoBarraIgnoreCase(prod.getCodigoBarra().trim());
+            }
+            opt.ifPresent(productoRepository::delete);
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(ProductoSimpleService.class)
+                    .warn("No se pudo eliminar ProductoSimple en Maestro ERP: {}", e.getMessage());
+        }
     }
 }

@@ -36,6 +36,7 @@ public class CompraService {
     private final ProductoProveedorRepository productoProveedorRepository;
     private final MovimientoStockRepository movimientoStockRepository;
     private final AuditoriaService auditoriaService;
+    private final ProductoService productoService;
 
     public CompraService(CompraRepository compraRepository,
                          DetalleCompraRepository detalleCompraRepository,
@@ -43,7 +44,8 @@ public class CompraService {
                          ProductoRepository productoRepository,
                          ProductoProveedorRepository productoProveedorRepository,
                          MovimientoStockRepository movimientoStockRepository,
-                         AuditoriaService auditoriaService) {
+                         AuditoriaService auditoriaService,
+                         ProductoService productoService) {
         this.compraRepository = compraRepository;
         this.detalleCompraRepository = detalleCompraRepository;
         this.proveedorRepository = proveedorRepository;
@@ -51,6 +53,7 @@ public class CompraService {
         this.productoProveedorRepository = productoProveedorRepository;
         this.movimientoStockRepository = movimientoStockRepository;
         this.auditoriaService = auditoriaService;
+        this.productoService = productoService;
     }
 
     @Transactional(readOnly = true)
@@ -180,7 +183,8 @@ public class CompraService {
             if (costoUnitario.compareTo(BigDecimal.ZERO) > 0) {
                 producto.setPrecioCosto(costoUnitario);
             }
-            productoRepository.save(producto);
+            producto = productoRepository.save(producto);
+            productoService.sincronizarConCatalogoOperativo(producto);
 
             // --- 2. VINCULACIÓN O ACTUALIZACIÓN DE COSTO CON EL PROVEEDOR ---
             Optional<ProductoProveedor> vinculoOpt = productoProveedorRepository
@@ -259,7 +263,8 @@ public class CompraService {
                 double cantDouble = detalle.getCantidad() != null ? detalle.getCantidad().doubleValue() : 0.0;
                 double stockPosterior = Math.max(0.0, stockAnterior - cantDouble);
                 producto.setStock(BigDecimal.valueOf(stockPosterior).setScale(2, RoundingMode.HALF_UP));
-                productoRepository.save(producto);
+                producto = productoRepository.save(producto);
+                productoService.sincronizarConCatalogoOperativo(producto);
 
                 MovimientoStock movReversion = MovimientoStock.builder()
                         .tipoItem(TipoItemStock.PRODUCTO)

@@ -132,6 +132,16 @@ public class Producto {
         this.proveedores.removeIf(pp -> pp.getProveedor().getId().equals(proveedorId));
     }
 
+    public ProductoProveedor getProveedorPrincipal() {
+        if (this.proveedores == null || this.proveedores.isEmpty()) {
+            return null;
+        }
+        return this.proveedores.stream()
+                .filter(pp -> Boolean.TRUE.equals(pp.getEsPrincipal()))
+                .findFirst()
+                .orElse(this.proveedores.get(0));
+    }
+
     // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

@@ -2,23 +2,33 @@ package com.heladeria.api.services;
 
 import com.heladeria.api.dto.PresentacionRequestDTO;
 import com.heladeria.api.entities.Presentacion;
+import com.heladeria.api.entities.Producto;
+import com.heladeria.api.entities.enums.TipoArticulo;
 import com.heladeria.api.entities.enums.TipoIva;
+import com.heladeria.api.entities.enums.UnidadMedida;
 import com.heladeria.api.exceptions.RecursoNoEncontradoException;
 import com.heladeria.api.exceptions.ReglaDeNegocioException;
 import com.heladeria.api.repositories.PresentacionRepository;
+import com.heladeria.api.repositories.ProductoRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class PresentacionService {
 
     private final PresentacionRepository presentacionRepository;
+    private final ProductoRepository productoRepository;
     private final AuditoriaService auditoriaService;
 
-    public PresentacionService(PresentacionRepository presentacionRepository, AuditoriaService auditoriaService) {
+    public PresentacionService(PresentacionRepository presentacionRepository,
+                               ProductoRepository productoRepository,
+                               AuditoriaService auditoriaService) {
         this.presentacionRepository = presentacionRepository;
+        this.productoRepository = productoRepository;
         this.auditoriaService = auditoriaService;
     }
 
@@ -62,6 +72,7 @@ public class PresentacionService {
                 "Creada presentación/envase '" + guardada.getNombre() + "', Precio: Gs. " + guardada.getPrecio() +
                 ", Stock: " + guardada.getStock() + ", Máx sabores: " + guardada.getMaxSabores()
         );
+        sincronizarConCatalogoMaestro(guardada);
         return guardada;
     }
 
@@ -117,12 +128,14 @@ public class PresentacionService {
                 actualizada.getNombre(),
                 cambios.toString().trim()
         );
+        sincronizarConCatalogoMaestro(actualizada);
         return actualizada;
     }
 
     @Transactional
     public void eliminar(Long id) {
         Presentacion presentacion = obtenerPorId(id);
+        sincronizarEliminacionMaestro(presentacion);
         presentacionRepository.delete(presentacion);
         auditoriaService.registrar(
                 "PRESENTACIONES_ENVASES",
@@ -131,5 +144,53 @@ public class PresentacionService {
                 presentacion.getNombre(),
                 "Eliminada presentación/envase: '" + presentacion.getNombre() + "'"
         );
+    }
+
+    private void sincronizarConCatalogoMaestro(Presentacion pres) {
+        if (pres == null || pres.getNombre() == null) {
+            return;
+        }
+        try {
+            Optional<Producto> opt = productoRepository.findByNombreIgnoreCase(pres.getNombre().trim());
+            Producto p = opt.orElseGet(Producto::new);
+            p.setNombre(pres.getNombre().trim());
+            p.setTipoArticulo(TipoArticulo.ENVASE);
+            p.setPrecioVenta(pres.getPrecio());
+            p.setMaxSabores(pres.getMaxSabores());
+            p.setPesoGramosAprox(pres.getPesoGramosAprox());
+            p.setActivo(Boolean.TRUE.equals(pres.getActivo()));
+            if (pres.getStock() != null) {
+                p.setStock(BigDecimal.valueOf(pres.getStock()));
+            }
+            if (pres.getStockMinimo() != null) {
+                p.setStockMinimo(BigDecimal.valueOf(pres.getStockMinimo()));
+            }
+            if (pres.getTipoIva() != null) {
+                p.setTipoIva(pres.getTipoIva());
+            }
+            if (p.getUnidadMedida() == null) {
+                p.setUnidadMedida(UnidadMedida.UNIDAD);
+            }
+            if (p.getPrecioCosto() == null) {
+                p.setPrecioCosto(BigDecimal.ZERO);
+            }
+            productoRepository.save(p);
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(PresentacionService.class)
+                    .warn("Advertencia al sincronizar Presentacion '{}' con Maestro ERP: {}", pres.getNombre(), e.getMessage());
+        }
+    }
+
+    private void sincronizarEliminacionMaestro(Presentacion pres) {
+        if (pres == null || pres.getNombre() == null) {
+            return;
+        }
+        try {
+            productoRepository.findByNombreIgnoreCase(pres.getNombre().trim())
+                    .ifPresent(productoRepository::delete);
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(PresentacionService.class)
+                    .warn("No se pudo eliminar en Maestro ERP: {}", e.getMessage());
+        }
     }
 }

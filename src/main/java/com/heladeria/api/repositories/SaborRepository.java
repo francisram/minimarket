@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface SaborRepository extends JpaRepository<Sabor, Long> {
@@ -15,4 +16,5 @@ public interface SaborRepository extends JpaRepository<Sabor, Long> {
     List<Sabor> findByEsVeganoTrue();
     List<Sabor> findBySinAzucarTrue();
     boolean existsByNombreIgnoreCase(String nombre);
+    Optional<Sabor> findByNombreIgnoreCase(String nombre);
 }

@@ -1,25 +1,35 @@
 package com.heladeria.api.services;
 
 import com.heladeria.api.dto.SaborRequestDTO;
+import com.heladeria.api.entities.Producto;
 import com.heladeria.api.entities.Sabor;
 import com.heladeria.api.entities.enums.CategoriaSabor;
+import com.heladeria.api.entities.enums.TipoArticulo;
+import com.heladeria.api.entities.enums.UnidadMedida;
 import com.heladeria.api.exceptions.RecursoNoEncontradoException;
 import com.heladeria.api.exceptions.ReglaDeNegocioException;
+import com.heladeria.api.repositories.ProductoRepository;
 import com.heladeria.api.repositories.SaborRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
 public class SaborService {
 
     private final SaborRepository saborRepository;
+    private final ProductoRepository productoRepository;
     private final AuditoriaService auditoriaService;
 
-    public SaborService(SaborRepository saborRepository, AuditoriaService auditoriaService) {
+    public SaborService(SaborRepository saborRepository,
+                        ProductoRepository productoRepository,
+                        AuditoriaService auditoriaService) {
         this.saborRepository = saborRepository;
+        this.productoRepository = productoRepository;
         this.auditoriaService = auditoriaService;
     }
 
@@ -69,6 +79,7 @@ public class SaborService {
                 "Creado sabor '" + guardado.getNombre() + "' (" + guardado.getCategoria() +
                 "), Stock inicial: " + (guardado.getStockKilos() != null ? guardado.getStockKilos() : 0.0) + " kg"
         );
+        sincronizarConCatalogoMaestro(guardado);
         return guardado;
     }
 
@@ -120,6 +131,7 @@ public class SaborService {
                 actualizado.getNombre(),
                 cambios.toString().trim()
         );
+        sincronizarConCatalogoMaestro(actualizado);
         return actualizado;
     }
 
@@ -136,12 +148,14 @@ public class SaborService {
                 actualizado.getNombre(),
                 "Disponibilidad cambiada a: " + (disponible ? "Disponible para venta" : "Agotado en bacha")
         );
+        sincronizarConCatalogoMaestro(actualizado);
         return actualizado;
     }
 
     @Transactional
     public void eliminar(Long id) {
         Sabor sabor = obtenerPorId(id);
+        sincronizarEliminacionMaestro(sabor);
         saborRepository.delete(sabor);
         auditoriaService.registrar(
                 "SABORES",
@@ -150,5 +164,55 @@ public class SaborService {
                 sabor.getNombre(),
                 "Eliminado sabor: '" + sabor.getNombre() + "'"
         );
+    }
+
+    private void sincronizarConCatalogoMaestro(Sabor s) {
+        if (s == null || s.getNombre() == null) {
+            return;
+        }
+        try {
+            Optional<Producto> opt = productoRepository.findByNombreIgnoreCase(s.getNombre().trim());
+            Producto p = opt.orElseGet(Producto::new);
+            p.setNombre(s.getNombre().trim());
+            p.setDescripcion(s.getDescripcion());
+            p.setTipoArticulo(TipoArticulo.SABOR);
+            p.setCategoriaSabor(s.getCategoria());
+            p.setAptoCeliaco(Boolean.TRUE.equals(s.getAptoCeliaco()));
+            p.setEsVegano(Boolean.TRUE.equals(s.getEsVegano()));
+            p.setSinAzucar(Boolean.TRUE.equals(s.getSinAzucar()));
+            p.setActivo(Boolean.TRUE.equals(s.getDisponible()));
+            if (s.getStockKilos() != null) {
+                p.setStock(BigDecimal.valueOf(s.getStockKilos()));
+            }
+            if (s.getStockMinimoKilos() != null) {
+                p.setStockMinimo(BigDecimal.valueOf(s.getStockMinimoKilos()));
+            }
+            if (p.getUnidadMedida() == null) {
+                p.setUnidadMedida(UnidadMedida.KG);
+            }
+            if (p.getPrecioVenta() == null) {
+                p.setPrecioVenta(BigDecimal.ZERO);
+            }
+            if (p.getPrecioCosto() == null) {
+                p.setPrecioCosto(BigDecimal.ZERO);
+            }
+            productoRepository.save(p);
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(SaborService.class)
+                    .warn("Advertencia al sincronizar Sabor '{}' con Maestro ERP: {}", s.getNombre(), e.getMessage());
+        }
+    }
+
+    private void sincronizarEliminacionMaestro(Sabor s) {
+        if (s == null || s.getNombre() == null) {
+            return;
+        }
+        try {
+            productoRepository.findByNombreIgnoreCase(s.getNombre().trim())
+                    .ifPresent(productoRepository::delete);
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(SaborService.class)
+                    .warn("No se pudo eliminar en Maestro ERP: {}", e.getMessage());
+        }
     }
 }

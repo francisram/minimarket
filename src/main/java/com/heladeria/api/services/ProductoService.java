@@ -4,18 +4,17 @@ import com.heladeria.api.dto.AsignarProveedorRequestDTO;
 import com.heladeria.api.dto.ProductoDTO;
 import com.heladeria.api.dto.ProductoRequestDTO;
 import com.heladeria.api.dto.ProveedorVinculadoDTO;
-import com.heladeria.api.entities.Producto;
-import com.heladeria.api.entities.ProductoProveedor;
-import com.heladeria.api.entities.Proveedor;
+import com.heladeria.api.entities.*;
+import com.heladeria.api.entities.enums.CategoriaSabor;
 import com.heladeria.api.entities.enums.TipoArticulo;
+import com.heladeria.api.entities.enums.TipoIva;
 import com.heladeria.api.exceptions.RecursoNoEncontradoException;
 import com.heladeria.api.exceptions.ReglaDeNegocioException;
-import com.heladeria.api.repositories.ProductoProveedorRepository;
-import com.heladeria.api.repositories.ProductoRepository;
-import com.heladeria.api.repositories.ProveedorRepository;
+import com.heladeria.api.repositories.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -28,15 +27,27 @@ public class ProductoService {
     private final ProductoProveedorRepository productoProveedorRepository;
     private final ProveedorRepository proveedorRepository;
     private final AuditoriaService auditoriaService;
+    private final SaborRepository saborRepository;
+    private final PresentacionRepository presentacionRepository;
+    private final ToppingRepository toppingRepository;
+    private final ProductoSimpleRepository productoSimpleRepository;
 
     public ProductoService(ProductoRepository productoRepository,
                            ProductoProveedorRepository productoProveedorRepository,
                            ProveedorRepository proveedorRepository,
-                           AuditoriaService auditoriaService) {
+                           AuditoriaService auditoriaService,
+                           SaborRepository saborRepository,
+                           PresentacionRepository presentacionRepository,
+                           ToppingRepository toppingRepository,
+                           ProductoSimpleRepository productoSimpleRepository) {
         this.productoRepository = productoRepository;
         this.productoProveedorRepository = productoProveedorRepository;
         this.proveedorRepository = proveedorRepository;
         this.auditoriaService = auditoriaService;
+        this.saborRepository = saborRepository;
+        this.presentacionRepository = presentacionRepository;
+        this.toppingRepository = toppingRepository;
+        this.productoSimpleRepository = productoSimpleRepository;
     }
 
     @Transactional(readOnly = true)
@@ -122,6 +133,7 @@ public class ProductoService {
                 ", Precio Venta: Gs. " + guardado.getPrecioVenta() + ", Costo: Gs. " + guardado.getPrecioCosto()
         );
 
+        sincronizarConCatalogoOperativo(guardado);
         return mapToDTO(guardado);
     }
 
@@ -171,6 +183,7 @@ public class ProductoService {
                 cambios.toString().trim()
         );
 
+        sincronizarConCatalogoOperativo(producto);
         return mapToDTO(producto);
     }
 
@@ -178,6 +191,7 @@ public class ProductoService {
     public void eliminar(Long id) {
         Producto producto = productoRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Producto con ID " + id + " no encontrado"));
+        sincronizarEliminacionOperativa(producto);
         productoRepository.delete(producto);
         auditoriaService.registrar(
                 "CATALOGO_MAESTRO",
@@ -201,6 +215,7 @@ public class ProductoService {
                 guardado.getNombre(),
                 "Estado cambiado a: " + (activo ? "Activo" : "Inactivo")
         );
+        sincronizarConCatalogoOperativo(guardado);
         return mapToDTO(guardado);
     }
 
@@ -337,5 +352,111 @@ public class ProductoService {
         }
 
         return dto;
+    }
+
+    public void sincronizarConCatalogoOperativo(Producto p) {
+        if (p == null || p.getTipoArticulo() == null) {
+            return;
+        }
+        try {
+            switch (p.getTipoArticulo()) {
+                case SABOR -> {
+                    Optional<Sabor> opt = saborRepository.findByNombreIgnoreCase(p.getNombre().trim());
+                    Sabor s = opt.orElseGet(Sabor::new);
+                    s.setNombre(p.getNombre().trim());
+                    s.setDescripcion(p.getDescripcion());
+                    s.setCategoria(p.getCategoriaSabor() != null ? p.getCategoriaSabor() : (s.getCategoria() != null ? s.getCategoria() : CategoriaSabor.CREMA));
+                    s.setAptoCeliaco(Boolean.TRUE.equals(p.getAptoCeliaco()));
+                    s.setEsVegano(Boolean.TRUE.equals(p.getEsVegano()));
+                    s.setSinAzucar(Boolean.TRUE.equals(p.getSinAzucar()));
+                    s.setDisponible(p.getActivo() == null || p.getActivo());
+                    if (p.getStock() != null) {
+                        s.setStockKilos(p.getStock().doubleValue());
+                    }
+                    if (p.getStockMinimo() != null) {
+                        s.setStockMinimoKilos(p.getStockMinimo().doubleValue());
+                    }
+                    saborRepository.save(s);
+                }
+                case ENVASE -> {
+                    Optional<Presentacion> opt = presentacionRepository.findByNombreIgnoreCase(p.getNombre().trim());
+                    Presentacion pres = opt.orElseGet(Presentacion::new);
+                    pres.setNombre(p.getNombre().trim());
+                    pres.setPrecio(p.getPrecioVenta() != null ? p.getPrecioVenta() : BigDecimal.ZERO);
+                    pres.setMaxSabores(p.getMaxSabores() != null ? p.getMaxSabores() : (pres.getMaxSabores() != null ? pres.getMaxSabores() : 1));
+                    pres.setPesoGramosAprox(p.getPesoGramosAprox() != null ? p.getPesoGramosAprox() : (pres.getPesoGramosAprox() != null ? pres.getPesoGramosAprox() : 250));
+                    pres.setActivo(p.getActivo() == null || p.getActivo());
+                    if (p.getStock() != null) {
+                        pres.setStock(p.getStock().intValue());
+                    }
+                    if (p.getStockMinimo() != null) {
+                        pres.setStockMinimo(p.getStockMinimo().intValue());
+                    }
+                    if (p.getTipoIva() != null) {
+                        pres.setTipoIva(p.getTipoIva());
+                    }
+                    presentacionRepository.save(pres);
+                }
+                case TOPPING -> {
+                    Optional<Topping> opt = toppingRepository.findByNombreIgnoreCase(p.getNombre().trim());
+                    Topping top = opt.orElseGet(Topping::new);
+                    top.setNombre(p.getNombre().trim());
+                    top.setPrecioExtra(p.getPrecioVenta() != null ? p.getPrecioVenta() : BigDecimal.ZERO);
+                    top.setDisponible(p.getActivo() == null || p.getActivo());
+                    toppingRepository.save(top);
+                }
+                case VENTA_DIRECTA -> {
+                    Optional<ProductoSimple> opt = productoSimpleRepository.findByNombreIgnoreCase(p.getNombre().trim());
+                    if (opt.isEmpty() && p.getCodigoBarra() != null && !p.getCodigoBarra().isBlank()) {
+                        opt = productoSimpleRepository.findByCodigoBarraIgnoreCase(p.getCodigoBarra().trim());
+                    }
+                    ProductoSimple ps = opt.orElseGet(ProductoSimple::new);
+                    ps.setNombre(p.getNombre().trim());
+                    ps.setPrecio(p.getPrecioVenta() != null ? p.getPrecioVenta() : BigDecimal.ZERO);
+                    ps.setCodigoBarra(p.getCodigoBarra() != null && !p.getCodigoBarra().isBlank() ? p.getCodigoBarra().trim() : null);
+                    ps.setCategoria(ps.getCategoria() != null ? ps.getCategoria() : "MINIMARKET");
+                    ps.setActivo(p.getActivo() == null || p.getActivo());
+                    if (p.getTipoIva() != null) {
+                        ps.setTipoIva(p.getTipoIva());
+                    }
+                    if (p.getStock() != null) {
+                        ps.setStock(p.getStock().intValue());
+                    }
+                    if (p.getStockMinimo() != null) {
+                        ps.setStockMinimo(p.getStockMinimo().intValue());
+                    }
+                    if (p.getProveedorPrincipal() != null && p.getProveedorPrincipal().getProveedor() != null) {
+                        ps.setProveedor(p.getProveedorPrincipal().getProveedor());
+                    }
+                    productoSimpleRepository.save(ps);
+                }
+                default -> {}
+            }
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(ProductoService.class)
+                    .warn("Advertencia al sincronizar con catálogo operativo para '{}': {}", p.getNombre(), e.getMessage());
+        }
+    }
+
+    private void sincronizarEliminacionOperativa(Producto p) {
+        if (p == null || p.getTipoArticulo() == null) {
+            return;
+        }
+        try {
+            switch (p.getTipoArticulo()) {
+                case SABOR -> saborRepository.findByNombreIgnoreCase(p.getNombre().trim())
+                        .ifPresent(saborRepository::delete);
+                case ENVASE -> presentacionRepository.findByNombreIgnoreCase(p.getNombre().trim())
+                        .ifPresent(presentacionRepository::delete);
+                case TOPPING -> toppingRepository.findByNombreIgnoreCase(p.getNombre().trim())
+                        .ifPresent(toppingRepository::delete);
+                case VENTA_DIRECTA -> productoSimpleRepository.findByNombreIgnoreCase(p.getNombre().trim())
+                        .ifPresent(productoSimpleRepository::delete);
+                default -> {}
+            }
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(ProductoService.class)
+                    .warn("No se pudo eliminar de catálogo operativo por restricciones de histórico: {}", e.getMessage());
+        }
     }
 }
