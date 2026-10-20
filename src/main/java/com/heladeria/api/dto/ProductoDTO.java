@@ -32,6 +32,7 @@ public class ProductoDTO {
 
     // Específico SABOR
     private CategoriaSabor categoriaSabor;
+    private String categoria;
     private Boolean aptoCeliaco;
     private Boolean esVegano;
     private Boolean sinAzucar;
@@ -92,6 +93,9 @@ public class ProductoDTO {
 
     public CategoriaSabor getCategoriaSabor() { return categoriaSabor; }
     public void setCategoriaSabor(CategoriaSabor categoriaSabor) { this.categoriaSabor = categoriaSabor; }
+
+    public String getCategoria() { return categoria; }
+    public void setCategoria(String categoria) { this.categoria = categoria; }
 
     public Boolean getAptoCeliaco() { return aptoCeliaco; }
     public void setAptoCeliaco(Boolean aptoCeliaco) { this.aptoCeliaco = aptoCeliaco; }

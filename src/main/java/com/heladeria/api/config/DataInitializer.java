@@ -27,6 +27,7 @@ public class DataInitializer implements CommandLineRunner {
     private final ProveedorRepository proveedorRepository;
     private final CompraRepository compraRepository;
     private final ProductoService productoService;
+    private final CategoriaRepository categoriaRepository;
     private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     public DataInitializer(SaborRepository saborRepository,
@@ -37,6 +38,7 @@ public class DataInitializer implements CommandLineRunner {
                            ProveedorRepository proveedorRepository,
                            CompraRepository compraRepository,
                            ProductoService productoService,
+                           CategoriaRepository categoriaRepository,
                            org.springframework.jdbc.core.JdbcTemplate jdbcTemplate) {
         this.saborRepository = saborRepository;
         this.presentacionRepository = presentacionRepository;
@@ -46,6 +48,7 @@ public class DataInitializer implements CommandLineRunner {
         this.proveedorRepository = proveedorRepository;
         this.compraRepository = compraRepository;
         this.productoService = productoService;
+        this.categoriaRepository = categoriaRepository;
         this.jdbcTemplate = jdbcTemplate;
     }
 
@@ -56,6 +59,32 @@ public class DataInitializer implements CommandLineRunner {
             jdbcTemplate.execute("ALTER TABLE detalles_pedido ADD CONSTRAINT detalles_pedido_tipo_item_check CHECK (tipo_item IN ('HELADO', 'PRODUCTO_SIMPLE', 'TOPPING'))");
         } catch (Exception e) {
             log.warn("Verificación de constraint detalles_pedido_tipo_item_check: {}", e.getMessage());
+        }
+
+        if (categoriaRepository.count() == 0) {
+            log.info("Precargando categorías dinámicas iniciales...");
+            categoriaRepository.saveAll(List.of(
+                Categoria.builder().nombre("Cremas").descripcion("Helados a base de crema de leche y leche entera").tipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.SABOR).activo(true).build(),
+                Categoria.builder().nombre("Chocolates").descripcion("Variedades de chocolates artesanales y combinaciones").tipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.SABOR).activo(true).build(),
+                Categoria.builder().nombre("Dulces de Leche").descripcion("Especialidades elaboradas con dulce de leche natural").tipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.SABOR).activo(true).build(),
+                Categoria.builder().nombre("Frutales al Agua").descripcion("Elaborados con frutas frescas y base agua, apto vegano").tipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.SABOR).activo(true).build(),
+                Categoria.builder().nombre("Especiales").descripcion("Creaciones exclusivas de la casa y combinaciones de autor").tipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.SABOR).activo(true).build(),
+                Categoria.builder().nombre("Diet / Sin Azúcar").descripcion("Sabores endulzados con stevia para dietas bajas en calorías").tipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.SABOR).activo(true).build(),
+
+                Categoria.builder().nombre("Bebidas").descripcion("Gaseosas, aguas minerales, jugos y bebidas frías").tipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.VENTA_DIRECTA).activo(true).build(),
+                Categoria.builder().nombre("Cafetería").descripcion("Cafés espresso, capuchinos e infusiones calientes").tipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.VENTA_DIRECTA).activo(true).build(),
+                Categoria.builder().nombre("Envasados & Paletas").descripcion("Paletas bombón, alfajores helados y postres individuales").tipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.VENTA_DIRECTA).activo(true).build(),
+                Categoria.builder().nombre("Golosinas & Snacks").descripcion("Snacks dulces y salados, confites y chocolates").tipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.VENTA_DIRECTA).activo(true).build(),
+
+                Categoria.builder().nombre("Potes Térmicos").descripcion("Potes de poliestireno para conservación térmica").tipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.ENVASE).activo(true).build(),
+                Categoria.builder().nombre("Cucuruchos & Vasos").descripcion("Conos crocantes y vasitos descartables al paso").tipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.ENVASE).activo(true).build(),
+
+                Categoria.builder().nombre("Salsas").descripcion("Salsas dulces, baño de repostería y coberturas").tipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.TOPPING).activo(true).build(),
+                Categoria.builder().nombre("Frutos Secos & Crocantes").descripcion("Almendras tostadas, nueces y chispas crocantes").tipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.TOPPING).activo(true).build(),
+
+                Categoria.builder().nombre("Descartables").descripcion("Cucharas, servilletas y bolsas para heladería").tipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.INSUMO).activo(true).build(),
+                Categoria.builder().nombre("Materia Prima").descripcion("Bases, esencias, pastas y pulpas de elaboración").tipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.INSUMO).activo(true).build()
+            ));
         }
 
         if (saborRepository.count() == 0) {

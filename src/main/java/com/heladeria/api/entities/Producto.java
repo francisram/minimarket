@@ -76,6 +76,9 @@ public class Producto {
     @Column(name = "categoria_sabor", length = 30)
     private CategoriaSabor categoriaSabor;
 
+    @Column(name = "categoria", length = 80)
+    private String categoria;
+
     @Column(name = "apto_celiaco")
     private Boolean aptoCeliaco = true;
 
@@ -194,6 +197,9 @@ public class Producto {
 
     public CategoriaSabor getCategoriaSabor() { return categoriaSabor; }
     public void setCategoriaSabor(CategoriaSabor categoriaSabor) { this.categoriaSabor = categoriaSabor; }
+
+    public String getCategoria() { return categoria; }
+    public void setCategoria(String categoria) { this.categoria = categoria; }
 
     public Boolean getAptoCeliaco() { return aptoCeliaco; }
     public void setAptoCeliaco(Boolean aptoCeliaco) { this.aptoCeliaco = aptoCeliaco != null ? aptoCeliaco : true; }

@@ -289,6 +289,7 @@ public class ProductoService {
         p.setStockMinimo(dto.getStockMinimo());
         p.setUnidadMedida(dto.getUnidadMedida());
         p.setActivo(dto.getActivo() != null ? dto.getActivo() : true);
+        p.setCategoria(dto.getCategoria() != null && !dto.getCategoria().isBlank() ? dto.getCategoria().trim() : null);
 
         // Atributos condicionales
         if (dto.getTipoArticulo() == TipoArticulo.ENVASE) {
@@ -317,6 +318,7 @@ public class ProductoService {
         dto.setStockMinimo(p.getStockMinimo());
         dto.setUnidadMedida(p.getUnidadMedida());
         dto.setActivo(p.getActivo());
+        dto.setCategoria(p.getCategoria());
         dto.setMaxSabores(p.getMaxSabores());
         dto.setPesoGramosAprox(p.getPesoGramosAprox());
         dto.setCategoriaSabor(p.getCategoriaSabor());
@@ -414,7 +416,7 @@ public class ProductoService {
                     ps.setNombre(p.getNombre().trim());
                     ps.setPrecio(p.getPrecioVenta() != null ? p.getPrecioVenta() : BigDecimal.ZERO);
                     ps.setCodigoBarra(p.getCodigoBarra() != null && !p.getCodigoBarra().isBlank() ? p.getCodigoBarra().trim() : null);
-                    ps.setCategoria(ps.getCategoria() != null ? ps.getCategoria() : "MINIMARKET");
+                    ps.setCategoria(p.getCategoria() != null && !p.getCategoria().isBlank() ? p.getCategoria().trim() : (ps.getCategoria() != null ? ps.getCategoria() : "MINIMARKET"));
                     ps.setActivo(p.getActivo() == null || p.getActivo());
                     if (p.getTipoIva() != null) {
                         ps.setTipoIva(p.getTipoIva());

@@ -215,6 +215,7 @@ public class ProductoSimpleService {
             p.setTipoArticulo(TipoArticulo.VENTA_DIRECTA);
             p.setPrecioVenta(prod.getPrecio() != null ? prod.getPrecio() : BigDecimal.ZERO);
             p.setCodigoBarra(prod.getCodigoBarra() != null && !prod.getCodigoBarra().isBlank() ? prod.getCodigoBarra().trim() : null);
+            p.setCategoria(prod.getCategoria());
             p.setActivo(Boolean.TRUE.equals(prod.getActivo()));
             if (prod.getTipoIva() != null) {
                 p.setTipoIva(prod.getTipoIva());

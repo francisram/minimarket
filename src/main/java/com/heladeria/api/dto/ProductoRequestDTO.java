@@ -53,6 +53,7 @@ public class ProductoRequestDTO {
 
     // Atributos SABOR
     private CategoriaSabor categoriaSabor;
+    private String categoria;
     private Boolean aptoCeliaco = true;
     private Boolean esVegano = false;
     private Boolean sinAzucar = false;
@@ -107,6 +108,9 @@ public class ProductoRequestDTO {
 
     public CategoriaSabor getCategoriaSabor() { return categoriaSabor; }
     public void setCategoriaSabor(CategoriaSabor categoriaSabor) { this.categoriaSabor = categoriaSabor; }
+
+    public String getCategoria() { return categoria; }
+    public void setCategoria(String categoria) { this.categoria = categoria; }
 
     public Boolean getAptoCeliaco() { return aptoCeliaco; }
     public void setAptoCeliaco(Boolean aptoCeliaco) { this.aptoCeliaco = aptoCeliaco != null ? aptoCeliaco : true; }
