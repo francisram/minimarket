@@ -40,6 +40,8 @@ public class ImpresionService {
 
     // ESC @ (inicializar) + ESC t 16 (selección de página de códigos WPC1252 para ñ y acentos)
     private static final byte[] INICIALIZAR = {0x1B, 0x40, 0x1B, 0x74, 0x10};
+    private static final byte[] ALINEAR_CENTRO = {0x1B, 0x61, 0x01};
+    private static final byte[] ALINEAR_IZQUIERDA = {0x1B, 0x61, 0x00};
     private static final byte[] AVANCE_PAPEL = "\n\n\n\n".getBytes(CHARSET_IMPRESION);
     private static final byte[] CORTAR = {0x1D, 0x56, 0x00};
 
@@ -50,13 +52,24 @@ public class ImpresionService {
     private static final double LOGO_PUNTO_BLANCO = 205;
 
     public void imprimir(Impresora impresora, String texto) {
-        imprimir(impresora, construirJob(texto));
+        imprimir(impresora, texto, null);
     }
 
     public void imprimir(Impresora impresora, String texto, String logoBase64) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        logoRaster(logoBase64).ifPresent(out::writeBytes);
-        out.writeBytes(construirJob(texto));
+        out.writeBytes(INICIALIZAR);
+        if (StringUtils.hasText(logoBase64)) {
+            out.writeBytes(ALINEAR_CENTRO);
+            logoRaster(logoBase64).ifPresent(bytes -> {
+                out.writeBytes(bytes);
+                out.writeBytes("\n".getBytes(CHARSET_IMPRESION));
+            });
+            out.writeBytes(ALINEAR_IZQUIERDA);
+        }
+        String sanitizado = texto != null ? texto.replace('•', '-') : "";
+        out.writeBytes(sanitizado.getBytes(CHARSET_IMPRESION));
+        out.writeBytes(AVANCE_PAPEL);
+        out.writeBytes(CORTAR);
         imprimir(impresora, out.toByteArray());
     }
 
@@ -68,16 +81,6 @@ public class ImpresionService {
         } else {
             imprimirPorRed(impresora, job);
         }
-    }
-
-    private byte[] construirJob(String texto) {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        out.writeBytes(INICIALIZAR);
-        String sanitizado = texto != null ? texto.replace('•', '-') : "";
-        out.writeBytes(sanitizado.getBytes(CHARSET_IMPRESION));
-        out.writeBytes(AVANCE_PAPEL);
-        out.writeBytes(CORTAR);
-        return out.toByteArray();
     }
 
     public Optional<byte[]> logoRaster(String logoBase64) {
