@@ -18,7 +18,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/sabores")
 @CrossOrigin(origins = "*")
-@PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_sabores')")
+@PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_sabores') or hasAuthority('PAGINA_pedidos')")
 @Tag(name = "Sabores", description = "Gestión del catálogo de sabores de helado, dietas y disponibilidad")
 public class SaborController {
 
@@ -46,18 +46,21 @@ public class SaborController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_sabores')")
     @Operation(summary = "Crear nuevo sabor de helado")
     public ResponseEntity<Sabor> crear(@Valid @RequestBody SaborRequestDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(saborService.crear(dto));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_sabores')")
     @Operation(summary = "Actualizar sabor existente")
     public ResponseEntity<Sabor> actualizar(@PathVariable Long id, @Valid @RequestBody SaborRequestDTO dto) {
         return ResponseEntity.ok(saborService.actualizar(id, dto));
     }
 
     @PatchMapping("/{id}/disponibilidad")
+    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_sabores')")
     @Operation(summary = "Cambiar disponibilidad en mostrador (disponible/agotado)")
     public ResponseEntity<Sabor> cambiarDisponibilidad(
             @PathVariable Long id,
@@ -66,6 +69,7 @@ public class SaborController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_sabores')")
     @Operation(summary = "Eliminar sabor por ID")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         saborService.eliminar(id);

@@ -18,7 +18,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/categorias")
 @CrossOrigin(origins = "*")
-@PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_productos') or hasAuthority('PAGINA_sabores') or hasAuthority('PAGINA_pedidos')")
+@PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_categorias') or hasAuthority('PAGINA_productos') or hasAuthority('PAGINA_sabores') or hasAuthority('PAGINA_pedidos')")
 @Tag(name = "Categorías", description = "Gestión integral de categorías dinámicas para heladería, cafetería y minimarket")
 public class CategoriaController {
 
@@ -44,18 +44,21 @@ public class CategoriaController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_categorias') or hasAuthority('PAGINA_productos') or hasAuthority('PAGINA_sabores')")
     @Operation(summary = "Crear nueva categoría")
     public ResponseEntity<CategoriaDTO> crear(@Valid @RequestBody CategoriaRequestDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(categoriaService.crear(dto));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_categorias') or hasAuthority('PAGINA_productos') or hasAuthority('PAGINA_sabores')")
     @Operation(summary = "Actualizar categoría existente")
     public ResponseEntity<CategoriaDTO> actualizar(@PathVariable Long id, @Valid @RequestBody CategoriaRequestDTO dto) {
         return ResponseEntity.ok(categoriaService.actualizar(id, dto));
     }
 
     @PatchMapping("/{id}/estado")
+    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_categorias') or hasAuthority('PAGINA_productos') or hasAuthority('PAGINA_sabores')")
     @Operation(summary = "Cambiar estado activo/inactivo de la categoría")
     public ResponseEntity<CategoriaDTO> cambiarEstado(@PathVariable Long id, @RequestBody Map<String, Boolean> body) {
         boolean activo = body.getOrDefault("activo", true);
@@ -63,6 +66,7 @@ public class CategoriaController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_categorias') or hasAuthority('PAGINA_productos') or hasAuthority('PAGINA_sabores')")
     @Operation(summary = "Eliminar categoría")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         categoriaService.eliminar(id);

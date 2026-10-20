@@ -16,7 +16,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/presentaciones")
 @CrossOrigin(origins = "*")
-@PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_presentaciones')")
+@PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_presentaciones') or hasAuthority('PAGINA_pedidos')")
 @Tag(name = "Presentaciones", description = "Formatos y envases de helado (potes, cucuruchos, vasos) y límites de sabores")
 public class PresentacionController {
 
@@ -39,18 +39,21 @@ public class PresentacionController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_presentaciones')")
     @Operation(summary = "Crear nuevo formato de helado")
     public ResponseEntity<Presentacion> crear(@Valid @RequestBody PresentacionRequestDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(presentacionService.crear(dto));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_presentaciones')")
     @Operation(summary = "Actualizar presentación")
     public ResponseEntity<Presentacion> actualizar(@PathVariable Long id, @Valid @RequestBody PresentacionRequestDTO dto) {
         return ResponseEntity.ok(presentacionService.actualizar(id, dto));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_presentaciones')")
     @Operation(summary = "Eliminar presentación")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         presentacionService.eliminar(id);

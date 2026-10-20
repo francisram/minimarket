@@ -17,7 +17,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/toppings")
 @CrossOrigin(origins = "*")
-@PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_toppings')")
+@PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_toppings') or hasAuthority('PAGINA_pedidos')")
 @Tag(name = "Toppings y Agregados", description = "Salsas, baños y adicionales para helados")
 public class ToppingController {
 
@@ -40,18 +40,21 @@ public class ToppingController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_toppings')")
     @Operation(summary = "Crear nuevo topping o adicional")
     public ResponseEntity<Topping> crear(@Valid @RequestBody ToppingRequestDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(toppingService.crear(dto));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_toppings')")
     @Operation(summary = "Actualizar topping")
     public ResponseEntity<Topping> actualizar(@PathVariable Long id, @Valid @RequestBody ToppingRequestDTO dto) {
         return ResponseEntity.ok(toppingService.actualizar(id, dto));
     }
 
     @PatchMapping("/{id}/disponibilidad")
+    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_toppings')")
     @Operation(summary = "Cambiar disponibilidad de topping")
     public ResponseEntity<Topping> cambiarDisponibilidad(
             @PathVariable Long id,
@@ -60,6 +63,7 @@ public class ToppingController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_toppings')")
     @Operation(summary = "Eliminar topping")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         toppingService.eliminar(id);
