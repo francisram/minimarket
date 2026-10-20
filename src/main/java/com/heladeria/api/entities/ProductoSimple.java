@@ -51,6 +51,9 @@ public class ProductoSimple {
     @JoinColumn(name = "proveedor_id")
     private Proveedor proveedor;
 
+    @Column(name = "imagen_url", columnDefinition = "TEXT")
+    private String imagenUrl;
+
     public ProductoSimple() {
     }
 
@@ -124,6 +127,9 @@ public class ProductoSimple {
     public Proveedor getProveedor() { return proveedor; }
     public void setProveedor(Proveedor proveedor) { this.proveedor = proveedor; }
 
+    public String getImagenUrl() { return imagenUrl; }
+    public void setImagenUrl(String imagenUrl) { this.imagenUrl = imagenUrl; }
+
     public static class ProductoSimpleBuilder {
         private Long id;
         private String nombre;
@@ -137,6 +143,7 @@ public class ProductoSimple {
         private String codigoBarra;
         private String codigo;
         private Proveedor proveedor;
+        private String imagenUrl;
 
         public ProductoSimpleBuilder id(Long id) { this.id = id; return this; }
         public ProductoSimpleBuilder nombre(String nombre) { this.nombre = nombre; return this; }
@@ -150,10 +157,12 @@ public class ProductoSimple {
         public ProductoSimpleBuilder codigoBarra(String codigoBarra) { this.codigoBarra = codigoBarra; return this; }
         public ProductoSimpleBuilder codigo(String codigo) { this.codigo = codigo; return this; }
         public ProductoSimpleBuilder proveedor(Proveedor proveedor) { this.proveedor = proveedor; return this; }
+        public ProductoSimpleBuilder imagenUrl(String imagenUrl) { this.imagenUrl = imagenUrl; return this; }
 
         public ProductoSimple build() {
             ProductoSimple ps = new ProductoSimple(id, nombre, precio, categoria, stock, stockMinimo, activo, tipoIva, codigoBarra, codigo, proveedor);
             ps.setDescripcion(descripcion);
+            ps.setImagenUrl(imagenUrl);
             return ps;
         }
     }

@@ -36,6 +36,9 @@ public class Presentacion {
     @Column(name = "tipo_iva", nullable = false, length = 20, columnDefinition = "varchar(20) default 'IVA_10'")
     private TipoIva tipoIva = TipoIva.IVA_10;
 
+    @Column(name = "imagen_url", columnDefinition = "TEXT")
+    private String imagenUrl;
+
     public Presentacion() {
     }
 
@@ -90,6 +93,9 @@ public class Presentacion {
         this.tipoIva = tipoIva != null ? tipoIva : TipoIva.IVA_10;
     }
 
+    public String getImagenUrl() { return imagenUrl; }
+    public void setImagenUrl(String imagenUrl) { this.imagenUrl = imagenUrl; }
+
     public static class PresentacionBuilder {
         private Long id;
         private String nombre;
@@ -100,6 +106,7 @@ public class Presentacion {
         private Integer stock;
         private Integer stockMinimo = 10;
         private TipoIva tipoIva = TipoIva.IVA_10;
+        private String imagenUrl;
 
         public PresentacionBuilder id(Long id) { this.id = id; return this; }
         public PresentacionBuilder nombre(String nombre) { this.nombre = nombre; return this; }
@@ -110,9 +117,12 @@ public class Presentacion {
         public PresentacionBuilder stock(Integer stock) { this.stock = stock; return this; }
         public PresentacionBuilder stockMinimo(Integer stockMinimo) { this.stockMinimo = stockMinimo; return this; }
         public PresentacionBuilder tipoIva(TipoIva tipoIva) { this.tipoIva = tipoIva; return this; }
+        public PresentacionBuilder imagenUrl(String imagenUrl) { this.imagenUrl = imagenUrl; return this; }
 
         public Presentacion build() {
-            return new Presentacion(id, nombre, precio, maxSabores, pesoGramosAprox, activo, stock, stockMinimo, tipoIva);
+            Presentacion p = new Presentacion(id, nombre, precio, maxSabores, pesoGramosAprox, activo, stock, stockMinimo, tipoIva);
+            p.setImagenUrl(imagenUrl);
+            return p;
         }
     }
 }

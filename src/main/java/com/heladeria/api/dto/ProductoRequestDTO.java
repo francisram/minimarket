@@ -57,6 +57,7 @@ public class ProductoRequestDTO {
     private Boolean aptoCeliaco = true;
     private Boolean esVegano = false;
     private Boolean sinAzucar = false;
+    private String imagenUrl;
 
     // Lista de proveedores a vincular
     private List<AsignarProveedorRequestDTO> proveedores = new ArrayList<>();
@@ -127,4 +128,7 @@ public class ProductoRequestDTO {
 
     public List<ComboComponenteDTO> getComponentes() { return componentes; }
     public void setComponentes(List<ComboComponenteDTO> componentes) { this.componentes = componentes; }
+
+    public String getImagenUrl() { return imagenUrl; }
+    public void setImagenUrl(String imagenUrl) { this.imagenUrl = imagenUrl; }
 }

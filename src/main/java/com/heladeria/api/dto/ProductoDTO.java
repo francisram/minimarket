@@ -39,6 +39,7 @@ public class ProductoDTO {
 
     private LocalDateTime fechaCreacion;
     private LocalDateTime fechaActualizacion;
+    private String imagenUrl;
 
     private List<ProveedorVinculadoDTO> proveedores = new ArrayList<>();
     private ProveedorVinculadoDTO proveedorPrincipal;
@@ -121,4 +122,7 @@ public class ProductoDTO {
 
     public List<ComboComponenteDTO> getComponentes() { return componentes; }
     public void setComponentes(List<ComboComponenteDTO> componentes) { this.componentes = componentes; }
+
+    public String getImagenUrl() { return imagenUrl; }
+    public void setImagenUrl(String imagenUrl) { this.imagenUrl = imagenUrl; }
 }

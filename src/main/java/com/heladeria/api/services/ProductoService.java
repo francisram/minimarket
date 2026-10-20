@@ -374,6 +374,7 @@ public class ProductoService {
         p.setUnidadMedida(dto.getUnidadMedida());
         p.setActivo(dto.getActivo() != null ? dto.getActivo() : true);
         p.setCategoria(dto.getCategoria() != null && !dto.getCategoria().isBlank() ? dto.getCategoria().trim() : null);
+        p.setImagenUrl(dto.getImagenUrl());
 
         // Atributos condicionales
         if (dto.getTipoArticulo() == TipoArticulo.ENVASE) {
@@ -403,6 +404,7 @@ public class ProductoService {
         dto.setUnidadMedida(p.getUnidadMedida());
         dto.setActivo(p.getActivo());
         dto.setCategoria(p.getCategoria());
+        dto.setImagenUrl(p.getImagenUrl());
         dto.setMaxSabores(p.getMaxSabores());
         dto.setPesoGramosAprox(p.getPesoGramosAprox());
         dto.setCategoriaSabor(p.getCategoriaSabor());
@@ -480,6 +482,7 @@ public class ProductoService {
                     s.setEsVegano(Boolean.TRUE.equals(p.getEsVegano()));
                     s.setSinAzucar(Boolean.TRUE.equals(p.getSinAzucar()));
                     s.setDisponible(p.getActivo() == null || p.getActivo());
+                    s.setImagenUrl(p.getImagenUrl());
                     if (p.getStock() != null) {
                         s.setStockKilos(p.getStock().doubleValue());
                     }
@@ -500,6 +503,7 @@ public class ProductoService {
                     pres.setMaxSabores(p.getMaxSabores() != null ? p.getMaxSabores() : (pres.getMaxSabores() != null ? pres.getMaxSabores() : 1));
                     pres.setPesoGramosAprox(p.getPesoGramosAprox() != null ? p.getPesoGramosAprox() : (pres.getPesoGramosAprox() != null ? pres.getPesoGramosAprox() : 250));
                     pres.setActivo(p.getActivo() == null || p.getActivo());
+                    pres.setImagenUrl(p.getImagenUrl());
                     if (p.getStock() != null) {
                         pres.setStock(p.getStock().intValue());
                     }
@@ -521,6 +525,7 @@ public class ProductoService {
                     top.setNombre(p.getNombre().trim());
                     top.setPrecioExtra(p.getPrecioVenta() != null ? p.getPrecioVenta() : BigDecimal.ZERO);
                     top.setDisponible(p.getActivo() == null || p.getActivo());
+                    top.setImagenUrl(p.getImagenUrl());
                     top = toppingRepository.save(top);
                     if ((p.getSku() == null || p.getSku().isBlank()) && top.getId() != null) {
                         p.setSku("T-" + top.getId());
@@ -553,6 +558,7 @@ public class ProductoService {
                     ps.setPrecio(p.getPrecioVenta() != null ? p.getPrecioVenta() : BigDecimal.ZERO);
                     ps.setCodigoBarra(p.getCodigoBarra() != null && !p.getCodigoBarra().isBlank() ? p.getCodigoBarra().trim() : null);
                     ps.setCategoria(p.getCategoria() != null && !p.getCategoria().isBlank() ? p.getCategoria().trim() : (ps.getCategoria() != null ? ps.getCategoria() : defaultCat));
+                    ps.setImagenUrl(p.getImagenUrl());
                     
                     if (p.getTipoArticulo() == TipoArticulo.COMBO) {
                         if (p.getComponentes() != null && !p.getComponentes().isEmpty()) {

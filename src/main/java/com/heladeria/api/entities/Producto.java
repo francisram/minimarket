@@ -94,6 +94,9 @@ public class Producto {
     @Column(name = "fecha_actualizacion")
     private LocalDateTime fechaActualizacion;
 
+    @Column(name = "imagen_url", columnDefinition = "TEXT")
+    private String imagenUrl;
+
     // --- Asociación N:M con Proveedores ---
     @OneToMany(mappedBy = "producto", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonManagedReference
@@ -226,6 +229,9 @@ public class Producto {
 
     public List<ComboComponente> getComponentes() { return componentes; }
     public void setComponentes(List<ComboComponente> componentes) { this.componentes = componentes; }
+
+    public String getImagenUrl() { return imagenUrl; }
+    public void setImagenUrl(String imagenUrl) { this.imagenUrl = imagenUrl; }
 
     public void agregarComponente(Producto comp, BigDecimal cantidad, String notas) {
         ComboComponente cc = new ComboComponente(this, comp, cantidad, notas);

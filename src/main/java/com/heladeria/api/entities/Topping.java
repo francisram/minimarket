@@ -22,6 +22,9 @@ public class Topping {
     @Column(nullable = false)
     private Boolean disponible = true;
 
+    @Column(name = "imagen_url", columnDefinition = "TEXT")
+    private String imagenUrl;
+
     public Topping() {
     }
 
@@ -50,19 +53,26 @@ public class Topping {
     public Boolean getDisponible() { return disponible; }
     public void setDisponible(Boolean disponible) { this.disponible = disponible; }
 
+    public String getImagenUrl() { return imagenUrl; }
+    public void setImagenUrl(String imagenUrl) { this.imagenUrl = imagenUrl; }
+
     public static class ToppingBuilder {
         private Long id;
         private String nombre;
         private BigDecimal precioExtra;
         private Boolean disponible = true;
+        private String imagenUrl;
 
         public ToppingBuilder id(Long id) { this.id = id; return this; }
         public ToppingBuilder nombre(String nombre) { this.nombre = nombre; return this; }
         public ToppingBuilder precioExtra(BigDecimal precioExtra) { this.precioExtra = precioExtra; return this; }
         public ToppingBuilder disponible(Boolean disponible) { this.disponible = disponible; return this; }
+        public ToppingBuilder imagenUrl(String imagenUrl) { this.imagenUrl = imagenUrl; return this; }
 
         public Topping build() {
-            return new Topping(id, nombre, precioExtra, disponible);
+            Topping t = new Topping(id, nombre, precioExtra, disponible);
+            t.setImagenUrl(imagenUrl);
+            return t;
         }
     }
 }

@@ -41,6 +41,9 @@ public class Sabor {
     @Column(precision = 6)
     private Double stockMinimoKilos = 2.0;
 
+    @Column(name = "imagen_url", columnDefinition = "TEXT")
+    private String imagenUrl;
+
     public Sabor() {
     }
 
@@ -92,6 +95,9 @@ public class Sabor {
     public Double getStockMinimoKilos() { return stockMinimoKilos; }
     public void setStockMinimoKilos(Double stockMinimoKilos) { this.stockMinimoKilos = stockMinimoKilos; }
 
+    public String getImagenUrl() { return imagenUrl; }
+    public void setImagenUrl(String imagenUrl) { this.imagenUrl = imagenUrl; }
+
     public static class SaborBuilder {
         private Long id;
         private String nombre;
@@ -103,6 +109,7 @@ public class Sabor {
         private Boolean disponible = true;
         private Double stockKilos;
         private Double stockMinimoKilos = 2.0;
+        private String imagenUrl;
 
         public SaborBuilder id(Long id) { this.id = id; return this; }
         public SaborBuilder nombre(String nombre) { this.nombre = nombre; return this; }
@@ -114,9 +121,12 @@ public class Sabor {
         public SaborBuilder disponible(Boolean disponible) { this.disponible = disponible; return this; }
         public SaborBuilder stockKilos(Double stockKilos) { this.stockKilos = stockKilos; return this; }
         public SaborBuilder stockMinimoKilos(Double stockMinimoKilos) { this.stockMinimoKilos = stockMinimoKilos; return this; }
+        public SaborBuilder imagenUrl(String imagenUrl) { this.imagenUrl = imagenUrl; return this; }
 
         public Sabor build() {
-            return new Sabor(id, nombre, descripcion, categoria, aptoCeliaco, esVegano, sinAzucar, disponible, stockKilos, stockMinimoKilos);
+            Sabor s = new Sabor(id, nombre, descripcion, categoria, aptoCeliaco, esVegano, sinAzucar, disponible, stockKilos, stockMinimoKilos);
+            s.setImagenUrl(imagenUrl);
+            return s;
         }
     }
 }
