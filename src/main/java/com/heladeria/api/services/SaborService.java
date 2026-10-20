@@ -196,6 +196,9 @@ public class SaborService {
             if (p.getPrecioCosto() == null) {
                 p.setPrecioCosto(BigDecimal.ZERO);
             }
+            if ((p.getSku() == null || p.getSku().isBlank()) && s.getId() != null) {
+                p.setSku("S-" + s.getId());
+            }
             productoRepository.save(p);
         } catch (Exception e) {
             org.slf4j.LoggerFactory.getLogger(SaborService.class)

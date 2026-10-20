@@ -174,6 +174,9 @@ public class PresentacionService {
             if (p.getPrecioCosto() == null) {
                 p.setPrecioCosto(BigDecimal.ZERO);
             }
+            if ((p.getSku() == null || p.getSku().isBlank()) && pres.getId() != null) {
+                p.setSku("H-" + pres.getId());
+            }
             productoRepository.save(p);
         } catch (Exception e) {
             org.slf4j.LoggerFactory.getLogger(PresentacionService.class)

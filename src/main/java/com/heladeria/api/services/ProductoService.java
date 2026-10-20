@@ -378,7 +378,11 @@ public class ProductoService {
                     if (p.getStockMinimo() != null) {
                         s.setStockMinimoKilos(p.getStockMinimo().doubleValue());
                     }
-                    saborRepository.save(s);
+                    s = saborRepository.save(s);
+                    if ((p.getSku() == null || p.getSku().isBlank()) && s.getId() != null) {
+                        p.setSku("S-" + s.getId());
+                        productoRepository.save(p);
+                    }
                 }
                 case ENVASE -> {
                     Optional<Presentacion> opt = presentacionRepository.findByNombreIgnoreCase(p.getNombre().trim());
@@ -397,7 +401,11 @@ public class ProductoService {
                     if (p.getTipoIva() != null) {
                         pres.setTipoIva(p.getTipoIva());
                     }
-                    presentacionRepository.save(pres);
+                    pres = presentacionRepository.save(pres);
+                    if ((p.getSku() == null || p.getSku().isBlank()) && pres.getId() != null) {
+                        p.setSku("H-" + pres.getId());
+                        productoRepository.save(p);
+                    }
                 }
                 case TOPPING -> {
                     Optional<Topping> opt = toppingRepository.findByNombreIgnoreCase(p.getNombre().trim());
@@ -405,7 +413,11 @@ public class ProductoService {
                     top.setNombre(p.getNombre().trim());
                     top.setPrecioExtra(p.getPrecioVenta() != null ? p.getPrecioVenta() : BigDecimal.ZERO);
                     top.setDisponible(p.getActivo() == null || p.getActivo());
-                    toppingRepository.save(top);
+                    top = toppingRepository.save(top);
+                    if ((p.getSku() == null || p.getSku().isBlank()) && top.getId() != null) {
+                        p.setSku("T-" + top.getId());
+                        productoRepository.save(p);
+                    }
                 }
                 case VENTA_DIRECTA -> {
                     Optional<ProductoSimple> opt = productoSimpleRepository.findByNombreIgnoreCase(p.getNombre().trim());
@@ -430,7 +442,23 @@ public class ProductoService {
                     if (p.getProveedorPrincipal() != null && p.getProveedorPrincipal().getProveedor() != null) {
                         ps.setProveedor(p.getProveedorPrincipal().getProveedor());
                     }
-                    productoSimpleRepository.save(ps);
+                    if (p.getSku() != null && !p.getSku().isBlank()) {
+                        ps.setCodigo(p.getSku().trim());
+                    }
+                    ps = productoSimpleRepository.save(ps);
+                    if (p.getSku() == null || p.getSku().isBlank()) {
+                        String cod = (ps.getCodigo() != null && !ps.getCodigo().isBlank()) ? ps.getCodigo() : "P-" + ps.getId();
+                        p.setSku(cod);
+                        ps.setCodigo(cod);
+                        productoSimpleRepository.save(ps);
+                        productoRepository.save(p);
+                    }
+                }
+                case INSUMO -> {
+                    if ((p.getSku() == null || p.getSku().isBlank()) && p.getId() != null) {
+                        p.setSku("INS-" + p.getId());
+                        productoRepository.save(p);
+                    }
                 }
                 default -> {}
             }

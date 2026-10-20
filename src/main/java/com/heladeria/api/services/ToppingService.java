@@ -165,6 +165,9 @@ public class ToppingService {
             if (p.getPrecioCosto() == null) {
                 p.setPrecioCosto(BigDecimal.ZERO);
             }
+            if ((p.getSku() == null || p.getSku().isBlank()) && top.getId() != null) {
+                p.setSku("T-" + top.getId());
+            }
             productoRepository.save(p);
         } catch (Exception e) {
             org.slf4j.LoggerFactory.getLogger(ToppingService.class)

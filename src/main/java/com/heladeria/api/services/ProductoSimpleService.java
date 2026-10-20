@@ -91,6 +91,10 @@ public class ProductoSimpleService {
                     .orElseThrow(() -> new RecursoNoEncontradoException("Proveedor con id " + dto.getProveedorId() + " no encontrado"));
         }
 
+        String codigoLimpio = (dto.getCodigo() != null && !dto.getCodigo().isBlank())
+                ? dto.getCodigo().trim()
+                : null;
+
         ProductoSimple producto = ProductoSimple.builder()
                 .nombre(dto.getNombre().trim())
                 .precio(dto.getPrecio())
@@ -100,10 +104,16 @@ public class ProductoSimpleService {
                 .activo(dto.getActivo() == null || dto.getActivo())
                 .tipoIva(dto.getTipoIva() != null ? dto.getTipoIva() : TipoIva.IVA_10)
                 .codigoBarra(codigoBarraLimpio)
+                .codigo(codigoLimpio)
                 .proveedor(proveedor)
                 .build();
 
         ProductoSimple guardado = productoSimpleRepository.save(producto);
+        if (guardado.getCodigo() == null || guardado.getCodigo().isBlank()) {
+            guardado.setCodigo("P-" + guardado.getId());
+            guardado = productoSimpleRepository.save(guardado);
+        }
+
         auditoriaService.registrar(
                 "PRODUCTOS_CAFETERIA",
                 "CREACION",
@@ -172,6 +182,11 @@ public class ProductoSimpleService {
         if (dto.getTipoIva() != null) {
             producto.setTipoIva(dto.getTipoIva());
         }
+        if (dto.getCodigo() != null) {
+            producto.setCodigo(dto.getCodigo().trim());
+        } else if (producto.getCodigo() == null || producto.getCodigo().isBlank()) {
+            producto.setCodigo("P-" + producto.getId());
+        }
         producto.setCodigoBarra(codigoBarraLimpio);
         producto.setProveedor(proveedor);
 
@@ -231,6 +246,13 @@ public class ProductoSimpleService {
             }
             if (p.getPrecioCosto() == null) {
                 p.setPrecioCosto(BigDecimal.ZERO);
+            }
+            if ((p.getSku() == null || p.getSku().isBlank())) {
+                if (prod.getCodigo() != null && !prod.getCodigo().isBlank()) {
+                    p.setSku(prod.getCodigo().trim());
+                } else if (prod.getId() != null) {
+                    p.setSku("P-" + prod.getId());
+                }
             }
             if (prod.getProveedor() != null) {
                 boolean yaAsociado = p.getProveedores().stream()

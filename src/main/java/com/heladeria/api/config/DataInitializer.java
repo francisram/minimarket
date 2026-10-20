@@ -128,10 +128,10 @@ public class DataInitializer implements CommandLineRunner {
         if (productoSimpleRepository.count() == 0) {
             log.info("Precargando productos simples (bebidas y envasados)...");
             productoSimpleRepository.saveAll(List.of(
-                    ProductoSimple.builder().nombre("Agua Mineral con gas 500ml").precio(new BigDecimal("10000")).categoria("BEBIDAS").stock(40).stockMinimo(5).activo(true).codigoBarra("7840001001").build(),
-                    ProductoSimple.builder().nombre("Agua Mineral sin gas 500ml").precio(new BigDecimal("10000")).categoria("BEBIDAS").stock(50).stockMinimo(5).activo(true).codigoBarra("7840001002").build(),
-                    ProductoSimple.builder().nombre("Alfajor Helado").precio(new BigDecimal("15000")).categoria("ENVASADOS").stock(25).stockMinimo(5).activo(true).codigoBarra("7840001003").build(),
-                    ProductoSimple.builder().nombre("Paleta Bombón Artesanal").precio(new BigDecimal("12000")).categoria("ENVASADOS").stock(30).stockMinimo(5).activo(true).codigoBarra("7840001004").build()
+                    ProductoSimple.builder().nombre("Agua Mineral con gas 500ml").precio(new BigDecimal("10000")).categoria("BEBIDAS").stock(40).stockMinimo(5).activo(true).codigoBarra("7840001001").codigo("P-1").build(),
+                    ProductoSimple.builder().nombre("Agua Mineral sin gas 500ml").precio(new BigDecimal("10000")).categoria("BEBIDAS").stock(50).stockMinimo(5).activo(true).codigoBarra("7840001002").codigo("P-2").build(),
+                    ProductoSimple.builder().nombre("Alfajor Helado").precio(new BigDecimal("15000")).categoria("ENVASADOS").stock(25).stockMinimo(5).activo(true).codigoBarra("7840001003").codigo("P-3").build(),
+                    ProductoSimple.builder().nombre("Paleta Bombón Artesanal").precio(new BigDecimal("12000")).categoria("ENVASADOS").stock(30).stockMinimo(5).activo(true).codigoBarra("7840001004").codigo("P-4").build()
             ));
         }
 
@@ -151,6 +151,7 @@ public class DataInitializer implements CommandLineRunner {
             pote1kg.setMaxSabores(4);
             pote1kg.setPesoGramosAprox(1000);
             pote1kg.setUnidadMedida(com.heladeria.api.entities.enums.UnidadMedida.UNIDAD);
+            pote1kg.setSku("H-8");
             if (provSur != null) pote1kg.agregarProveedor(provSur, "POT-1KG-SUR", new BigDecimal("1400"), true);
             if (provValle != null) pote1kg.agregarProveedor(provValle, "POT-1KG-VALLE", new BigDecimal("1550"), false);
             productoRepository.save(pote1kg);
@@ -164,6 +165,7 @@ public class DataInitializer implements CommandLineRunner {
             poteMedio.setMaxSabores(3);
             poteMedio.setPesoGramosAprox(500);
             poteMedio.setUnidadMedida(com.heladeria.api.entities.enums.UnidadMedida.UNIDAD);
+            poteMedio.setSku("H-7");
             if (provSur != null) poteMedio.agregarProveedor(provSur, "POT-500G", new BigDecimal("980"), true);
             productoRepository.save(poteMedio);
 
@@ -176,6 +178,7 @@ public class DataInitializer implements CommandLineRunner {
             cucuruchoDoble.setMaxSabores(2);
             cucuruchoDoble.setPesoGramosAprox(180);
             cucuruchoDoble.setUnidadMedida(com.heladeria.api.entities.enums.UnidadMedida.UNIDAD);
+            cucuruchoDoble.setSku("H-2");
             if (provValle != null) cucuruchoDoble.agregarProveedor(provValle, "CUC-DOB", new BigDecimal("400"), true);
             productoRepository.save(cucuruchoDoble);
 
@@ -190,6 +193,7 @@ public class DataInitializer implements CommandLineRunner {
             ddl.setUnidadMedida(com.heladeria.api.entities.enums.UnidadMedida.KG);
             ddl.setCategoriaSabor(CategoriaSabor.DULCE_DE_LECHE);
             ddl.setAptoCeliaco(true);
+            ddl.setSku("S-1");
             if (provValle != null) ddl.agregarProveedor(provValle, "BASE-DDL-01", new BigDecimal("35000"), true);
             productoRepository.save(ddl);
 
@@ -203,6 +207,7 @@ public class DataInitializer implements CommandLineRunner {
             chocoSuizo.setUnidadMedida(com.heladeria.api.entities.enums.UnidadMedida.KG);
             chocoSuizo.setCategoriaSabor(CategoriaSabor.CHOCOLATE);
             chocoSuizo.setAptoCeliaco(false);
+            chocoSuizo.setSku("S-3");
             if (provValle != null) chocoSuizo.agregarProveedor(provValle, "BASE-CHOC-SUI", new BigDecimal("42000"), true);
             productoRepository.save(chocoSuizo);
 
@@ -214,6 +219,7 @@ public class DataInitializer implements CommandLineRunner {
             banoChoco.setPrecioCosto(new BigDecimal("600"));
             banoChoco.setStock(new BigDecimal("100"));
             banoChoco.setUnidadMedida(com.heladeria.api.entities.enums.UnidadMedida.UNIDAD);
+            banoChoco.setSku("T-1");
             if (provValle != null) banoChoco.agregarProveedor(provValle, "TOP-CHOC", new BigDecimal("600"), true);
             productoRepository.save(banoChoco);
 
@@ -226,6 +232,7 @@ public class DataInitializer implements CommandLineRunner {
             aguaConGas.setPrecioCosto(new BigDecimal("4500"));
             aguaConGas.setStock(new BigDecimal("40"));
             aguaConGas.setUnidadMedida(com.heladeria.api.entities.enums.UnidadMedida.UNIDAD);
+            aguaConGas.setSku("P-1");
             if (provSur != null) aguaConGas.agregarProveedor(provSur, "AGUA-GAS-500", new BigDecimal("4500"), true);
             productoRepository.save(aguaConGas);
 
@@ -237,6 +244,7 @@ public class DataInitializer implements CommandLineRunner {
             alfajor.setPrecioCosto(new BigDecimal("8000"));
             alfajor.setStock(new BigDecimal("25"));
             alfajor.setUnidadMedida(com.heladeria.api.entities.enums.UnidadMedida.UNIDAD);
+            alfajor.setSku("P-3");
             if (provValle != null) alfajor.agregarProveedor(provValle, "ALF-HEL-01", new BigDecimal("8000"), true);
             productoRepository.save(alfajor);
 
@@ -248,6 +256,7 @@ public class DataInitializer implements CommandLineRunner {
             cucharas.setPrecioCosto(new BigDecimal("12000"));
             cucharas.setStock(new BigDecimal("50"));
             cucharas.setUnidadMedida(com.heladeria.api.entities.enums.UnidadMedida.UNIDAD);
+            cucharas.setSku("INS-1");
             if (provSur != null) cucharas.agregarProveedor(provSur, "CUCH-100U", new BigDecimal("11500"), true);
             productoRepository.save(cucharas);
         }

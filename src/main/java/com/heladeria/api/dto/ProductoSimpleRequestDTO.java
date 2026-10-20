@@ -26,6 +26,9 @@ public class ProductoSimpleRequestDTO {
     @Size(max = 60, message = "El código de barra no puede superar 60 caracteres")
     private String codigoBarra;
 
+    @Size(max = 30, message = "El código no puede superar 30 caracteres")
+    private String codigo;
+
     private Long proveedorId;
 
     public ProductoSimpleRequestDTO() {
@@ -54,6 +57,9 @@ public class ProductoSimpleRequestDTO {
 
     public String getCodigoBarra() { return codigoBarra; }
     public void setCodigoBarra(String codigoBarra) { this.codigoBarra = codigoBarra; }
+
+    public String getCodigo() { return codigo; }
+    public void setCodigo(String codigo) { this.codigo = codigo; }
 
     public Long getProveedorId() { return proveedorId; }
     public void setProveedorId(Long proveedorId) { this.proveedorId = proveedorId; }

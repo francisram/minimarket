@@ -41,6 +41,9 @@ public class ProductoSimple {
     @Column(name = "codigo_barra", length = 60)
     private String codigoBarra;
 
+    @Column(name = "codigo", length = 30)
+    private String codigo;
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "proveedor_id")
     private Proveedor proveedor;
@@ -56,7 +59,7 @@ public class ProductoSimple {
         this(id, nombre, precio, categoria, stock, stockMinimo, activo, tipoIva, null, null);
     }
 
-    public ProductoSimple(Long id, String nombre, BigDecimal precio, String categoria, Integer stock, Integer stockMinimo, Boolean activo, TipoIva tipoIva, String codigoBarra, Proveedor proveedor) {
+    public ProductoSimple(Long id, String nombre, BigDecimal precio, String categoria, Integer stock, Integer stockMinimo, Boolean activo, TipoIva tipoIva, String codigoBarra, String codigo, Proveedor proveedor) {
         this.id = id;
         this.nombre = nombre;
         this.precio = precio != null ? precio.setScale(0, java.math.RoundingMode.HALF_UP) : null;
@@ -66,7 +69,12 @@ public class ProductoSimple {
         this.activo = activo != null ? activo : true;
         this.tipoIva = tipoIva != null ? tipoIva : TipoIva.IVA_10;
         this.codigoBarra = codigoBarra;
+        this.codigo = codigo;
         this.proveedor = proveedor;
+    }
+
+    public ProductoSimple(Long id, String nombre, BigDecimal precio, String categoria, Integer stock, Integer stockMinimo, Boolean activo, TipoIva tipoIva, String codigoBarra, Proveedor proveedor) {
+        this(id, nombre, precio, categoria, stock, stockMinimo, activo, tipoIva, codigoBarra, null, proveedor);
     }
 
     public static ProductoSimpleBuilder builder() {
@@ -104,6 +112,9 @@ public class ProductoSimple {
     public String getCodigoBarra() { return codigoBarra; }
     public void setCodigoBarra(String codigoBarra) { this.codigoBarra = codigoBarra; }
 
+    public String getCodigo() { return codigo; }
+    public void setCodigo(String codigo) { this.codigo = codigo; }
+
     public Proveedor getProveedor() { return proveedor; }
     public void setProveedor(Proveedor proveedor) { this.proveedor = proveedor; }
 
@@ -117,6 +128,7 @@ public class ProductoSimple {
         private Boolean activo = true;
         private TipoIva tipoIva = TipoIva.IVA_10;
         private String codigoBarra;
+        private String codigo;
         private Proveedor proveedor;
 
         public ProductoSimpleBuilder id(Long id) { this.id = id; return this; }
@@ -128,10 +140,11 @@ public class ProductoSimple {
         public ProductoSimpleBuilder activo(Boolean activo) { this.activo = activo; return this; }
         public ProductoSimpleBuilder tipoIva(TipoIva tipoIva) { this.tipoIva = tipoIva; return this; }
         public ProductoSimpleBuilder codigoBarra(String codigoBarra) { this.codigoBarra = codigoBarra; return this; }
+        public ProductoSimpleBuilder codigo(String codigo) { this.codigo = codigo; return this; }
         public ProductoSimpleBuilder proveedor(Proveedor proveedor) { this.proveedor = proveedor; return this; }
 
         public ProductoSimple build() {
-            return new ProductoSimple(id, nombre, precio, categoria, stock, stockMinimo, activo, tipoIva, codigoBarra, proveedor);
+            return new ProductoSimple(id, nombre, precio, categoria, stock, stockMinimo, activo, tipoIva, codigoBarra, codigo, proveedor);
         }
     }
 }
