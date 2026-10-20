@@ -64,6 +64,11 @@ public class RolService {
         Rol rol = rolRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Rol no encontrado con ID: " + id));
 
+        if (("ADMIN".equalsIgnoreCase(rol.getNombreRol()) || "OWNER".equalsIgnoreCase(rol.getNombreRol()))
+                && !rol.getNombreRol().equalsIgnoreCase(dto.getNombre())) {
+            throw new com.heladeria.api.exceptions.ReglaDeNegocioException("El nombre de los roles base del sistema ('ADMIN' y 'OWNER') está protegido y no puede modificarse.");
+        }
+
         if (!rol.getNombreRol().equalsIgnoreCase(dto.getNombre()) &&
                 rolRepository.existsByNombreRolIgnoreCase(dto.getNombre())) {
             throw new IllegalStateException("Ya existe un rol con el nombre: " + dto.getNombre());
@@ -75,13 +80,15 @@ public class RolService {
 
     @Transactional
     public void eliminar(Long id) {
-        if (!rolRepository.existsById(id)) {
-            throw new RecursoNoEncontradoException("Rol no encontrado con ID: " + id);
+        Rol rol = rolRepository.findById(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Rol no encontrado con ID: " + id));
+        if ("ADMIN".equalsIgnoreCase(rol.getNombreRol()) || "OWNER".equalsIgnoreCase(rol.getNombreRol())) {
+            throw new com.heladeria.api.exceptions.ReglaDeNegocioException("Los roles base del sistema ('ADMIN' y 'OWNER') están protegidos y no pueden eliminarse.");
         }
         if (usuarioRepository.existsByRol_Id(id)) {
-            throw new IllegalStateException("No se puede eliminar el rol: hay usuarios asignados a él");
+            throw new com.heladeria.api.exceptions.ReglaDeNegocioException("No se puede eliminar el rol: hay usuarios asignados a él");
         }
-        rolRepository.deleteById(id);
+        rolRepository.delete(rol);
     }
 
     private void aplicarCampos(Rol rol, RolDTO dto) {
