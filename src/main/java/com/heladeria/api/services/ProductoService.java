@@ -16,9 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -126,12 +124,23 @@ public class ProductoService {
         }
 
         if (dto.getComponentes() != null && !dto.getComponentes().isEmpty()) {
+            Map<Long, ComboComponenteDTO> unicos = new LinkedHashMap<>();
             for (ComboComponenteDTO compDto : dto.getComponentes()) {
                 if (compDto.getComponenteId() != null) {
-                    Producto comp = productoRepository.findById(compDto.getComponenteId())
-                            .orElseThrow(() -> new RecursoNoEncontradoException("Componente ID " + compDto.getComponenteId() + " no encontrado"));
-                    guardado.agregarComponente(comp, compDto.getCantidad(), compDto.getNotas());
+                    if (unicos.containsKey(compDto.getComponenteId())) {
+                        ComboComponenteDTO prev = unicos.get(compDto.getComponenteId());
+                        BigDecimal c1 = prev.getCantidad() != null ? prev.getCantidad() : BigDecimal.ONE;
+                        BigDecimal c2 = compDto.getCantidad() != null ? compDto.getCantidad() : BigDecimal.ONE;
+                        prev.setCantidad(c1.add(c2));
+                    } else {
+                        unicos.put(compDto.getComponenteId(), compDto);
+                    }
                 }
+            }
+            for (ComboComponenteDTO compDto : unicos.values()) {
+                Producto comp = productoRepository.findById(compDto.getComponenteId())
+                        .orElseThrow(() -> new RecursoNoEncontradoException("Componente ID " + compDto.getComponenteId() + " no encontrado"));
+                guardado.agregarComponente(comp, compDto.getCantidad(), compDto.getNotas());
             }
             guardado = productoRepository.save(guardado);
         }
@@ -177,19 +186,70 @@ public class ProductoService {
 
         // Sincronizar proveedores si la lista no es nula
         if (dto.getProveedores() != null) {
-            producto.getProveedores().clear();
+            Set<Long> nuevosProvIds = dto.getProveedores().stream()
+                    .map(AsignarProveedorRequestDTO::getProveedorId)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+
+            producto.getProveedores().removeIf(pp -> !nuevosProvIds.contains(pp.getProveedor().getId()));
+
+            boolean tieneNuevoPrincipal = dto.getProveedores().stream().anyMatch(p -> Boolean.TRUE.equals(p.getEsPrincipal()));
+            if (tieneNuevoPrincipal) {
+                producto.getProveedores().forEach(pp -> pp.setEsPrincipal(false));
+            }
+
             for (AsignarProveedorRequestDTO provDto : dto.getProveedores()) {
-                Proveedor prov = proveedorRepository.findById(provDto.getProveedorId())
-                        .orElseThrow(() -> new RecursoNoEncontradoException("Proveedor ID " + provDto.getProveedorId() + " no encontrado"));
-                producto.agregarProveedor(prov, provDto.getCodigoReferencia(), provDto.getCostoCompra(), provDto.getEsPrincipal());
+                if (provDto.getProveedorId() != null) {
+                    Optional<ProductoProveedor> optExistente = producto.getProveedores().stream()
+                            .filter(pp -> pp.getProveedor().getId().equals(provDto.getProveedorId()))
+                            .findFirst();
+
+                    if (optExistente.isPresent()) {
+                        ProductoProveedor existente = optExistente.get();
+                        existente.setCodigoReferencia(provDto.getCodigoReferencia());
+                        existente.setCostoCompra(provDto.getCostoCompra());
+                        existente.setEsPrincipal(Boolean.TRUE.equals(provDto.getEsPrincipal()));
+                    } else {
+                        Proveedor prov = proveedorRepository.findById(provDto.getProveedorId())
+                                .orElseThrow(() -> new RecursoNoEncontradoException("Proveedor ID " + provDto.getProveedorId() + " no encontrado"));
+                        producto.agregarProveedor(prov, provDto.getCodigoReferencia(), provDto.getCostoCompra(), provDto.getEsPrincipal());
+                    }
+                }
             }
         }
 
         // Sincronizar componentes de combo si la lista no es nula
         if (dto.getComponentes() != null) {
-            producto.getComponentes().clear();
+            Map<Long, ComboComponenteDTO> unicos = new LinkedHashMap<>();
             for (ComboComponenteDTO compDto : dto.getComponentes()) {
                 if (compDto.getComponenteId() != null) {
+                    if (unicos.containsKey(compDto.getComponenteId())) {
+                        ComboComponenteDTO prev = unicos.get(compDto.getComponenteId());
+                        BigDecimal c1 = prev.getCantidad() != null ? prev.getCantidad() : BigDecimal.ONE;
+                        BigDecimal c2 = compDto.getCantidad() != null ? compDto.getCantidad() : BigDecimal.ONE;
+                        prev.setCantidad(c1.add(c2));
+                    } else {
+                        unicos.put(compDto.getComponenteId(), compDto);
+                    }
+                }
+            }
+
+            Set<Long> nuevosComponentesIds = unicos.keySet();
+
+            // 1. Remover componentes que ya no están en el combo
+            producto.getComponentes().removeIf(cc -> !nuevosComponentesIds.contains(cc.getComponente().getId()));
+
+            // 2. Actualizar existentes en sitio o agregar los nuevos
+            for (ComboComponenteDTO compDto : unicos.values()) {
+                Optional<ComboComponente> optExistente = producto.getComponentes().stream()
+                        .filter(cc -> cc.getComponente().getId().equals(compDto.getComponenteId()))
+                        .findFirst();
+
+                if (optExistente.isPresent()) {
+                    ComboComponente existente = optExistente.get();
+                    existente.setCantidad(compDto.getCantidad() != null ? compDto.getCantidad() : BigDecimal.ONE);
+                    existente.setNotas(compDto.getNotas());
+                } else {
                     Producto comp = productoRepository.findById(compDto.getComponenteId())
                             .orElseThrow(() -> new RecursoNoEncontradoException("Componente ID " + compDto.getComponenteId() + " no encontrado"));
                     producto.agregarComponente(comp, compDto.getCantidad(), compDto.getNotas());
