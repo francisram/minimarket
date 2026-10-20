@@ -42,6 +42,7 @@ public class ProductoDTO {
 
     private List<ProveedorVinculadoDTO> proveedores = new ArrayList<>();
     private ProveedorVinculadoDTO proveedorPrincipal;
+    private List<ComboComponenteDTO> componentes = new ArrayList<>();
 
     public ProductoDTO() {
     }
@@ -117,4 +118,7 @@ public class ProductoDTO {
 
     public ProveedorVinculadoDTO getProveedorPrincipal() { return proveedorPrincipal; }
     public void setProveedorPrincipal(ProveedorVinculadoDTO proveedorPrincipal) { this.proveedorPrincipal = proveedorPrincipal; }
+
+    public List<ComboComponenteDTO> getComponentes() { return componentes; }
+    public void setComponentes(List<ComboComponenteDTO> componentes) { this.componentes = componentes; }
 }

@@ -1,6 +1,7 @@
 package com.heladeria.api.services;
 
 import com.heladeria.api.dto.AsignarProveedorRequestDTO;
+import com.heladeria.api.dto.ComboComponenteDTO;
 import com.heladeria.api.dto.ProductoDTO;
 import com.heladeria.api.dto.ProductoRequestDTO;
 import com.heladeria.api.dto.ProveedorVinculadoDTO;
@@ -124,6 +125,17 @@ public class ProductoService {
             guardado = productoRepository.save(guardado);
         }
 
+        if (dto.getComponentes() != null && !dto.getComponentes().isEmpty()) {
+            for (ComboComponenteDTO compDto : dto.getComponentes()) {
+                if (compDto.getComponenteId() != null) {
+                    Producto comp = productoRepository.findById(compDto.getComponenteId())
+                            .orElseThrow(() -> new RecursoNoEncontradoException("Componente ID " + compDto.getComponenteId() + " no encontrado"));
+                    guardado.agregarComponente(comp, compDto.getCantidad(), compDto.getNotas());
+                }
+            }
+            guardado = productoRepository.save(guardado);
+        }
+
         auditoriaService.registrar(
                 "CATALOGO_MAESTRO",
                 "CREACION",
@@ -170,6 +182,18 @@ public class ProductoService {
                 Proveedor prov = proveedorRepository.findById(provDto.getProveedorId())
                         .orElseThrow(() -> new RecursoNoEncontradoException("Proveedor ID " + provDto.getProveedorId() + " no encontrado"));
                 producto.agregarProveedor(prov, provDto.getCodigoReferencia(), provDto.getCostoCompra(), provDto.getEsPrincipal());
+            }
+        }
+
+        // Sincronizar componentes de combo si la lista no es nula
+        if (dto.getComponentes() != null) {
+            producto.getComponentes().clear();
+            for (ComboComponenteDTO compDto : dto.getComponentes()) {
+                if (compDto.getComponenteId() != null) {
+                    Producto comp = productoRepository.findById(compDto.getComponenteId())
+                            .orElseThrow(() -> new RecursoNoEncontradoException("Componente ID " + compDto.getComponenteId() + " no encontrado"));
+                    producto.agregarComponente(comp, compDto.getCantidad(), compDto.getNotas());
+                }
             }
         }
 
@@ -353,6 +377,26 @@ public class ProductoService {
             dto.setProveedorPrincipal(provDtos.get(0));
         }
 
+        List<ComboComponenteDTO> compDtos = new ArrayList<>();
+        if (p.getComponentes() != null) {
+            for (ComboComponente cc : p.getComponentes()) {
+                Producto comp = cc.getComponente();
+                ComboComponenteDTO ccd = new ComboComponenteDTO(
+                        cc.getId(),
+                        comp.getId(),
+                        comp.getNombre(),
+                        comp.getSku(),
+                        comp.getTipoArticulo(),
+                        comp.getPrecioCosto(),
+                        comp.getPrecioVenta(),
+                        cc.getCantidad(),
+                        cc.getNotas()
+                );
+                compDtos.add(ccd);
+            }
+        }
+        dto.setComponentes(compDtos);
+
         return dto;
     }
 
@@ -419,16 +463,32 @@ public class ProductoService {
                         productoRepository.save(p);
                     }
                 }
-                case VENTA_DIRECTA -> {
+                case VENTA_DIRECTA, ELABORADO, COMBO, SERVICIO -> {
+                    String prefix = switch (p.getTipoArticulo()) {
+                        case ELABORADO -> "ELAB-";
+                        case COMBO -> "CMB-";
+                        case SERVICIO -> "SRV-";
+                        default -> "P-";
+                    };
+                    String defaultCat = switch (p.getTipoArticulo()) {
+                        case ELABORADO -> "Tortas Heladas & Postres";
+                        case COMBO -> "Promociones & Combos";
+                        case SERVICIO -> "Fletes & Delivery";
+                        default -> "MINIMARKET";
+                    };
+
                     Optional<ProductoSimple> opt = productoSimpleRepository.findByNombreIgnoreCase(p.getNombre().trim());
                     if (opt.isEmpty() && p.getCodigoBarra() != null && !p.getCodigoBarra().isBlank()) {
                         opt = productoSimpleRepository.findByCodigoBarraIgnoreCase(p.getCodigoBarra().trim());
+                    }
+                    if (opt.isEmpty() && p.getSku() != null && !p.getSku().isBlank()) {
+                        opt = productoSimpleRepository.findByCodigo(p.getSku().trim());
                     }
                     ProductoSimple ps = opt.orElseGet(ProductoSimple::new);
                     ps.setNombre(p.getNombre().trim());
                     ps.setPrecio(p.getPrecioVenta() != null ? p.getPrecioVenta() : BigDecimal.ZERO);
                     ps.setCodigoBarra(p.getCodigoBarra() != null && !p.getCodigoBarra().isBlank() ? p.getCodigoBarra().trim() : null);
-                    ps.setCategoria(p.getCategoria() != null && !p.getCategoria().isBlank() ? p.getCategoria().trim() : (ps.getCategoria() != null ? ps.getCategoria() : "MINIMARKET"));
+                    ps.setCategoria(p.getCategoria() != null && !p.getCategoria().isBlank() ? p.getCategoria().trim() : (ps.getCategoria() != null ? ps.getCategoria() : defaultCat));
                     ps.setActivo(p.getActivo() == null || p.getActivo());
                     if (p.getTipoIva() != null) {
                         ps.setTipoIva(p.getTipoIva());
@@ -447,7 +507,7 @@ public class ProductoService {
                     }
                     ps = productoSimpleRepository.save(ps);
                     if (p.getSku() == null || p.getSku().isBlank()) {
-                        String cod = (ps.getCodigo() != null && !ps.getCodigo().isBlank()) ? ps.getCodigo() : "P-" + ps.getId();
+                        String cod = (ps.getCodigo() != null && !ps.getCodigo().isBlank()) ? ps.getCodigo() : prefix + ps.getId();
                         p.setSku(cod);
                         ps.setCodigo(cod);
                         productoSimpleRepository.save(ps);
@@ -457,6 +517,12 @@ public class ProductoService {
                 case INSUMO -> {
                     if ((p.getSku() == null || p.getSku().isBlank()) && p.getId() != null) {
                         p.setSku("INS-" + p.getId());
+                        productoRepository.save(p);
+                    }
+                }
+                case ACTIVO_FIJO -> {
+                    if ((p.getSku() == null || p.getSku().isBlank()) && p.getId() != null) {
+                        p.setSku("ACT-" + p.getId());
                         productoRepository.save(p);
                     }
                 }

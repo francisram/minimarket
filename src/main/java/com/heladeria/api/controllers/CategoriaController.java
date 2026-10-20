@@ -18,7 +18,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/categorias")
 @CrossOrigin(origins = "*")
-@PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_categorias') or hasAuthority('PAGINA_productos') or hasAuthority('PAGINA_sabores') or hasAuthority('PAGINA_pedidos')")
+@PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_categorias') or hasAuthority('PAGINA_productos') or hasAuthority('PAGINA_sabores') or hasAuthority('PAGINA_presentaciones') or hasAuthority('PAGINA_toppings') or hasAuthority('PAGINA_pedidos')")
 @Tag(name = "Categorías", description = "Gestión integral de categorías dinámicas para heladería, cafetería y minimarket")
 public class CategoriaController {
 

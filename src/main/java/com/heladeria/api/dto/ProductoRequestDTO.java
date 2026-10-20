@@ -60,6 +60,7 @@ public class ProductoRequestDTO {
 
     // Lista de proveedores a vincular
     private List<AsignarProveedorRequestDTO> proveedores = new ArrayList<>();
+    private List<ComboComponenteDTO> componentes = new ArrayList<>();
 
     public ProductoRequestDTO() {
     }
@@ -123,4 +124,7 @@ public class ProductoRequestDTO {
 
     public List<AsignarProveedorRequestDTO> getProveedores() { return proveedores; }
     public void setProveedores(List<AsignarProveedorRequestDTO> proveedores) { this.proveedores = proveedores; }
+
+    public List<ComboComponenteDTO> getComponentes() { return componentes; }
+    public void setComponentes(List<ComboComponenteDTO> componentes) { this.componentes = componentes; }
 }

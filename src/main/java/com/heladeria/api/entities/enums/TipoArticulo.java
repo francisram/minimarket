@@ -5,5 +5,9 @@ public enum TipoArticulo {
     ENVASE,
     SABOR,
     TOPPING,
-    INSUMO
+    INSUMO,
+    ELABORADO,
+    COMBO,
+    SERVICIO,
+    ACTIVO_FIJO
 }

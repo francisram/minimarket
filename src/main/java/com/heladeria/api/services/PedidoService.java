@@ -4,6 +4,8 @@ import com.heladeria.api.dto.DetallePedidoRequestDTO;
 import com.heladeria.api.dto.PedidoRequestDTO;
 import com.heladeria.api.entities.*;
 import com.heladeria.api.entities.enums.CondicionVenta;
+import com.heladeria.api.entities.enums.TipoArticulo;
+import java.util.Optional;
 import com.heladeria.api.entities.enums.EstadoPedido;
 import com.heladeria.api.entities.enums.MetodoPago;
 import com.heladeria.api.entities.enums.EstadoSesionCaja;
@@ -41,6 +43,7 @@ public class PedidoService {
     private final InstitucionRepository institucionRepository;
     private final ClienteService clienteService;
     private final InventarioService inventarioService;
+    private final ProductoRepository productoRepository;
 
     public PedidoService(PedidoRepository pedidoRepository,
                          PresentacionRepository presentacionRepository,
@@ -51,7 +54,8 @@ public class PedidoService {
                          SesionCajaRepository sesionCajaRepository,
                          InstitucionRepository institucionRepository,
                          ClienteService clienteService,
-                         InventarioService inventarioService) {
+                         InventarioService inventarioService,
+                         ProductoRepository productoRepository) {
         this.pedidoRepository = pedidoRepository;
         this.presentacionRepository = presentacionRepository;
         this.saborRepository = saborRepository;
@@ -62,6 +66,7 @@ public class PedidoService {
         this.institucionRepository = institucionRepository;
         this.clienteService = clienteService;
         this.inventarioService = inventarioService;
+        this.productoRepository = productoRepository;
     }
 
     @Transactional
@@ -328,29 +333,148 @@ public class PedidoService {
                     throw new ReglaDeNegocioException("El producto '" + prod.getNombre() + "' no está activo.");
                 }
 
-                // Control de stock
-                if (prod.getStock() != null && prod.getStock() < itemDto.getCantidad()) {
-                    throw new ReglaDeNegocioException("Stock insuficiente para '" + prod.getNombre() +
-                            "'. Disponible: " + prod.getStock() + ", Solicitado: " + itemDto.getCantidad());
+                // Verificar si este producto es un COMBO con componentes registrados
+                Optional<Producto> optCombo = Optional.empty();
+                if (prod.getCodigo() != null && !prod.getCodigo().isBlank()) {
+                    optCombo = productoRepository.findBySkuIgnoreCase(prod.getCodigo().trim());
+                }
+                if (optCombo.isEmpty() && prod.getCodigoBarra() != null && !prod.getCodigoBarra().isBlank()) {
+                    optCombo = productoRepository.findByCodigoBarraIgnoreCase(prod.getCodigoBarra().trim());
+                }
+                if (optCombo.isEmpty()) {
+                    optCombo = productoRepository.findByNombreIgnoreCase(prod.getNombre().trim());
                 }
 
-                if (prod.getStock() != null) {
-                    double stockAnt = prod.getStock().doubleValue();
-                    double stockPost = stockAnt - itemDto.getCantidad();
-                    prod.setStock((int) Math.round(stockPost));
-                    productoSimpleRepository.save(prod);
-                    inventarioService.registrarMovimientoInterno(
-                            TipoItemStock.PRODUCTO,
-                            prod.getId(),
-                            prod.getNombre(),
-                            TipoMovimientoStock.SALIDA_VENTA,
-                            itemDto.getCantidad().doubleValue(),
-                            stockAnt,
-                            stockPost,
-                            "Venta POS #" + (numeroFactura != null ? numeroFactura : trxId),
-                            username
-                    );
-                    productoSimpleRepository.save(prod);
+                if (optCombo.isPresent() && optCombo.get().getTipoArticulo() == TipoArticulo.COMBO
+                        && optCombo.get().getComponentes() != null && !optCombo.get().getComponentes().isEmpty()) {
+                    // Es un Combo Compuesto: Descontar stock de cada uno de sus componentes individuales
+                    Producto combo = optCombo.get();
+                    for (ComboComponente cc : combo.getComponentes()) {
+                        Producto comp = cc.getComponente();
+                        BigDecimal cantFactor = cc.getCantidad() != null ? cc.getCantidad() : BigDecimal.ONE;
+                        BigDecimal cantTotalDescontar = cantFactor.multiply(BigDecimal.valueOf(itemDto.getCantidad()));
+
+                        // Descontar en Producto maestro
+                        if (comp.getStock() != null) {
+                            double compStockAnt = comp.getStock().doubleValue();
+                            double compStockPost = compStockAnt - cantTotalDescontar.doubleValue();
+                            comp.setStock(BigDecimal.valueOf(compStockPost));
+                            productoRepository.save(comp);
+                        }
+
+                        // Descontar en catalogo operativo segun el tipo sin lambdas
+                        String conceptoCombo = "Venta Combo #" + (numeroFactura != null ? numeroFactura : trxId) + " (" + prod.getNombre() + ")";
+                        if (comp.getTipoArticulo() == TipoArticulo.ENVASE) {
+                            Optional<Presentacion> optPres = presentacionRepository.findByNombreIgnoreCase(comp.getNombre().trim());
+                            if (optPres.isPresent()) {
+                                Presentacion presComp = optPres.get();
+                                if (presComp.getStock() != null) {
+                                    double pAnt = presComp.getStock().doubleValue();
+                                    double pPost = pAnt - cantTotalDescontar.doubleValue();
+                                    presComp.setStock((int) Math.round(pPost));
+                                    presentacionRepository.save(presComp);
+                                    inventarioService.registrarMovimientoInterno(
+                                            TipoItemStock.ENVASE,
+                                            presComp.getId(),
+                                            presComp.getNombre(),
+                                            TipoMovimientoStock.SALIDA_VENTA,
+                                            cantTotalDescontar.doubleValue(),
+                                            pAnt,
+                                            pPost,
+                                            conceptoCombo,
+                                            finalUsername
+                                    );
+                                }
+                            }
+                        } else if (comp.getTipoArticulo() == TipoArticulo.TOPPING) {
+                            Optional<Topping> optTop = toppingRepository.findByNombreIgnoreCase(comp.getNombre().trim());
+                            if (optTop.isPresent()) {
+                                Topping topComp = optTop.get();
+                                inventarioService.registrarMovimientoInterno(
+                                        TipoItemStock.PRODUCTO,
+                                        topComp.getId(),
+                                        topComp.getNombre(),
+                                        TipoMovimientoStock.SALIDA_VENTA,
+                                        cantTotalDescontar.doubleValue(),
+                                        0.0,
+                                        0.0,
+                                        conceptoCombo,
+                                        finalUsername
+                                );
+                            }
+                        } else if (comp.getTipoArticulo() == TipoArticulo.SABOR) {
+                            Optional<Sabor> optSab = saborRepository.findByNombreIgnoreCase(comp.getNombre().trim());
+                            if (optSab.isPresent()) {
+                                Sabor sabComp = optSab.get();
+                                if (sabComp.getStockKilos() != null) {
+                                    double sAnt = sabComp.getStockKilos();
+                                    double sPost = Math.max(0.0, sAnt - cantTotalDescontar.doubleValue());
+                                    sabComp.setStockKilos(sPost);
+                                    if (sPost <= 0.001) sabComp.setDisponible(false);
+                                    saborRepository.save(sabComp);
+                                    inventarioService.registrarMovimientoInterno(
+                                            TipoItemStock.SABOR,
+                                            sabComp.getId(),
+                                            sabComp.getNombre(),
+                                            TipoMovimientoStock.SALIDA_VENTA,
+                                            cantTotalDescontar.doubleValue(),
+                                            sAnt,
+                                            sPost,
+                                            conceptoCombo,
+                                            finalUsername
+                                    );
+                                }
+                            }
+                        } else {
+                            // VENTA_DIRECTA, INSUMO, ELABORADO
+                            Optional<ProductoSimple> optPs = productoSimpleRepository.findByNombreIgnoreCase(comp.getNombre().trim());
+                            if (optPs.isPresent()) {
+                                ProductoSimple psComp = optPs.get();
+                                if (psComp.getStock() != null) {
+                                    double psAnt = psComp.getStock().doubleValue();
+                                    double psPost = psAnt - cantTotalDescontar.doubleValue();
+                                    psComp.setStock((int) Math.round(psPost));
+                                    productoSimpleRepository.save(psComp);
+                                    inventarioService.registrarMovimientoInterno(
+                                            TipoItemStock.PRODUCTO,
+                                            psComp.getId(),
+                                            psComp.getNombre(),
+                                            TipoMovimientoStock.SALIDA_VENTA,
+                                            cantTotalDescontar.doubleValue(),
+                                            psAnt,
+                                            psPost,
+                                            conceptoCombo,
+                                            finalUsername
+                                    );
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // Control de stock estandar (Combo simple o producto unitario)
+                    if (prod.getStock() != null && prod.getStock() < itemDto.getCantidad()) {
+                        throw new ReglaDeNegocioException("Stock insuficiente para '" + prod.getNombre() +
+                                "'. Disponible: " + prod.getStock() + ", Solicitado: " + itemDto.getCantidad());
+                    }
+
+                    if (prod.getStock() != null) {
+                        double stockAnt = prod.getStock().doubleValue();
+                        double stockPost = stockAnt - itemDto.getCantidad();
+                        prod.setStock((int) Math.round(stockPost));
+                        productoSimpleRepository.save(prod);
+                        inventarioService.registrarMovimientoInterno(
+                                TipoItemStock.PRODUCTO,
+                                prod.getId(),
+                                prod.getNombre(),
+                                TipoMovimientoStock.SALIDA_VENTA,
+                                itemDto.getCantidad().doubleValue(),
+                                stockAnt,
+                                stockPost,
+                                "Venta POS #" + (numeroFactura != null ? numeroFactura : trxId),
+                                username
+                        );
+                        productoSimpleRepository.save(prod);
+                    }
                 }
 
                 detalle.setProductoSimple(prod);

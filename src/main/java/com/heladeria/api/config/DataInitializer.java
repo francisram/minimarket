@@ -83,7 +83,15 @@ public class DataInitializer implements CommandLineRunner {
                 Categoria.builder().nombre("Frutos Secos & Crocantes").descripcion("Almendras tostadas, nueces y chispas crocantes").tipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.TOPPING).activo(true).build(),
 
                 Categoria.builder().nombre("Descartables").descripcion("Cucharas, servilletas y bolsas para heladería").tipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.INSUMO).activo(true).build(),
-                Categoria.builder().nombre("Materia Prima").descripcion("Bases, esencias, pastas y pulpas de elaboración").tipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.INSUMO).activo(true).build()
+                Categoria.builder().nombre("Materia Prima").descripcion("Bases, esencias, pastas y pulpas de elaboración").tipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.INSUMO).activo(true).build(),
+
+                Categoria.builder().nombre("Tortas Heladas & Postres").descripcion("Tortas heladas artesanales, postres y bombones suizos").tipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.ELABORADO).activo(true).build(),
+                Categoria.builder().nombre("Copas & Batidos").descripcion("Copas heladas de salón, milkshakes y frappés").tipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.ELABORADO).activo(true).build(),
+                Categoria.builder().nombre("Promociones & Combos").descripcion("Packs familiares, meriendas y promociones especiales").tipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.COMBO).activo(true).build(),
+                Categoria.builder().nombre("Fletes & Delivery").descripcion("Costo de envío a domicilio y logística de entregas").tipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.SERVICIO).activo(true).build(),
+                Categoria.builder().nombre("Eventos & Alquileres").descripcion("Alquiler de carrito heladero, catering y eventos especiales").tipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.SERVICIO).activo(true).build(),
+                Categoria.builder().nombre("Maquinaria & Frío").descripcion("Freezers, heladeras exhibidoras, pozos de frío y balanzas").tipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.ACTIVO_FIJO).activo(true).build(),
+                Categoria.builder().nombre("Mobiliario & Salón").descripcion("Mesas, sillas, sombrillas y cartelería del local").tipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.ACTIVO_FIJO).activo(true).build()
             ));
         }
 

@@ -99,6 +99,11 @@ public class Producto {
     @JsonManagedReference
     private List<ProductoProveedor> proveedores = new ArrayList<>();
 
+    // --- Composición de Combo ---
+    @OneToMany(mappedBy = "combo", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JsonManagedReference
+    private List<ComboComponente> componentes = new ArrayList<>();
+
     public Producto() {
     }
 
@@ -218,4 +223,16 @@ public class Producto {
 
     public List<ProductoProveedor> getProveedores() { return proveedores; }
     public void setProveedores(List<ProductoProveedor> proveedores) { this.proveedores = proveedores; }
+
+    public List<ComboComponente> getComponentes() { return componentes; }
+    public void setComponentes(List<ComboComponente> componentes) { this.componentes = componentes; }
+
+    public void agregarComponente(Producto comp, BigDecimal cantidad, String notas) {
+        ComboComponente cc = new ComboComponente(this, comp, cantidad, notas);
+        this.componentes.add(cc);
+    }
+
+    public void limpiarComponentes() {
+        this.componentes.clear();
+    }
 }
