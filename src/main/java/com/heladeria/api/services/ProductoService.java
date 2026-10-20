@@ -400,9 +400,13 @@ public class ProductoService {
         return dto;
     }
 
+    @Transactional
     public void sincronizarConCatalogoOperativo(Producto p) {
         if (p == null || p.getTipoArticulo() == null) {
             return;
+        }
+        if (p.getId() != null) {
+            p = productoRepository.findById(p.getId()).orElse(p);
         }
         try {
             switch (p.getTipoArticulo()) {
@@ -489,6 +493,40 @@ public class ProductoService {
                     ps.setPrecio(p.getPrecioVenta() != null ? p.getPrecioVenta() : BigDecimal.ZERO);
                     ps.setCodigoBarra(p.getCodigoBarra() != null && !p.getCodigoBarra().isBlank() ? p.getCodigoBarra().trim() : null);
                     ps.setCategoria(p.getCategoria() != null && !p.getCategoria().isBlank() ? p.getCategoria().trim() : (ps.getCategoria() != null ? ps.getCategoria() : defaultCat));
+                    
+                    if (p.getTipoArticulo() == TipoArticulo.COMBO) {
+                        if (p.getComponentes() != null && !p.getComponentes().isEmpty()) {
+                            StringBuilder sb = new StringBuilder("Incluye: ");
+                            for (int i = 0; i < p.getComponentes().size(); i++) {
+                                ComboComponente cc = p.getComponentes().get(i);
+                                if (i > 0) sb.append(" + ");
+                                if (cc.getCantidad() != null) {
+                                    if (cc.getCantidad().stripTrailingZeros().scale() <= 0) {
+                                        sb.append(cc.getCantidad().intValue());
+                                    } else {
+                                        sb.append(cc.getCantidad().stripTrailingZeros().toPlainString());
+                                    }
+                                    sb.append("x ");
+                                }
+                                sb.append(cc.getComponente() != null ? cc.getComponente().getNombre() : "Item");
+                                if (cc.getNotas() != null && !cc.getNotas().isBlank()) {
+                                    sb.append(" (").append(cc.getNotas().trim()).append(")");
+                                }
+                            }
+                            String descStr = sb.toString();
+                            if (descStr.length() > 255) {
+                                descStr = descStr.substring(0, 252) + "...";
+                            }
+                            ps.setDescripcion(descStr);
+                        } else if (p.getDescripcion() != null && !p.getDescripcion().isBlank()) {
+                            ps.setDescripcion(p.getDescripcion().trim());
+                        } else {
+                            ps.setDescripcion("Promo directa sin despiece");
+                        }
+                    } else if (p.getDescripcion() != null && !p.getDescripcion().isBlank()) {
+                        ps.setDescripcion(p.getDescripcion().trim());
+                    }
+
                     ps.setActivo(p.getActivo() == null || p.getActivo());
                     if (p.getTipoIva() != null) {
                         ps.setTipoIva(p.getTipoIva());

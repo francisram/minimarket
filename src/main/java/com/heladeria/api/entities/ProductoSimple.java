@@ -25,6 +25,9 @@ public class ProductoSimple {
     @Column(length = 50)
     private String categoria;
 
+    @Column(length = 255)
+    private String descripcion;
+
     @Column(nullable = false)
     private Integer stock = 0;
 
@@ -95,6 +98,9 @@ public class ProductoSimple {
     public String getCategoria() { return categoria; }
     public void setCategoria(String categoria) { this.categoria = categoria; }
 
+    public String getDescripcion() { return descripcion; }
+    public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
+
     public Integer getStock() { return stock; }
     public void setStock(Integer stock) { this.stock = stock; }
 
@@ -123,6 +129,7 @@ public class ProductoSimple {
         private String nombre;
         private BigDecimal precio;
         private String categoria;
+        private String descripcion;
         private Integer stock = 0;
         private Integer stockMinimo = 5;
         private Boolean activo = true;
@@ -135,6 +142,7 @@ public class ProductoSimple {
         public ProductoSimpleBuilder nombre(String nombre) { this.nombre = nombre; return this; }
         public ProductoSimpleBuilder precio(BigDecimal precio) { this.precio = precio; return this; }
         public ProductoSimpleBuilder categoria(String categoria) { this.categoria = categoria; return this; }
+        public ProductoSimpleBuilder descripcion(String descripcion) { this.descripcion = descripcion; return this; }
         public ProductoSimpleBuilder stock(Integer stock) { this.stock = stock; return this; }
         public ProductoSimpleBuilder stockMinimo(Integer stockMinimo) { this.stockMinimo = stockMinimo; return this; }
         public ProductoSimpleBuilder activo(Boolean activo) { this.activo = activo; return this; }
@@ -144,7 +152,9 @@ public class ProductoSimple {
         public ProductoSimpleBuilder proveedor(Proveedor proveedor) { this.proveedor = proveedor; return this; }
 
         public ProductoSimple build() {
-            return new ProductoSimple(id, nombre, precio, categoria, stock, stockMinimo, activo, tipoIva, codigoBarra, codigo, proveedor);
+            ProductoSimple ps = new ProductoSimple(id, nombre, precio, categoria, stock, stockMinimo, activo, tipoIva, codigoBarra, codigo, proveedor);
+            ps.setDescripcion(descripcion);
+            return ps;
         }
     }
 }

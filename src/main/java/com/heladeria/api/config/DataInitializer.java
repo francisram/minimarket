@@ -382,8 +382,23 @@ public class DataInitializer implements CommandLineRunner {
                 }
             }
 
-            // 5. Todo Producto en Maestro que no esté en operativo, sincronizarlo
+            // 5. Homologar costos base si están en 0 y sincronizar con catálogo operativo
             for (Producto prod : productoRepository.findAll()) {
+                if (prod.getPrecioCosto() == null || prod.getPrecioCosto().compareTo(BigDecimal.ZERO) == 0) {
+                    BigDecimal costoEstimado = switch (prod.getTipoArticulo()) {
+                        case SABOR -> new BigDecimal("32000");
+                        case ENVASE -> new BigDecimal("800");
+                        case TOPPING -> new BigDecimal("600");
+                        case VENTA_DIRECTA -> new BigDecimal("4500");
+                        case COMBO -> new BigDecimal("20000");
+                        case INSUMO -> new BigDecimal("10000");
+                        default -> BigDecimal.ZERO;
+                    };
+                    if (costoEstimado.compareTo(BigDecimal.ZERO) > 0) {
+                        prod.setPrecioCosto(costoEstimado);
+                        productoRepository.save(prod);
+                    }
+                }
                 productoService.sincronizarConCatalogoOperativo(prod);
             }
             log.info("Homologación de catálogos existentes completada.");

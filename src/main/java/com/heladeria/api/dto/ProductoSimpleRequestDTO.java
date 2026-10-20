@@ -18,6 +18,10 @@ public class ProductoSimpleRequestDTO {
     private BigDecimal precio;
 
     private String categoria;
+
+    @Size(max = 255, message = "La descripción no puede superar 255 caracteres")
+    private String descripcion;
+
     private Integer stock = 0;
     private Integer stockMinimo = 5;
     private Boolean activo = true;
@@ -42,6 +46,9 @@ public class ProductoSimpleRequestDTO {
 
     public String getCategoria() { return categoria; }
     public void setCategoria(String categoria) { this.categoria = categoria; }
+
+    public String getDescripcion() { return descripcion; }
+    public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
 
     public Integer getStock() { return stock; }
     public void setStock(Integer stock) { this.stock = stock; }

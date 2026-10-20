@@ -99,6 +99,7 @@ public class ProductoSimpleService {
                 .nombre(dto.getNombre().trim())
                 .precio(dto.getPrecio())
                 .categoria(dto.getCategoria())
+                .descripcion(dto.getDescripcion() != null ? dto.getDescripcion().trim() : null)
                 .stock(dto.getStock() != null ? dto.getStock() : 0)
                 .stockMinimo(dto.getStockMinimo() != null ? dto.getStockMinimo() : 5)
                 .activo(dto.getActivo() == null || dto.getActivo())
@@ -170,6 +171,9 @@ public class ProductoSimpleService {
         producto.setNombre(dto.getNombre().trim());
         producto.setPrecio(dto.getPrecio());
         producto.setCategoria(dto.getCategoria());
+        if (dto.getDescripcion() != null) {
+            producto.setDescripcion(dto.getDescripcion().trim());
+        }
         if (dto.getStock() != null) {
             producto.setStock(dto.getStock());
         }
