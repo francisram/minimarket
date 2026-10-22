@@ -1,6 +1,7 @@
 package com.heladeria.api.controllers;
 
 import com.heladeria.api.dto.ActualizarEstadoDTO;
+import com.heladeria.api.dto.CancelarPedidoRequestDTO;
 import com.heladeria.api.dto.PedidoRequestDTO;
 import com.heladeria.api.entities.Pedido;
 import com.heladeria.api.entities.enums.EstadoPedido;
@@ -63,9 +64,11 @@ public class PedidoController {
     }
 
     @PutMapping("/{id}/cancelar")
-    @Operation(summary = "Cancelar pedido y reintegrar stock si corresponde")
-    public ResponseEntity<Pedido> cancelar(@PathVariable Long id) {
-        return ResponseEntity.ok(pedidoService.cancelarPedido(id));
+    @Operation(summary = "Cancelar pedido y reintegrar stock si corresponde (requiere clave de administrador)")
+    public ResponseEntity<Pedido> cancelar(
+            @PathVariable Long id,
+            @RequestBody(required = false) CancelarPedidoRequestDTO dto) {
+        return ResponseEntity.ok(pedidoService.cancelarPedido(id, dto));
     }
 
     @PostMapping("/{id}/imprimir")

@@ -247,6 +247,12 @@ public class Pedido {
         return sesionCaja != null ? sesionCaja.getId() : null;
     }
 
+    @Transient
+    @JsonProperty("sesionCajaEstado")
+    public String getSesionCajaEstado() {
+        return sesionCaja != null && sesionCaja.getEstado() != null ? sesionCaja.getEstado().name() : null;
+    }
+
     public TipoComprobante getTipoComprobante() { return tipoComprobante; }
     public void setTipoComprobante(TipoComprobante tipoComprobante) { this.tipoComprobante = tipoComprobante; }
 

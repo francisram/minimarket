@@ -17,7 +17,11 @@ import com.heladeria.api.entities.enums.TipoMovimientoStock;
 import com.heladeria.api.exceptions.RecursoNoEncontradoException;
 import com.heladeria.api.exceptions.ReglaDeNegocioException;
 import com.heladeria.api.repositories.*;
+import com.heladeria.api.dto.CancelarPedidoRequestDTO;
 import com.heladeria.api.util.MonedaPyUtils;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,6 +48,9 @@ public class PedidoService {
     private final ClienteService clienteService;
     private final InventarioService inventarioService;
     private final ProductoRepository productoRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final AuditoriaService auditoriaService;
 
     public PedidoService(PedidoRepository pedidoRepository,
                          PresentacionRepository presentacionRepository,
@@ -55,7 +62,10 @@ public class PedidoService {
                          InstitucionRepository institucionRepository,
                          ClienteService clienteService,
                          InventarioService inventarioService,
-                         ProductoRepository productoRepository) {
+                         ProductoRepository productoRepository,
+                         UsuarioRepository usuarioRepository,
+                         PasswordEncoder passwordEncoder,
+                         AuditoriaService auditoriaService) {
         this.pedidoRepository = pedidoRepository;
         this.presentacionRepository = presentacionRepository;
         this.saborRepository = saborRepository;
@@ -67,6 +77,9 @@ public class PedidoService {
         this.clienteService = clienteService;
         this.inventarioService = inventarioService;
         this.productoRepository = productoRepository;
+        this.usuarioRepository = usuarioRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.auditoriaService = auditoriaService;
     }
 
     @Transactional
@@ -578,15 +591,66 @@ public class PedidoService {
 
     @Transactional
     public Pedido cancelarPedido(Long id) {
+        return cancelarPedido(id, null);
+    }
+
+    @Transactional
+    public Pedido cancelarPedido(Long id, CancelarPedidoRequestDTO dto) {
         Pedido pedido = obtenerPorId(id);
 
         if (pedido.getEstado() == EstadoPedido.CANCELADO) {
             throw new ReglaDeNegocioException("El pedido ya se encuentra cancelado.");
         }
 
-        var authUser = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-        String usuarioCancelacion = (authUser != null && authUser.getName() != null) ? authUser.getName() : "ADMIN";
+        var authUser = SecurityContextHolder.getContext().getAuthentication();
+        boolean esAdminLogueado = authUser != null && authUser.getAuthorities() != null && authUser.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_OWNER"));
+
+        String usuarioCancelacion;
+
+        // Validar contraseña de administrador / supervisor
+        if (dto != null && dto.getAdminPassword() != null && !dto.getAdminPassword().trim().isEmpty()) {
+            List<Usuario> admins = usuarioRepository.findAll().stream()
+                    .filter(u -> Boolean.TRUE.equals(u.getEstado()))
+                    .filter(u -> u.getRol() != null && ("ADMIN".equalsIgnoreCase(u.getRol().getNombreRol()) || "OWNER".equalsIgnoreCase(u.getRol().getNombreRol())))
+                    .toList();
+
+            Usuario adminAutorizante = null;
+            if (dto.getAdminUsername() != null && !dto.getAdminUsername().isBlank()) {
+                adminAutorizante = admins.stream()
+                        .filter(u -> u.getUsername().equalsIgnoreCase(dto.getAdminUsername().trim()))
+                        .findFirst()
+                        .filter(u -> passwordEncoder.matches(dto.getAdminPassword(), u.getPasswordHash()))
+                        .orElse(null);
+            } else {
+                for (Usuario u : admins) {
+                    if (passwordEncoder.matches(dto.getAdminPassword(), u.getPasswordHash())) {
+                        adminAutorizante = u;
+                        break;
+                    }
+                }
+            }
+
+            if (adminAutorizante == null) {
+                throw new ReglaDeNegocioException("Contraseña de Administrador incorrecta. Operación de cancelación rechazada.");
+            }
+
+            usuarioCancelacion = adminAutorizante.getUsername();
+        } else if (esAdminLogueado) {
+            usuarioCancelacion = authUser.getName();
+        } else {
+            throw new ReglaDeNegocioException("Se requiere la contraseña de un Administrador o Propietario para anular un comprobante.");
+        }
+
         String docRef = pedido.getNumeroFactura() != null ? pedido.getNumeroFactura() : (pedido.getTrxId() != null ? pedido.getTrxId() : String.valueOf(pedido.getId()));
+        String motivoStr = (dto != null && dto.getMotivo() != null && !dto.getMotivo().isBlank())
+                ? " - Motivo: " + dto.getMotivo().trim()
+                : "";
+        String detalleLog = "Cancelación Pedido #" + docRef + " (Autorizado por Admin: " + usuarioCancelacion + ")" + motivoStr;
+
+        if (pedido.getSesionCaja() != null && pedido.getSesionCaja().getEstado() == EstadoSesionCaja.CERRADA) {
+            detalleLog += " [Sesión de Caja #" + pedido.getSesionCaja().getId() + " CERRADA]";
+        }
 
         // Reintegrar stock de productos simples, envases y sabores si se cancela
         for (DetallePedido detalle : pedido.getDetalles()) {
@@ -605,7 +669,7 @@ public class PedidoService {
                             detalle.getCantidad().doubleValue(),
                             stockAnt,
                             stockPost,
-                            "Cancelación Pedido #" + docRef,
+                            detalleLog,
                             usuarioCancelacion
                     );
                 }
@@ -625,7 +689,7 @@ public class PedidoService {
                             detalle.getCantidad().doubleValue(),
                             stockAnt,
                             stockPost,
-                            "Cancelación Pedido #" + docRef,
+                            detalleLog,
                             usuarioCancelacion
                     );
                 }
@@ -654,7 +718,7 @@ public class PedidoService {
                                     kilosPorSabor,
                                     stockAnt,
                                     nuevoStock,
-                                    "Cancelación Pedido #" + docRef,
+                                    detalleLog,
                                     usuarioCancelacion
                             );
                         }
@@ -664,7 +728,20 @@ public class PedidoService {
         }
 
         pedido.setEstado(EstadoPedido.CANCELADO);
-        return pedidoRepository.save(pedido);
+        Pedido guardado = pedidoRepository.save(pedido);
+
+        // Registrar evento en la bitácora de auditoría
+        auditoriaService.registrarLog(
+                usuarioCancelacion,
+                "VENTAS",
+                "CANCELACION",
+                pedido.getId(),
+                docRef,
+                "Comprobante anulado. Total: Gs. " + pedido.getTotal() + ". Autorizado por: " + usuarioCancelacion + motivoStr,
+                null
+        );
+
+        return guardado;
     }
 
     @Transactional(readOnly = true)
