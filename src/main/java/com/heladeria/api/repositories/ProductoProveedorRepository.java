@@ -17,4 +17,6 @@ public interface ProductoProveedorRepository extends JpaRepository<ProductoProve
     Optional<ProductoProveedor> findByProductoIdAndProveedorId(Long productoId, Long proveedorId);
 
     void deleteByProductoIdAndProveedorId(Long productoId, Long proveedorId);
+
+    void deleteByProveedorId(Long proveedorId);
 }

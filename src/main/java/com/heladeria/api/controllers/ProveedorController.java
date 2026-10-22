@@ -65,4 +65,12 @@ public class ProveedorController {
     public ResponseEntity<ProveedorDTO> cambiarEstado(@PathVariable Long id, @RequestParam("activo") boolean activo) {
         return ResponseEntity.ok(proveedorService.cambiarEstado(id, activo));
     }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_proveedores')")
+    @Operation(summary = "Eliminar proveedor por ID")
+    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
+        proveedorService.eliminar(id);
+        return ResponseEntity.noContent().build();
+    }
 }

@@ -17,9 +17,11 @@ import java.util.Optional;
 public class ClienteService {
 
     private final ClienteRepository clienteRepository;
+    private final AuditoriaService auditoriaService;
 
-    public ClienteService(ClienteRepository clienteRepository) {
+    public ClienteService(ClienteRepository clienteRepository, AuditoriaService auditoriaService) {
         this.clienteRepository = clienteRepository;
+        this.auditoriaService = auditoriaService;
     }
 
     public List<ClienteDTO> listar(String filtro) {
@@ -87,6 +89,24 @@ public class ClienteService {
         c.setActivo(activo);
         c.setFechaActualizacion(LocalDateTime.now());
         return toDTO(clienteRepository.save(c));
+    }
+
+    @Transactional
+    public void eliminar(Long id) {
+        Cliente c = clienteRepository.findById(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Cliente con ID " + id + " no encontrado."));
+
+        clienteRepository.delete(c);
+
+        auditoriaService.registrarLog(
+                null,
+                "CLIENTES",
+                "BAJA",
+                id,
+                c.getRazonSocial(),
+                "Cliente eliminado del padrón. RUC: " + c.getRuc(),
+                null
+        );
     }
 
     /**

@@ -63,4 +63,12 @@ public class ClienteController {
     public ResponseEntity<ClienteDTO> cambiarEstado(@PathVariable Long id, @RequestParam("activo") boolean activo) {
         return ResponseEntity.ok(clienteService.cambiarEstado(id, activo));
     }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN') or hasAuthority('PAGINA_clientes')")
+    @Operation(summary = "Eliminar cliente por ID")
+    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
+        clienteService.eliminar(id);
+        return ResponseEntity.noContent().build();
+    }
 }

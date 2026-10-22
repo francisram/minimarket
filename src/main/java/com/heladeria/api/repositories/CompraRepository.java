@@ -12,4 +12,6 @@ public interface CompraRepository extends JpaRepository<Compra, Long> {
     List<Compra> findAllByOrderByFechaEmisionDescIdDesc();
 
     List<Compra> findByProveedorIdOrderByFechaEmisionDescIdDesc(Long proveedorId);
+
+    boolean existsByProveedorId(Long proveedorId);
 }

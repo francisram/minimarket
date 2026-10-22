@@ -2,9 +2,14 @@ package com.heladeria.api.services;
 
 import com.heladeria.api.dto.ProveedorDTO;
 import com.heladeria.api.dto.ProveedorRequestDTO;
+import com.heladeria.api.entities.ProductoSimple;
 import com.heladeria.api.entities.Proveedor;
 import com.heladeria.api.exceptions.ConflictException;
 import com.heladeria.api.exceptions.RecursoNoEncontradoException;
+import com.heladeria.api.exceptions.ReglaDeNegocioException;
+import com.heladeria.api.repositories.CompraRepository;
+import com.heladeria.api.repositories.ProductoProveedorRepository;
+import com.heladeria.api.repositories.ProductoSimpleRepository;
 import com.heladeria.api.repositories.ProveedorRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,9 +22,22 @@ import java.util.Optional;
 public class ProveedorService {
 
     private final ProveedorRepository proveedorRepository;
+    private final CompraRepository compraRepository;
+    private final ProductoProveedorRepository productoProveedorRepository;
+    private final ProductoSimpleRepository productoSimpleRepository;
+    private final AuditoriaService auditoriaService;
 
-    public ProveedorService(ProveedorRepository proveedorRepository) {
+    public ProveedorService(
+            ProveedorRepository proveedorRepository,
+            CompraRepository compraRepository,
+            ProductoProveedorRepository productoProveedorRepository,
+            ProductoSimpleRepository productoSimpleRepository,
+            AuditoriaService auditoriaService) {
         this.proveedorRepository = proveedorRepository;
+        this.compraRepository = compraRepository;
+        this.productoProveedorRepository = productoProveedorRepository;
+        this.productoSimpleRepository = productoSimpleRepository;
+        this.auditoriaService = auditoriaService;
     }
 
     @Transactional(readOnly = true)
@@ -100,6 +118,41 @@ public class ProveedorService {
         p.setActivo(activo);
         p.setFechaActualizacion(LocalDateTime.now());
         return toDTO(proveedorRepository.save(p));
+    }
+
+    @Transactional
+    public void eliminar(Long id) {
+        Proveedor p = proveedorRepository.findById(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Proveedor con ID " + id + " no encontrado."));
+
+        if (compraRepository.existsByProveedorId(id)) {
+            throw new ReglaDeNegocioException("No se puede eliminar el proveedor '" + p.getRazonSocial() +
+                    "' porque tiene facturas de compra registradas. Si ya no opera con él, puede desactivarlo.");
+        }
+
+        // Desvincular productos simples que lo tenían asignado como proveedor principal
+        List<ProductoSimple> productos = productoSimpleRepository.findByProveedorId(id);
+        for (ProductoSimple ps : productos) {
+            ps.setProveedor(null);
+            productoSimpleRepository.save(ps);
+        }
+
+        // Eliminar registros de la tabla intermedia producto_proveedor
+        productoProveedorRepository.deleteByProveedorId(id);
+
+        // Eliminar el proveedor
+        proveedorRepository.delete(p);
+
+        // Registrar auditoría de baja
+        auditoriaService.registrarLog(
+                null,
+                "PROVEEDORES",
+                "BAJA",
+                id,
+                p.getRazonSocial(),
+                "Proveedor eliminado del padrón. RUC: " + p.getRuc(),
+                null
+        );
     }
 
     public ProveedorDTO toDTO(Proveedor p) {
