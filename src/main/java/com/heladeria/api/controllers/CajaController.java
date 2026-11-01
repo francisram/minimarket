@@ -77,4 +77,19 @@ public class CajaController {
     public ResponseEntity<SesionCajaDTO> obtenerPorId(@PathVariable Long id) {
         return ResponseEntity.ok(cajaService.obtenerPorId(id));
     }
+
+    @PostMapping("/movimientos")
+    @Operation(summary = "Registrar un movimiento de efectivo (egreso o ingreso) en la sesión de caja activa")
+    public ResponseEntity<MovimientoCajaDTO> registrarMovimiento(
+            @Valid @RequestBody RegistrarMovimientoCajaRequestDTO request,
+            Authentication authentication) {
+        String username = authentication != null ? authentication.getName() : "admin";
+        return ResponseEntity.status(HttpStatus.CREATED).body(cajaService.registrarMovimiento(request, username));
+    }
+
+    @GetMapping("/{id}/movimientos")
+    @Operation(summary = "Listar los movimientos de efectivo registrados en una sesión de caja")
+    public ResponseEntity<List<MovimientoCajaDTO>> obtenerMovimientosPorSesion(@PathVariable Long id) {
+        return ResponseEntity.ok(cajaService.listarMovimientos(id));
+    }
 }

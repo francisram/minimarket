@@ -19,6 +19,9 @@ public class ResumenCajaDTO {
     private BigDecimal totalVentas;
     private BigDecimal totalEsperadoEfectivo;
     private BigDecimal totalEsperadoTarjeta;
+    private BigDecimal totalIngresosCaja = BigDecimal.ZERO;
+    private BigDecimal totalEgresosCaja = BigDecimal.ZERO;
+    private java.util.List<MovimientoCajaDTO> movimientos = new java.util.ArrayList<>();
     private Integer totalPedidos;
     private Integer cantidadVouchers;
     private Integer cantidadTransferencias;
@@ -183,6 +186,30 @@ public class ResumenCajaDTO {
         this.cantidadTransferencias = cantidadTransferencias;
     }
 
+    public BigDecimal getTotalIngresosCaja() {
+        return totalIngresosCaja != null ? totalIngresosCaja : BigDecimal.ZERO;
+    }
+
+    public void setTotalIngresosCaja(BigDecimal totalIngresosCaja) {
+        this.totalIngresosCaja = totalIngresosCaja;
+    }
+
+    public BigDecimal getTotalEgresosCaja() {
+        return totalEgresosCaja != null ? totalEgresosCaja : BigDecimal.ZERO;
+    }
+
+    public void setTotalEgresosCaja(BigDecimal totalEgresosCaja) {
+        this.totalEgresosCaja = totalEgresosCaja;
+    }
+
+    public java.util.List<MovimientoCajaDTO> getMovimientos() {
+        return movimientos;
+    }
+
+    public void setMovimientos(java.util.List<MovimientoCajaDTO> movimientos) {
+        this.movimientos = movimientos != null ? movimientos : new java.util.ArrayList<>();
+    }
+
     public static class ResumenCajaDTOBuilder {
         private Long sesionId;
         private EstadoSesionCaja estado;
@@ -196,6 +223,9 @@ public class ResumenCajaDTO {
         private BigDecimal totalVentas;
         private BigDecimal totalEsperadoEfectivo;
         private BigDecimal totalEsperadoTarjeta;
+        private BigDecimal totalIngresosCaja = BigDecimal.ZERO;
+        private BigDecimal totalEgresosCaja = BigDecimal.ZERO;
+        private java.util.List<MovimientoCajaDTO> movimientos = new java.util.ArrayList<>();
         private Integer totalPedidos;
         private Integer cantidadVouchers;
         private Integer cantidadTransferencias;
@@ -212,15 +242,22 @@ public class ResumenCajaDTO {
         public ResumenCajaDTOBuilder totalVentas(BigDecimal totalVentas) { this.totalVentas = totalVentas; return this; }
         public ResumenCajaDTOBuilder totalEsperadoEfectivo(BigDecimal totalEsperadoEfectivo) { this.totalEsperadoEfectivo = totalEsperadoEfectivo; return this; }
         public ResumenCajaDTOBuilder totalEsperadoTarjeta(BigDecimal totalEsperadoTarjeta) { this.totalEsperadoTarjeta = totalEsperadoTarjeta; return this; }
+        public ResumenCajaDTOBuilder totalIngresosCaja(BigDecimal totalIngresosCaja) { this.totalIngresosCaja = totalIngresosCaja; return this; }
+        public ResumenCajaDTOBuilder totalEgresosCaja(BigDecimal totalEgresosCaja) { this.totalEgresosCaja = totalEgresosCaja; return this; }
+        public ResumenCajaDTOBuilder movimientos(java.util.List<MovimientoCajaDTO> movimientos) { this.movimientos = movimientos; return this; }
         public ResumenCajaDTOBuilder totalPedidos(Integer totalPedidos) { this.totalPedidos = totalPedidos; return this; }
         public ResumenCajaDTOBuilder cantidadVouchers(Integer cantidadVouchers) { this.cantidadVouchers = cantidadVouchers; return this; }
         public ResumenCajaDTOBuilder cantidadTransferencias(Integer cantidadTransferencias) { this.cantidadTransferencias = cantidadTransferencias; return this; }
 
         public ResumenCajaDTO build() {
-            return new ResumenCajaDTO(sesionId, estado, usuarioApertura, fechaApertura, montoInicial,
+            ResumenCajaDTO dto = new ResumenCajaDTO(sesionId, estado, usuarioApertura, fechaApertura, montoInicial,
                     totalEfectivo, totalTarjetaDebito, totalTarjetaCredito, totalTransferenciaQr,
                     totalVentas, totalEsperadoEfectivo, totalEsperadoTarjeta,
                     totalPedidos, cantidadVouchers, cantidadTransferencias);
+            dto.setTotalIngresosCaja(totalIngresosCaja);
+            dto.setTotalEgresosCaja(totalEgresosCaja);
+            dto.setMovimientos(movimientos);
+            return dto;
         }
     }
 }

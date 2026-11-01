@@ -1,14 +1,17 @@
 package com.heladeria.api.services;
 
 import com.heladeria.api.dto.*;
+import com.heladeria.api.entities.MovimientoCaja;
 import com.heladeria.api.entities.Pedido;
 import com.heladeria.api.entities.SesionCaja;
 import com.heladeria.api.entities.Usuario;
 import com.heladeria.api.entities.enums.EstadoPedido;
 import com.heladeria.api.entities.enums.EstadoSesionCaja;
 import com.heladeria.api.entities.enums.MetodoPago;
+import com.heladeria.api.entities.enums.TipoMovimientoCaja;
 import com.heladeria.api.exceptions.RecursoNoEncontradoException;
 import com.heladeria.api.exceptions.ReglaDeNegocioException;
+import com.heladeria.api.repositories.MovimientoCajaRepository;
 import com.heladeria.api.repositories.PedidoRepository;
 import com.heladeria.api.repositories.SesionCajaRepository;
 import com.heladeria.api.repositories.UsuarioRepository;
@@ -19,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class CajaService {
@@ -26,15 +30,18 @@ public class CajaService {
     private final SesionCajaRepository sesionCajaRepository;
     private final PedidoRepository pedidoRepository;
     private final UsuarioRepository usuarioRepository;
+    private final MovimientoCajaRepository movimientoCajaRepository;
     private final AuditoriaService auditoriaService;
 
     public CajaService(SesionCajaRepository sesionCajaRepository,
                        PedidoRepository pedidoRepository,
                        UsuarioRepository usuarioRepository,
+                       MovimientoCajaRepository movimientoCajaRepository,
                        AuditoriaService auditoriaService) {
         this.sesionCajaRepository = sesionCajaRepository;
         this.pedidoRepository = pedidoRepository;
         this.usuarioRepository = usuarioRepository;
+        this.movimientoCajaRepository = movimientoCajaRepository;
         this.auditoriaService = auditoriaService;
     }
 
@@ -121,8 +128,28 @@ public class CajaService {
             }
         }
 
-        BigDecimal totalEsperadoEfectivo = MonedaPyUtils.redondearGs(sesion.getMontoInicial().add(totalEfectivo));
         BigDecimal totalEsperadoTarjeta = MonedaPyUtils.redondearGs(totalTarjetaDebito.add(totalTarjetaCredito));
+
+        List<MovimientoCaja> movimientos = movimientoCajaRepository.findBySesionCaja_IdOrderByFechaDesc(sesion.getId());
+        BigDecimal totalIngresos = BigDecimal.ZERO;
+        BigDecimal totalEgresos = BigDecimal.ZERO;
+        for (MovimientoCaja m : movimientos) {
+            if (m.getTipo() == TipoMovimientoCaja.INGRESO) {
+                totalIngresos = totalIngresos.add(m.getMonto() != null ? m.getMonto() : BigDecimal.ZERO);
+            } else if (m.getTipo() == TipoMovimientoCaja.EGRESO) {
+                totalEgresos = totalEgresos.add(m.getMonto() != null ? m.getMonto() : BigDecimal.ZERO);
+            }
+        }
+        totalIngresos = MonedaPyUtils.redondearGs(totalIngresos);
+        totalEgresos = MonedaPyUtils.redondearGs(totalEgresos);
+
+        BigDecimal totalEsperadoEfectivo = MonedaPyUtils.redondearGs(
+                sesion.getMontoInicial().add(totalEfectivo).add(totalIngresos).subtract(totalEgresos)
+        );
+
+        List<MovimientoCajaDTO> movimientosDTO = movimientos.stream()
+                .map(MovimientoCajaDTO::fromEntity)
+                .collect(Collectors.toList());
 
         return ResumenCajaDTO.builder()
                 .sesionId(sesion.getId())
@@ -135,6 +162,9 @@ public class CajaService {
                 .totalTarjetaCredito(totalTarjetaCredito)
                 .totalTransferenciaQr(totalTransferenciaQr)
                 .totalVentas(totalVentas)
+                .totalIngresosCaja(totalIngresos)
+                .totalEgresosCaja(totalEgresos)
+                .movimientos(movimientosDTO)
                 .totalEsperadoEfectivo(totalEsperadoEfectivo)
                 .totalEsperadoTarjeta(totalEsperadoTarjeta)
                 .totalPedidos(pedidos.size())
@@ -251,7 +281,15 @@ public class CajaService {
         }
 
         BigDecimal totalEsperadoTarjeta = MonedaPyUtils.redondearGs(totalTarjetaDebito.add(totalTarjetaCredito));
-        BigDecimal montoEsperadoEfectivo = MonedaPyUtils.redondearGs(sesion.getMontoInicial().add(totalEfectivo));
+
+        BigDecimal sumIngresos = movimientoCajaRepository.sumMontoBySesionCajaIdAndTipo(sesion.getId(), TipoMovimientoCaja.INGRESO);
+        BigDecimal sumEgresos = movimientoCajaRepository.sumMontoBySesionCajaIdAndTipo(sesion.getId(), TipoMovimientoCaja.EGRESO);
+        BigDecimal totalIngresos = sumIngresos != null ? MonedaPyUtils.redondearGs(sumIngresos) : BigDecimal.ZERO;
+        BigDecimal totalEgresos = sumEgresos != null ? MonedaPyUtils.redondearGs(sumEgresos) : BigDecimal.ZERO;
+
+        BigDecimal montoEsperadoEfectivo = MonedaPyUtils.redondearGs(
+                sesion.getMontoInicial().add(totalEfectivo).add(totalIngresos).subtract(totalEgresos)
+        );
         BigDecimal montoRealEfectivo = MonedaPyUtils.redondearGs(request.getMontoRealEfectivo());
         BigDecimal diferencia = MonedaPyUtils.redondearGs(montoRealEfectivo.subtract(montoEsperadoEfectivo));
 
@@ -268,6 +306,9 @@ public class CajaService {
         BigDecimal diferenciaTransferenciaQr = montoRealTransferenciaQr != null
                 ? MonedaPyUtils.redondearGs(montoRealTransferenciaQr.subtract(totalTransferenciaQr))
                 : null;
+
+        sesion.setTotalIngresosCaja(totalIngresos);
+        sesion.setTotalEgresosCaja(totalEgresos);
 
         sesion.setUsuarioCierre(usuario);
         sesion.setFechaCierre(LocalDateTime.now());
@@ -332,5 +373,82 @@ public class CajaService {
         return sesionCajaRepository.findById(id)
                 .map(SesionCajaDTO::fromEntity)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Sesión de caja con id " + id + " no encontrada."));
+    }
+
+    @Transactional
+    public MovimientoCajaDTO registrarMovimiento(RegistrarMovimientoCajaRequestDTO request, String username) {
+        if (request == null) {
+            throw new ReglaDeNegocioException("La solicitud de movimiento no puede ser nula.");
+        }
+        if (request.getMonto() == null || request.getMonto().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ReglaDeNegocioException("El monto del movimiento debe ser mayor a cero.");
+        }
+        if (request.getConcepto() == null || request.getConcepto().trim().isBlank()) {
+            throw new ReglaDeNegocioException("Debe especificar el concepto o motivo del movimiento.");
+        }
+
+        SesionCaja sesion;
+        if (request.getSesionId() != null) {
+            sesion = sesionCajaRepository.findById(request.getSesionId())
+                    .orElseThrow(() -> new RecursoNoEncontradoException("Sesión de caja con id " + request.getSesionId() + " no encontrada."));
+        } else {
+            sesion = sesionCajaRepository.findFirstByUsuarioApertura_UsernameAndEstadoOrderByFechaAperturaDesc(username, EstadoSesionCaja.ABIERTA)
+                    .orElseGet(() -> sesionCajaRepository.findFirstByEstadoOrderByFechaAperturaDesc(EstadoSesionCaja.ABIERTA)
+                            .orElseThrow(() -> new ReglaDeNegocioException("No existe ninguna sesión de caja abierta para registrar movimientos.")));
+        }
+
+        if (sesion.getEstado() != EstadoSesionCaja.ABIERTA) {
+            throw new ReglaDeNegocioException("No se pueden registrar movimientos en una sesión de caja cerrada (Sesión #" + sesion.getId() + ").");
+        }
+
+        BigDecimal montoRedondeado = MonedaPyUtils.redondearGs(request.getMonto());
+
+        MovimientoCaja mov = MovimientoCaja.builder()
+                .sesionCaja(sesion)
+                .tipo(request.getTipo())
+                .categoria(request.getCategoria())
+                .concepto(request.getConcepto().trim())
+                .comprobante(request.getComprobante() != null && !request.getComprobante().isBlank() ? request.getComprobante().trim() : null)
+                .monto(montoRedondeado)
+                .usuario(username != null ? username : "sistema")
+                .fecha(LocalDateTime.now())
+                .build();
+
+        MovimientoCaja guardado = movimientoCajaRepository.save(mov);
+
+        if (request.getTipo() == TipoMovimientoCaja.INGRESO) {
+            sesion.setTotalIngresosCaja(sesion.getTotalIngresosCaja().add(montoRedondeado));
+        } else {
+            sesion.setTotalEgresosCaja(sesion.getTotalEgresosCaja().add(montoRedondeado));
+        }
+        sesionCajaRepository.save(sesion);
+
+        auditoriaService.registrarLog(
+                username != null ? username : "sistema",
+                "CAJA",
+                request.getTipo() == TipoMovimientoCaja.EGRESO ? "EGRESO_CAJA" : "INGRESO_CAJA",
+                guardado.getId(),
+                "Movimiento de Caja #" + guardado.getId(),
+                String.format("%s: Gs. %s - %s [%s] (Sesión #%d)",
+                        request.getTipo(),
+                        guardado.getMonto(),
+                        guardado.getConcepto(),
+                        guardado.getCategoria(),
+                        sesion.getId()),
+                null
+        );
+
+        return MovimientoCajaDTO.fromEntity(guardado);
+    }
+
+    @Transactional(readOnly = true)
+    public List<MovimientoCajaDTO> listarMovimientos(Long sesionId) {
+        if (sesionId == null) {
+            return List.of();
+        }
+        return movimientoCajaRepository.findBySesionCaja_IdOrderByFechaDesc(sesionId)
+                .stream()
+                .map(MovimientoCajaDTO::fromEntity)
+                .toList();
     }
 }

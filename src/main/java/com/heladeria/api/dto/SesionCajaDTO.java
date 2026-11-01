@@ -27,6 +27,9 @@ public class SesionCajaDTO {
     private BigDecimal totalVentasTarjetaCredito;
     private BigDecimal totalVentasTransferenciaQr;
     private BigDecimal totalVentasGeneral;
+    private BigDecimal totalIngresosCaja = BigDecimal.ZERO;
+    private BigDecimal totalEgresosCaja = BigDecimal.ZERO;
+    private java.util.List<MovimientoCajaDTO> movimientos = new java.util.ArrayList<>();
     private Integer cantidadPedidos;
     private String observacionesApertura;
     private String observacionesCierre;
@@ -85,7 +88,7 @@ public class SesionCajaDTO {
         if (entity == null) {
             return null;
         }
-        return new SesionCajaDTO(
+        SesionCajaDTO dto = new SesionCajaDTO(
                 entity.getId(),
                 entity.getEstado(),
                 entity.getUsuarioApertura() != null ? entity.getUsuarioApertura().getUsername() : null,
@@ -109,6 +112,14 @@ public class SesionCajaDTO {
                 entity.getObservacionesApertura(),
                 entity.getObservacionesCierre()
         );
+        dto.setTotalIngresosCaja(entity.getTotalIngresosCaja());
+        dto.setTotalEgresosCaja(entity.getTotalEgresosCaja());
+        if (entity.getMovimientos() != null && !entity.getMovimientos().isEmpty()) {
+            dto.setMovimientos(entity.getMovimientos().stream()
+                    .map(MovimientoCajaDTO::fromEntity)
+                    .collect(java.util.stream.Collectors.toList()));
+        }
+        return dto;
     }
 
     public Long getId() { return id; }
@@ -170,6 +181,15 @@ public class SesionCajaDTO {
 
     public Integer getCantidadPedidos() { return cantidadPedidos; }
     public void setCantidadPedidos(Integer cantidadPedidos) { this.cantidadPedidos = cantidadPedidos; }
+
+    public BigDecimal getTotalIngresosCaja() { return totalIngresosCaja != null ? totalIngresosCaja : BigDecimal.ZERO; }
+    public void setTotalIngresosCaja(BigDecimal totalIngresosCaja) { this.totalIngresosCaja = totalIngresosCaja; }
+
+    public BigDecimal getTotalEgresosCaja() { return totalEgresosCaja != null ? totalEgresosCaja : BigDecimal.ZERO; }
+    public void setTotalEgresosCaja(BigDecimal totalEgresosCaja) { this.totalEgresosCaja = totalEgresosCaja; }
+
+    public java.util.List<MovimientoCajaDTO> getMovimientos() { return movimientos; }
+    public void setMovimientos(java.util.List<MovimientoCajaDTO> movimientos) { this.movimientos = movimientos != null ? movimientos : new java.util.ArrayList<>(); }
 
     public String getObservacionesApertura() { return observacionesApertura; }
     public void setObservacionesApertura(String observacionesApertura) { this.observacionesApertura = observacionesApertura; }

@@ -70,6 +70,16 @@ public class SesionCaja {
     @Column(precision = 12, scale = 0)
     private BigDecimal totalVentasGeneral;
 
+    @Column(name = "total_ingresos_caja", precision = 12, scale = 0, columnDefinition = "numeric(12,0) default 0")
+    private BigDecimal totalIngresosCaja = BigDecimal.ZERO;
+
+    @Column(name = "total_egresos_caja", precision = 12, scale = 0, columnDefinition = "numeric(12,0) default 0")
+    private BigDecimal totalEgresosCaja = BigDecimal.ZERO;
+
+    @OneToMany(mappedBy = "sesionCaja", cascade = CascadeType.ALL, orphanRemoval = true)
+    @com.fasterxml.jackson.annotation.JsonManagedReference
+    private java.util.List<MovimientoCaja> movimientos = new java.util.ArrayList<>();
+
     @Column
     private Integer cantidadPedidos;
 
@@ -235,6 +245,27 @@ public class SesionCaja {
     public EstadoSesionCaja getEstado() { return estado; }
     public void setEstado(EstadoSesionCaja estado) { this.estado = estado; }
 
+    public BigDecimal getTotalIngresosCaja() { return totalIngresosCaja != null ? totalIngresosCaja : BigDecimal.ZERO; }
+    public void setTotalIngresosCaja(BigDecimal totalIngresosCaja) {
+        this.totalIngresosCaja = totalIngresosCaja != null ? MonedaPyUtils.redondearGs(totalIngresosCaja) : BigDecimal.ZERO;
+    }
+
+    public BigDecimal getTotalEgresosCaja() { return totalEgresosCaja != null ? totalEgresosCaja : BigDecimal.ZERO; }
+    public void setTotalEgresosCaja(BigDecimal totalEgresosCaja) {
+        this.totalEgresosCaja = totalEgresosCaja != null ? MonedaPyUtils.redondearGs(totalEgresosCaja) : BigDecimal.ZERO;
+    }
+
+    public java.util.List<MovimientoCaja> getMovimientos() { return movimientos; }
+    public void setMovimientos(java.util.List<MovimientoCaja> movimientos) { this.movimientos = movimientos; }
+
+    public void agregarMovimiento(MovimientoCaja mov) {
+        if (this.movimientos == null) {
+            this.movimientos = new java.util.ArrayList<>();
+        }
+        mov.setSesionCaja(this);
+        this.movimientos.add(mov);
+    }
+
     public String getObservacionesApertura() { return observacionesApertura; }
     public void setObservacionesApertura(String observacionesApertura) { this.observacionesApertura = observacionesApertura; }
 
@@ -260,6 +291,8 @@ public class SesionCaja {
         private BigDecimal totalVentasTarjetaCredito = BigDecimal.ZERO;
         private BigDecimal totalVentasTransferenciaQr = BigDecimal.ZERO;
         private BigDecimal totalVentasGeneral = BigDecimal.ZERO;
+        private BigDecimal totalIngresosCaja = BigDecimal.ZERO;
+        private BigDecimal totalEgresosCaja = BigDecimal.ZERO;
         private Integer cantidadPedidos = 0;
         private EstadoSesionCaja estado = EstadoSesionCaja.ABIERTA;
         private String observacionesApertura;
@@ -283,17 +316,22 @@ public class SesionCaja {
         public SesionCajaBuilder totalVentasTarjetaCredito(BigDecimal totalVentasTarjetaCredito) { this.totalVentasTarjetaCredito = totalVentasTarjetaCredito; return this; }
         public SesionCajaBuilder totalVentasTransferenciaQr(BigDecimal totalVentasTransferenciaQr) { this.totalVentasTransferenciaQr = totalVentasTransferenciaQr; return this; }
         public SesionCajaBuilder totalVentasGeneral(BigDecimal totalVentasGeneral) { this.totalVentasGeneral = totalVentasGeneral; return this; }
+        public SesionCajaBuilder totalIngresosCaja(BigDecimal totalIngresosCaja) { this.totalIngresosCaja = totalIngresosCaja; return this; }
+        public SesionCajaBuilder totalEgresosCaja(BigDecimal totalEgresosCaja) { this.totalEgresosCaja = totalEgresosCaja; return this; }
         public SesionCajaBuilder cantidadPedidos(Integer cantidadPedidos) { this.cantidadPedidos = cantidadPedidos; return this; }
         public SesionCajaBuilder estado(EstadoSesionCaja estado) { this.estado = estado; return this; }
         public SesionCajaBuilder observacionesApertura(String observacionesApertura) { this.observacionesApertura = observacionesApertura; return this; }
         public SesionCajaBuilder observacionesCierre(String observacionesCierre) { this.observacionesCierre = observacionesCierre; return this; }
 
         public SesionCaja build() {
-            return new SesionCaja(id, usuarioApertura, usuarioCierre, fechaApertura, fechaCierre, montoInicial,
+            SesionCaja s = new SesionCaja(id, usuarioApertura, usuarioCierre, fechaApertura, fechaCierre, montoInicial,
                     montoEsperadoEfectivo, montoRealEfectivo, diferencia,
                     montoRealTarjeta, diferenciaTarjeta, montoRealTransferenciaQr, diferenciaTransferenciaQr,
                     totalVentasEfectivo, totalVentasTarjetaDebito, totalVentasTarjetaCredito, totalVentasTransferenciaQr,
                     totalVentasGeneral, cantidadPedidos, estado, observacionesApertura, observacionesCierre);
+            s.setTotalIngresosCaja(totalIngresosCaja);
+            s.setTotalEgresosCaja(totalEgresosCaja);
+            return s;
         }
     }
 }
