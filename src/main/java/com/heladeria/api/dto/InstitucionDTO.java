@@ -1,12 +1,15 @@
 package com.heladeria.api.dto;
 
 import com.heladeria.api.entities.Institucion;
+import com.heladeria.api.validation.RucValido;
 import java.time.LocalDate;
 
 public class InstitucionDTO {
 
     private String nombre;
     private String logoBase64;
+
+    @RucValido(obligatorio = false, permitirCedulaSinDv = false, message = "El RUC institucional no es válido según el Módulo 11 de la DNIT (debe incluir guion y DV)")
     private String ruc;
     private String timbrado;
     private LocalDate timbradoVencimiento;

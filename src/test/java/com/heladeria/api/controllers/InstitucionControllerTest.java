@@ -166,7 +166,7 @@ class InstitucionControllerTest {
     void putInstitucionConAutoridadPaginaInstitucionRetorna200() throws Exception {
         InstitucionDTO dto = new InstitucionDTO();
         dto.setNombre("Heladería Modificada por Operador");
-        dto.setRuc("1234567-8");
+        dto.setRuc("1234567-9");
 
         mockMvc.perform(put("/institucion")
                         .header("Authorization", "Bearer " + operadorInstitucionToken)
@@ -181,7 +181,7 @@ class InstitucionControllerTest {
     void putInstitucionConAdminRetorna200() throws Exception {
         InstitucionDTO dto = new InstitucionDTO();
         dto.setNombre("Heladería Modificada por Admin");
-        dto.setRuc("9876543-2");
+        dto.setRuc("80106020-6");
 
         mockMvc.perform(put("/institucion")
                         .header("Authorization", "Bearer " + adminToken)
@@ -189,5 +189,20 @@ class InstitucionControllerTest {
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.nombre").value("Heladería Modificada por Admin"));
+    }
+
+    @Test
+    @DisplayName("PUT /institucion con RUC inválido retorna 400 Bad Request")
+    void putInstitucionConRucInvalidoRetorna400() throws Exception {
+        InstitucionDTO dto = new InstitucionDTO();
+        dto.setNombre("Heladería RUC Inválido");
+        dto.setRuc("80106020-0");
+
+        mockMvc.perform(put("/institucion")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.campos.ruc", org.hamcrest.Matchers.containsString("Módulo 11")));
     }
 }

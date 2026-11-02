@@ -4,6 +4,7 @@ import com.heladeria.api.entities.enums.CondicionVenta;
 import com.heladeria.api.entities.enums.MetodoPago;
 import com.heladeria.api.entities.enums.TipoComprobante;
 import com.heladeria.api.entities.enums.TipoEntrega;
+import com.heladeria.api.validation.RucValido;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -33,6 +34,7 @@ public class PedidoRequestDTO {
 
     private CondicionVenta condicionVenta;
 
+    @RucValido(obligatorio = false, permitirCedulaSinDv = true, message = "El RUC o Cédula del cliente no es válido según el Módulo 11 de la DNIT")
     private String clienteRuc;
 
     private String clienteDireccion;

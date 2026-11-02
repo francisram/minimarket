@@ -123,7 +123,7 @@ class ClienteControllerTest {
     @Test
     @DisplayName("Crear nuevo cliente responde 201 Created")
     void testCrearCliente() throws Exception {
-        ClienteRequestDTO req = new ClienteRequestDTO("9876543-2", "Comercial San Roque", "Av. Eusebio Ayala", "021-999888", "info@sanroque.com", true);
+        ClienteRequestDTO req = new ClienteRequestDTO("3669922-5", "Comercial San Roque", "Av. Eusebio Ayala", "021-999888", "info@sanroque.com", true);
 
         mockMvc.perform(post("/api/clientes")
                         .header("Authorization", "Bearer " + cajeroToken)
@@ -131,8 +131,22 @@ class ClienteControllerTest {
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").isNumber())
-                .andExpect(jsonPath("$.ruc").value("9876543-2"))
+                .andExpect(jsonPath("$.ruc").value("3669922-5"))
                 .andExpect(jsonPath("$.razonSocial").value("Comercial San Roque"));
+    }
+
+    @Test
+    @DisplayName("Crear cliente con RUC inválido devuelve 400 Bad Request")
+    void testCrearClienteConRucInvalidoDevuelve400() throws Exception {
+        ClienteRequestDTO req = new ClienteRequestDTO("3669922-0", "Comercial Invalido", "Av. Eusebio Ayala", "021-999888", "info@invalido.com", true);
+
+        mockMvc.perform(post("/api/clientes")
+                        .header("Authorization", "Bearer " + cajeroToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Error de validación de campos"))
+                .andExpect(jsonPath("$.campos.ruc", containsString("Módulo 11")));
     }
 
     @Test

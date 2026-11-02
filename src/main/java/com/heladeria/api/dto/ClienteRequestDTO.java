@@ -1,5 +1,6 @@
 package com.heladeria.api.dto;
 
+import com.heladeria.api.validation.RucValido;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -7,6 +8,7 @@ public class ClienteRequestDTO {
 
     @NotBlank(message = "El RUC o Cédula es obligatorio")
     @Size(max = 30, message = "El RUC no puede superar 30 caracteres")
+    @RucValido(obligatorio = true, permitirCedulaSinDv = true, message = "El RUC o Cédula no es válido según el Módulo 11 de la DNIT")
     private String ruc;
 
     @NotBlank(message = "La Razón Social o Nombre es obligatorio")

@@ -17,6 +17,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -366,7 +369,10 @@ class PedidoServiceTest {
         assertEquals(14, presentacionRepository.findById(vaso.getId()).orElseThrow().getStock());
         assertEquals(1.8, saborRepository.findById(menta.getId()).orElseThrow().getStockKilos(), 0.001);
 
-        // Cancelar pedido
+        // Cancelar pedido como administrador autorizado
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("admin", null, List.of(new SimpleGrantedAuthority("ROLE_ADMIN")))
+        );
         pedidoService.cancelarPedido(pedido.getId());
 
         // Verificar restitución
