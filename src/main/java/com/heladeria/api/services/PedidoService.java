@@ -51,6 +51,7 @@ public class PedidoService {
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuditoriaService auditoriaService;
+    private final PuntoExpedicionRepository puntoExpedicionRepository;
 
     public PedidoService(PedidoRepository pedidoRepository,
                          PresentacionRepository presentacionRepository,
@@ -65,7 +66,8 @@ public class PedidoService {
                          ProductoRepository productoRepository,
                          UsuarioRepository usuarioRepository,
                          PasswordEncoder passwordEncoder,
-                         AuditoriaService auditoriaService) {
+                         AuditoriaService auditoriaService,
+                         PuntoExpedicionRepository puntoExpedicionRepository) {
         this.pedidoRepository = pedidoRepository;
         this.presentacionRepository = presentacionRepository;
         this.saborRepository = saborRepository;
@@ -80,6 +82,7 @@ public class PedidoService {
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
         this.auditoriaService = auditoriaService;
+        this.puntoExpedicionRepository = puntoExpedicionRepository;
     }
 
     @Transactional
@@ -114,37 +117,96 @@ public class PedidoService {
             throw new ReglaDeNegocioException("El número de voucher / boleta es obligatorio para pagos con tarjeta de débito o crédito.");
         }
 
+        PuntoExpedicion puntoExpedicionAsignado = null;
         if (tipoComprobante == TipoComprobante.FACTURA) {
             if (request.getClienteRuc() == null || request.getClienteRuc().trim().isEmpty()
                     || request.getClienteNombre() == null || request.getClienteNombre().trim().isEmpty()) {
                 throw new ReglaDeNegocioException("Para emitir factura legal debe indicar el RUC y la Razón Social del cliente.");
             }
 
-            Institucion inst = institucionRepository.findById(1L).orElseGet(() -> {
-                Institucion nueva = new Institucion();
-                nueva.setId(1L);
-                nueva.setNombre("Heladería Artesanal");
-                return institucionRepository.save(nueva);
-            });
-
-            // Validar Vencimiento del Timbrado
-            if (inst.getTimbradoVencimiento() != null && inst.getTimbradoVencimiento().isBefore(LocalDate.now())) {
-                throw new IllegalStateException("El timbrado fiscal N° " + inst.getTimbrado() + " ha vencido el " + inst.getTimbradoVencimiento() + ". Debe renovar el timbrado para poder emitir facturas legales.");
+            PuntoExpedicion punto = sesionActiva.getPuntoExpedicion();
+            if (punto == null) {
+                punto = puntoExpedicionRepository.findByActivoTrueOrderByEstablecimientoAscPuntoEmisionAsc().stream().findFirst().orElse(null);
+            }
+            if (punto == null) {
+                // Auto-inicialización / migración desde Institucion si aún no existe en DB
+                Institucion inst = institucionRepository.findById(1L).orElseGet(() -> {
+                    Institucion nueva = new Institucion();
+                    nueva.setId(1L);
+                    nueva.setNombre("Heladería Artesanal");
+                    return institucionRepository.save(nueva);
+                });
+                String estab = (inst.getEstablecimiento() != null && !inst.getEstablecimiento().isBlank()) ? inst.getEstablecimiento() : "001";
+                String pto = (inst.getPuntoEmision() != null && !inst.getPuntoEmision().isBlank()) ? inst.getPuntoEmision() : "001";
+                punto = PuntoExpedicion.builder()
+                        .nombre("Caja 1 - Principal")
+                        .establecimiento(estab)
+                        .puntoEmision(pto)
+                        .timbrado(inst.getTimbrado())
+                        .timbradoInicio(inst.getTimbradoInicio())
+                        .timbradoVencimiento(inst.getTimbradoVencimiento())
+                        .numeroInicioFactura(inst.getNumeroInicioFactura() != null ? inst.getNumeroInicioFactura() : 1L)
+                        .numeroFinFactura(inst.getNumeroFinFactura() != null ? inst.getNumeroFinFactura() : 1000L)
+                        .ultimoNumeroFactura(inst.getUltimoNumeroFactura() != null ? inst.getUltimoNumeroFactura() : 0L)
+                        .activo(true)
+                        .build();
+                punto = puntoExpedicionRepository.save(punto);
+                sesionActiva.setPuntoExpedicion(punto);
+                sesionCajaRepository.save(sesionActiva);
             }
 
-            long sig = (inst.getUltimoNumeroFactura() != null ? inst.getUltimoNumeroFactura() : 0L) + 1;
+            // Bloqueo pesimista para concurrencia atómica (SELECT ... FOR UPDATE)
+            PuntoExpedicion puntoLock = puntoExpedicionRepository.findByIdForUpdate(punto.getId())
+                    .orElseThrow(() -> new ReglaDeNegocioException("Punto de expedición no encontrado para emitir factura."));
+
+            Institucion inst = institucionRepository.findById(1L).orElse(null);
+
+            // Sincronizar compatibilidad con institucion si es 001-001 (punto principal)
+            if (inst != null && "001".equals(puntoLock.getEstablecimiento()) && "001".equals(puntoLock.getPuntoEmision())) {
+                if (inst.getTimbrado() != null) puntoLock.setTimbrado(inst.getTimbrado());
+                if (inst.getTimbradoInicio() != null) puntoLock.setTimbradoInicio(inst.getTimbradoInicio());
+                if (inst.getTimbradoVencimiento() != null) puntoLock.setTimbradoVencimiento(inst.getTimbradoVencimiento());
+                if (inst.getNumeroFinFactura() != null) puntoLock.setNumeroFinFactura(inst.getNumeroFinFactura());
+                if (inst.getUltimoNumeroFactura() != null && inst.getUltimoNumeroFactura() > puntoLock.getUltimoNumeroFactura()) {
+                    puntoLock.setUltimoNumeroFactura(inst.getUltimoNumeroFactura());
+                }
+            }
+
+            // Validar Vencimiento del Timbrado (del punto o fallback a institución)
+            LocalDate timbradoVencimiento = puntoLock.getTimbradoVencimiento();
+            String timbrado = puntoLock.getTimbrado();
+            if (timbrado == null || timbrado.isBlank()) {
+                if (inst != null) {
+                    timbrado = inst.getTimbrado();
+                    timbradoVencimiento = inst.getTimbradoVencimiento();
+                }
+            }
+            if (timbradoVencimiento != null && timbradoVencimiento.isBefore(LocalDate.now())) {
+                throw new IllegalStateException("El timbrado fiscal N° " + timbrado + " ha vencido el " + timbradoVencimiento + ". Debe renovar el timbrado para poder emitir facturas legales.");
+            }
+
+            long sig = (puntoLock.getUltimoNumeroFactura() != null ? puntoLock.getUltimoNumeroFactura() : 0L) + 1;
 
             // Validar Límite del Talonario
-            if (inst.getNumeroFinFactura() != null && sig > inst.getNumeroFinFactura()) {
-                throw new IllegalStateException("Se ha alcanzado el límite máximo del talonario (" + inst.getNumeroFinFactura() + "). Debe habilitar un nuevo talonario desde el módulo contable.");
+            if (puntoLock.getNumeroFinFactura() != null && sig > puntoLock.getNumeroFinFactura()) {
+                throw new IllegalStateException("Se ha alcanzado el límite máximo del talonario (" + puntoLock.getNumeroFinFactura() + "). Debe habilitar un nuevo talonario desde el módulo contable.");
             }
 
-            String estab = (inst.getEstablecimiento() != null && !inst.getEstablecimiento().isBlank()) ? inst.getEstablecimiento() : "001";
-            String punto = (inst.getPuntoEmision() != null && !inst.getPuntoEmision().isBlank()) ? inst.getPuntoEmision() : "001";
-            numeroFactura = String.format("%s-%s-%07d", estab, punto, sig);
+            String estab = (puntoLock.getEstablecimiento() != null && !puntoLock.getEstablecimiento().isBlank()) ? puntoLock.getEstablecimiento() : "001";
+            String pto = (puntoLock.getPuntoEmision() != null && !puntoLock.getPuntoEmision().isBlank()) ? puntoLock.getPuntoEmision() : "001";
+            numeroFactura = String.format("%s-%s-%07d", estab, pto, sig);
 
-            inst.setUltimoNumeroFactura(sig);
-            institucionRepository.save(inst);
+            puntoLock.setUltimoNumeroFactura(sig);
+            puntoExpedicionRepository.save(puntoLock);
+            puntoExpedicionAsignado = puntoLock;
+
+            // Sincronizar compatibilidad con institucion si es 001-001
+            if ("001".equals(estab) && "001".equals(pto)) {
+                institucionRepository.findById(1L).ifPresent(i -> {
+                    i.setUltimoNumeroFactura(sig);
+                    institucionRepository.save(i);
+                });
+            }
         }
  
         String clienteRuc = (request.getClienteRuc() != null && !request.getClienteRuc().trim().isEmpty())
@@ -183,6 +245,7 @@ public class PedidoService {
 
         Pedido pedido = Pedido.builder()
                 .sesionCaja(sesionActiva)
+                .puntoExpedicion(puntoExpedicionAsignado != null ? puntoExpedicionAsignado : sesionActiva.getPuntoExpedicion())
                 .tipoComprobante(tipoComprobante)
                 .condicionVenta(condicionVenta)
                 .clienteNombre(clienteNombre)

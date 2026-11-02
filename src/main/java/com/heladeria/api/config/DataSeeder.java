@@ -30,6 +30,7 @@ public class DataSeeder implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final LicenciaService licenciaService;
     private final InstitucionRepository institucionRepository;
+    private final PuntoExpedicionRepository puntoExpedicionRepository;
     private final ClienteRepository clienteRepository;
     private final ProveedorRepository proveedorRepository;
 
@@ -44,6 +45,7 @@ public class DataSeeder implements CommandLineRunner {
                       PasswordEncoder passwordEncoder,
                       LicenciaService licenciaService,
                       InstitucionRepository institucionRepository,
+                      PuntoExpedicionRepository puntoExpedicionRepository,
                       ClienteRepository clienteRepository,
                       ProveedorRepository proveedorRepository,
                       @Value("${app.security.default-admin-password:admin123}") String defaultAdminPassword,
@@ -56,6 +58,7 @@ public class DataSeeder implements CommandLineRunner {
         this.passwordEncoder = passwordEncoder;
         this.licenciaService = licenciaService;
         this.institucionRepository = institucionRepository;
+        this.puntoExpedicionRepository = puntoExpedicionRepository;
         this.clienteRepository = clienteRepository;
         this.proveedorRepository = proveedorRepository;
         this.defaultAdminPassword = defaultAdminPassword;
@@ -258,8 +261,49 @@ public class DataSeeder implements CommandLineRunner {
             inst.setCiudad("Asunción");
         }
 
-        institucionRepository.save(inst);
+        Institucion instGuardada = institucionRepository.save(inst);
         log.info("[SEED] Institución y datos fiscales configurados.");
+        sembrarPuntosExpedicion(instGuardada);
+    }
+
+    private void sembrarPuntosExpedicion(Institucion inst) {
+        if (puntoExpedicionRepository.count() == 0) {
+            String estab = (inst != null && inst.getEstablecimiento() != null && !inst.getEstablecimiento().isBlank()) ? inst.getEstablecimiento() : "001";
+            String pto1 = (inst != null && inst.getPuntoEmision() != null && !inst.getPuntoEmision().isBlank()) ? inst.getPuntoEmision() : "001";
+            String timbrado = (inst != null && inst.getTimbrado() != null) ? inst.getTimbrado() : "17894561";
+            LocalDate vencimiento = (inst != null && inst.getTimbradoVencimiento() != null) ? inst.getTimbradoVencimiento() : LocalDate.now().plusYears(1);
+            LocalDate inicio = (inst != null && inst.getTimbradoInicio() != null) ? inst.getTimbradoInicio() : LocalDate.now().minusMonths(1);
+            Long ultimo = (inst != null && inst.getUltimoNumeroFactura() != null) ? inst.getUltimoNumeroFactura() : 0L;
+
+            PuntoExpedicion p1 = PuntoExpedicion.builder()
+                    .nombre("Caja 1 - Principal")
+                    .establecimiento(estab)
+                    .puntoEmision(pto1)
+                    .timbrado(timbrado)
+                    .timbradoInicio(inicio)
+                    .timbradoVencimiento(vencimiento)
+                    .numeroInicioFactura(1L)
+                    .numeroFinFactura(1000L)
+                    .ultimoNumeroFactura(ultimo)
+                    .activo(true)
+                    .build();
+
+            PuntoExpedicion p2 = PuntoExpedicion.builder()
+                    .nombre("Caja 2 - Take Away")
+                    .establecimiento(estab)
+                    .puntoEmision("002")
+                    .timbrado(timbrado)
+                    .timbradoInicio(inicio)
+                    .timbradoVencimiento(vencimiento)
+                    .numeroInicioFactura(1L)
+                    .numeroFinFactura(1000L)
+                    .ultimoNumeroFactura(0L)
+                    .activo(true)
+                    .build();
+
+            puntoExpedicionRepository.saveAll(List.of(p1, p2));
+            log.info("[SEED] Puntos de expedición inicializados: Caja 1 ({}-{}) y Caja 2 ({}-002).", estab, pto1, estab);
+        }
     }
 
     private void sembrarClientes() {

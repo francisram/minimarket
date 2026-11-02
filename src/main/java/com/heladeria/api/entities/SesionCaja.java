@@ -76,6 +76,10 @@ public class SesionCaja {
     @Column(name = "total_egresos_caja", precision = 12, scale = 0, columnDefinition = "numeric(12,0) default 0")
     private BigDecimal totalEgresosCaja = BigDecimal.ZERO;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "punto_expedicion_id")
+    private PuntoExpedicion puntoExpedicion;
+
     @OneToMany(mappedBy = "sesionCaja", cascade = CascadeType.ALL, orphanRemoval = true)
     @com.fasterxml.jackson.annotation.JsonManagedReference
     private java.util.List<MovimientoCaja> movimientos = new java.util.ArrayList<>();
@@ -266,6 +270,9 @@ public class SesionCaja {
         this.movimientos.add(mov);
     }
 
+    public PuntoExpedicion getPuntoExpedicion() { return puntoExpedicion; }
+    public void setPuntoExpedicion(PuntoExpedicion puntoExpedicion) { this.puntoExpedicion = puntoExpedicion; }
+
     public String getObservacionesApertura() { return observacionesApertura; }
     public void setObservacionesApertura(String observacionesApertura) { this.observacionesApertura = observacionesApertura; }
 
@@ -276,6 +283,7 @@ public class SesionCaja {
         private Long id;
         private Usuario usuarioApertura;
         private Usuario usuarioCierre;
+        private PuntoExpedicion puntoExpedicion;
         private LocalDateTime fechaApertura;
         private LocalDateTime fechaCierre;
         private BigDecimal montoInicial = BigDecimal.ZERO;
@@ -301,6 +309,7 @@ public class SesionCaja {
         public SesionCajaBuilder id(Long id) { this.id = id; return this; }
         public SesionCajaBuilder usuarioApertura(Usuario usuarioApertura) { this.usuarioApertura = usuarioApertura; return this; }
         public SesionCajaBuilder usuarioCierre(Usuario usuarioCierre) { this.usuarioCierre = usuarioCierre; return this; }
+        public SesionCajaBuilder puntoExpedicion(PuntoExpedicion puntoExpedicion) { this.puntoExpedicion = puntoExpedicion; return this; }
         public SesionCajaBuilder fechaApertura(LocalDateTime fechaApertura) { this.fechaApertura = fechaApertura; return this; }
         public SesionCajaBuilder fechaCierre(LocalDateTime fechaCierre) { this.fechaCierre = fechaCierre; return this; }
         public SesionCajaBuilder montoInicial(BigDecimal montoInicial) { this.montoInicial = montoInicial; return this; }
@@ -329,6 +338,7 @@ public class SesionCaja {
                     montoRealTarjeta, diferenciaTarjeta, montoRealTransferenciaQr, diferenciaTransferenciaQr,
                     totalVentasEfectivo, totalVentasTarjetaDebito, totalVentasTarjetaCredito, totalVentasTransferenciaQr,
                     totalVentasGeneral, cantidadPedidos, estado, observacionesApertura, observacionesCierre);
+            s.setPuntoExpedicion(puntoExpedicion);
             s.setTotalIngresosCaja(totalIngresosCaja);
             s.setTotalEgresosCaja(totalEgresosCaja);
             return s;

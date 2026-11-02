@@ -29,4 +29,10 @@ public interface SesionCajaRepository extends JpaRepository<SesionCaja, Long> {
     List<SesionCaja> findByUsuarioApertura_UsernameAndFechaAperturaBetweenOrderByFechaAperturaDesc(String username, LocalDateTime inicio, LocalDateTime fin);
 
     List<SesionCaja> findAllByOrderByFechaAperturaDesc();
+
+    boolean existsByPuntoExpedicion_IdAndEstado(Long puntoId, EstadoSesionCaja estado);
+
+    Optional<SesionCaja> findFirstByPuntoExpedicion_IdAndEstado(Long puntoId, EstadoSesionCaja estado);
+
+    List<SesionCaja> findByPuntoExpedicion_IdAndEstado(Long puntoId, EstadoSesionCaja estado);
 }

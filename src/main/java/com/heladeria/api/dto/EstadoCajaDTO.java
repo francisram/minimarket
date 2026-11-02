@@ -10,17 +10,25 @@ public class EstadoCajaDTO {
     private String cajeroApertura;
     private LocalDateTime fechaApertura;
     private BigDecimal montoInicial;
+    private PuntoExpedicionDTO puntoExpedicion;
 
     public EstadoCajaDTO() {
     }
 
     public EstadoCajaDTO(boolean abierta, Long sesionId, String cajeroApertura,
                          LocalDateTime fechaApertura, BigDecimal montoInicial) {
+        this(abierta, sesionId, cajeroApertura, fechaApertura, montoInicial, null);
+    }
+
+    public EstadoCajaDTO(boolean abierta, Long sesionId, String cajeroApertura,
+                         LocalDateTime fechaApertura, BigDecimal montoInicial,
+                         PuntoExpedicionDTO puntoExpedicion) {
         this.abierta = abierta;
         this.sesionId = sesionId;
         this.cajeroApertura = cajeroApertura;
         this.fechaApertura = fechaApertura;
         this.montoInicial = montoInicial;
+        this.puntoExpedicion = puntoExpedicion;
     }
 
     public boolean isAbierta() {
@@ -61,5 +69,13 @@ public class EstadoCajaDTO {
 
     public void setMontoInicial(BigDecimal montoInicial) {
         this.montoInicial = montoInicial;
+    }
+
+    public PuntoExpedicionDTO getPuntoExpedicion() {
+        return puntoExpedicion;
+    }
+
+    public void setPuntoExpedicion(PuntoExpedicionDTO puntoExpedicion) {
+        this.puntoExpedicion = puntoExpedicion;
     }
 }

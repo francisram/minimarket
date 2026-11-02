@@ -30,6 +30,7 @@ public class SesionCajaDTO {
     private BigDecimal totalIngresosCaja = BigDecimal.ZERO;
     private BigDecimal totalEgresosCaja = BigDecimal.ZERO;
     private java.util.List<MovimientoCajaDTO> movimientos = new java.util.ArrayList<>();
+    private PuntoExpedicionDTO puntoExpedicion;
     private Integer cantidadPedidos;
     private String observacionesApertura;
     private String observacionesCierre;
@@ -114,6 +115,9 @@ public class SesionCajaDTO {
         );
         dto.setTotalIngresosCaja(entity.getTotalIngresosCaja());
         dto.setTotalEgresosCaja(entity.getTotalEgresosCaja());
+        if (entity.getPuntoExpedicion() != null) {
+            dto.setPuntoExpedicion(PuntoExpedicionDTO.fromEntity(entity.getPuntoExpedicion()));
+        }
         if (entity.getMovimientos() != null && !entity.getMovimientos().isEmpty()) {
             dto.setMovimientos(entity.getMovimientos().stream()
                     .map(MovimientoCajaDTO::fromEntity)
@@ -121,6 +125,9 @@ public class SesionCajaDTO {
         }
         return dto;
     }
+
+    public PuntoExpedicionDTO getPuntoExpedicion() { return puntoExpedicion; }
+    public void setPuntoExpedicion(PuntoExpedicionDTO puntoExpedicion) { this.puntoExpedicion = puntoExpedicion; }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

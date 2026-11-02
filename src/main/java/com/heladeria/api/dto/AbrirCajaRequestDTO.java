@@ -13,12 +13,20 @@ public class AbrirCajaRequestDTO {
 
     private String observaciones;
 
+    private Long puntoExpedicionId;
+
     public AbrirCajaRequestDTO() {
     }
 
     public AbrirCajaRequestDTO(BigDecimal montoInicial, String observaciones) {
         this.montoInicial = montoInicial;
         this.observaciones = observaciones;
+    }
+
+    public AbrirCajaRequestDTO(BigDecimal montoInicial, String observaciones, Long puntoExpedicionId) {
+        this.montoInicial = montoInicial;
+        this.observaciones = observaciones;
+        this.puntoExpedicionId = puntoExpedicionId;
     }
 
     public BigDecimal getMontoInicial() {
@@ -35,5 +43,13 @@ public class AbrirCajaRequestDTO {
 
     public void setObservaciones(String observaciones) {
         this.observaciones = observaciones;
+    }
+
+    public Long getPuntoExpedicionId() {
+        return puntoExpedicionId;
+    }
+
+    public void setPuntoExpedicionId(Long puntoExpedicionId) {
+        this.puntoExpedicionId = puntoExpedicionId;
     }
 }

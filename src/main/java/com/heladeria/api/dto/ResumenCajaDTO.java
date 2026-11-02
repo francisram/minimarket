@@ -25,6 +25,7 @@ public class ResumenCajaDTO {
     private Integer totalPedidos;
     private Integer cantidadVouchers;
     private Integer cantidadTransferencias;
+    private PuntoExpedicionDTO puntoExpedicion;
 
     public ResumenCajaDTO() {
     }
@@ -210,6 +211,14 @@ public class ResumenCajaDTO {
         this.movimientos = movimientos != null ? movimientos : new java.util.ArrayList<>();
     }
 
+    public PuntoExpedicionDTO getPuntoExpedicion() {
+        return puntoExpedicion;
+    }
+
+    public void setPuntoExpedicion(PuntoExpedicionDTO puntoExpedicion) {
+        this.puntoExpedicion = puntoExpedicion;
+    }
+
     public static class ResumenCajaDTOBuilder {
         private Long sesionId;
         private EstadoSesionCaja estado;
@@ -229,6 +238,7 @@ public class ResumenCajaDTO {
         private Integer totalPedidos;
         private Integer cantidadVouchers;
         private Integer cantidadTransferencias;
+        private PuntoExpedicionDTO puntoExpedicion;
 
         public ResumenCajaDTOBuilder sesionId(Long sesionId) { this.sesionId = sesionId; return this; }
         public ResumenCajaDTOBuilder estado(EstadoSesionCaja estado) { this.estado = estado; return this; }
@@ -248,6 +258,7 @@ public class ResumenCajaDTO {
         public ResumenCajaDTOBuilder totalPedidos(Integer totalPedidos) { this.totalPedidos = totalPedidos; return this; }
         public ResumenCajaDTOBuilder cantidadVouchers(Integer cantidadVouchers) { this.cantidadVouchers = cantidadVouchers; return this; }
         public ResumenCajaDTOBuilder cantidadTransferencias(Integer cantidadTransferencias) { this.cantidadTransferencias = cantidadTransferencias; return this; }
+        public ResumenCajaDTOBuilder puntoExpedicion(PuntoExpedicionDTO puntoExpedicion) { this.puntoExpedicion = puntoExpedicion; return this; }
 
         public ResumenCajaDTO build() {
             ResumenCajaDTO dto = new ResumenCajaDTO(sesionId, estado, usuarioApertura, fechaApertura, montoInicial,
@@ -257,6 +268,7 @@ public class ResumenCajaDTO {
             dto.setTotalIngresosCaja(totalIngresosCaja);
             dto.setTotalEgresosCaja(totalEgresosCaja);
             dto.setMovimientos(movimientos);
+            dto.setPuntoExpedicion(puntoExpedicion);
             return dto;
         }
     }

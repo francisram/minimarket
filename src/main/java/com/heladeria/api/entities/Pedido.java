@@ -57,6 +57,11 @@ public class Pedido {
     @JsonIgnore
     private SesionCaja sesionCaja;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "punto_expedicion_id")
+    @JsonIgnore
+    private PuntoExpedicion puntoExpedicion;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private TipoComprobante tipoComprobante = TipoComprobante.TICKET;
@@ -253,6 +258,15 @@ public class Pedido {
         return sesionCaja != null && sesionCaja.getEstado() != null ? sesionCaja.getEstado().name() : null;
     }
 
+    public PuntoExpedicion getPuntoExpedicion() { return puntoExpedicion; }
+    public void setPuntoExpedicion(PuntoExpedicion puntoExpedicion) { this.puntoExpedicion = puntoExpedicion; }
+
+    @Transient
+    @JsonProperty("puntoExpedicionId")
+    public Long getPuntoExpedicionId() {
+        return puntoExpedicion != null ? puntoExpedicion.getId() : null;
+    }
+
     public TipoComprobante getTipoComprobante() { return tipoComprobante; }
     public void setTipoComprobante(TipoComprobante tipoComprobante) { this.tipoComprobante = tipoComprobante; }
 
@@ -315,6 +329,7 @@ public class Pedido {
         private BigDecimal total = BigDecimal.ZERO;
         private List<DetallePedido> detalles = new ArrayList<>();
         private SesionCaja sesionCaja;
+        private PuntoExpedicion puntoExpedicion;
         private TipoComprobante tipoComprobante = TipoComprobante.TICKET;
         private CondicionVenta condicionVenta = CondicionVenta.CONTADO;
         private String clienteRuc;
@@ -339,6 +354,7 @@ public class Pedido {
         public PedidoBuilder total(BigDecimal total) { this.total = total; return this; }
         public PedidoBuilder detalles(List<DetallePedido> detalles) { this.detalles = detalles; return this; }
         public PedidoBuilder sesionCaja(SesionCaja sesionCaja) { this.sesionCaja = sesionCaja; return this; }
+        public PedidoBuilder puntoExpedicion(PuntoExpedicion puntoExpedicion) { this.puntoExpedicion = puntoExpedicion; return this; }
         public PedidoBuilder tipoComprobante(TipoComprobante tipoComprobante) { this.tipoComprobante = tipoComprobante; return this; }
         public PedidoBuilder condicionVenta(CondicionVenta condicionVenta) { this.condicionVenta = condicionVenta; return this; }
         public PedidoBuilder clienteRuc(String clienteRuc) { this.clienteRuc = clienteRuc; return this; }
@@ -358,6 +374,7 @@ public class Pedido {
                     sesionCaja, tipoComprobante, condicionVenta, clienteRuc, clienteDireccion, numeroFactura,
                     totalExentas, totalGravada5, totalGravada10, totalIva5, totalIva10, totalIva, numeroVoucher);
             p.setTrxId(trxId);
+            p.setPuntoExpedicion(puntoExpedicion);
             return p;
         }
     }

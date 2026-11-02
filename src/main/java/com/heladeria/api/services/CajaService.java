@@ -3,6 +3,7 @@ package com.heladeria.api.services;
 import com.heladeria.api.dto.*;
 import com.heladeria.api.entities.MovimientoCaja;
 import com.heladeria.api.entities.Pedido;
+import com.heladeria.api.entities.PuntoExpedicion;
 import com.heladeria.api.entities.SesionCaja;
 import com.heladeria.api.entities.Usuario;
 import com.heladeria.api.entities.enums.EstadoPedido;
@@ -13,6 +14,7 @@ import com.heladeria.api.exceptions.RecursoNoEncontradoException;
 import com.heladeria.api.exceptions.ReglaDeNegocioException;
 import com.heladeria.api.repositories.MovimientoCajaRepository;
 import com.heladeria.api.repositories.PedidoRepository;
+import com.heladeria.api.repositories.PuntoExpedicionRepository;
 import com.heladeria.api.repositories.SesionCajaRepository;
 import com.heladeria.api.repositories.UsuarioRepository;
 import com.heladeria.api.util.MonedaPyUtils;
@@ -31,17 +33,20 @@ public class CajaService {
     private final PedidoRepository pedidoRepository;
     private final UsuarioRepository usuarioRepository;
     private final MovimientoCajaRepository movimientoCajaRepository;
+    private final PuntoExpedicionRepository puntoExpedicionRepository;
     private final AuditoriaService auditoriaService;
 
     public CajaService(SesionCajaRepository sesionCajaRepository,
                        PedidoRepository pedidoRepository,
                        UsuarioRepository usuarioRepository,
                        MovimientoCajaRepository movimientoCajaRepository,
+                       PuntoExpedicionRepository puntoExpedicionRepository,
                        AuditoriaService auditoriaService) {
         this.sesionCajaRepository = sesionCajaRepository;
         this.pedidoRepository = pedidoRepository;
         this.usuarioRepository = usuarioRepository;
         this.movimientoCajaRepository = movimientoCajaRepository;
+        this.puntoExpedicionRepository = puntoExpedicionRepository;
         this.auditoriaService = auditoriaService;
     }
 
@@ -61,7 +66,8 @@ public class CajaService {
                             s.getId(),
                             s.getUsuarioApertura() != null ? s.getUsuarioApertura().getUsername() : null,
                             s.getFechaApertura(),
-                            s.getMontoInicial()
+                            s.getMontoInicial(),
+                            PuntoExpedicionDTO.fromEntity(s.getPuntoExpedicion())
                     ))
                     .orElseGet(() -> new EstadoCajaDTO(false, null, null, null, null));
         }
@@ -72,7 +78,8 @@ public class CajaService {
                         s.getId(),
                         s.getUsuarioApertura() != null ? s.getUsuarioApertura().getUsername() : null,
                         s.getFechaApertura(),
-                        s.getMontoInicial()
+                        s.getMontoInicial(),
+                        PuntoExpedicionDTO.fromEntity(s.getPuntoExpedicion())
                 ))
                 .orElseGet(() -> new EstadoCajaDTO(false, null, null, null, null));
     }
@@ -170,6 +177,7 @@ public class CajaService {
                 .totalPedidos(pedidos.size())
                 .cantidadVouchers(cantidadVouchers)
                 .cantidadTransferencias(cantidadTransferencias)
+                .puntoExpedicion(sesion.getPuntoExpedicion() != null ? PuntoExpedicionDTO.fromEntity(sesion.getPuntoExpedicion()) : null)
                 .build();
     }
 
@@ -182,8 +190,33 @@ public class CajaService {
         Usuario usuario = usuarioRepository.findByUsername(username)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado: " + username));
 
+        PuntoExpedicion punto = null;
+        if (request != null && request.getPuntoExpedicionId() != null) {
+            punto = puntoExpedicionRepository.findById(request.getPuntoExpedicionId())
+                    .orElseThrow(() -> new RecursoNoEncontradoException("Punto de expedición no encontrado con id " + request.getPuntoExpedicionId()));
+            if (!Boolean.TRUE.equals(punto.getActivo())) {
+                throw new ReglaDeNegocioException("El punto de expedición '" + punto.getNombre() + "' (" + punto.getPrefijoLegal() + ") se encuentra inactivo.");
+            }
+            if (sesionCajaRepository.existsByPuntoExpedicion_IdAndEstado(punto.getId(), EstadoSesionCaja.ABIERTA)) {
+                throw new ReglaDeNegocioException("El punto de expedición '" + punto.getNombre() + "' (" + punto.getPrefijoLegal() + ") ya está siendo utilizado por otra caja abierta.");
+            }
+        } else {
+            // Asignar primer punto activo disponible si existen puntos configurados
+            List<PuntoExpedicion> puntosActivos = puntoExpedicionRepository.findByActivoTrueOrderByEstablecimientoAscPuntoEmisionAsc();
+            for (PuntoExpedicion p : puntosActivos) {
+                if (!sesionCajaRepository.existsByPuntoExpedicion_IdAndEstado(p.getId(), EstadoSesionCaja.ABIERTA)) {
+                    punto = p;
+                    break;
+                }
+            }
+            if (punto == null && !puntosActivos.isEmpty()) {
+                throw new ReglaDeNegocioException("Todos los puntos de expedición configurados están actualmente en uso por otros cajeros.");
+            }
+        }
+
         SesionCaja sesion = SesionCaja.builder()
                 .usuarioApertura(usuario)
+                .puntoExpedicion(punto)
                 .fechaApertura(LocalDateTime.now())
                 .montoInicial(MonedaPyUtils.redondearGs(request.getMontoInicial()))
                 .totalVentasEfectivo(BigDecimal.ZERO)
@@ -204,7 +237,8 @@ public class CajaService {
                 "APERTURA_CAJA",
                 guardada.getId(),
                 "Sesión de Caja #" + guardada.getId(),
-                "Apertura de turno de caja. Fondo inicial: Gs. " + guardada.getMontoInicial() +
+                "Apertura de turno de caja" + (guardada.getPuntoExpedicion() != null ? " en [" + guardada.getPuntoExpedicion().getPrefijoLegal() + " - " + guardada.getPuntoExpedicion().getNombre() + "]" : "") +
+                ". Fondo inicial: Gs. " + guardada.getMontoInicial() +
                 (request.getObservaciones() != null && !request.getObservaciones().isBlank() ? " (" + request.getObservaciones().trim() + ")" : ""),
                 null
         );
