@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import com.heladeria.api.security.AuthUtils;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -51,7 +52,7 @@ public class PuntoExpedicionController {
     public ResponseEntity<PuntoExpedicionDTO> crear(
             @Valid @RequestBody PuntoExpedicionRequestDTO request,
             Authentication authentication) {
-        String username = authentication != null ? authentication.getName() : "admin";
+        String username = AuthUtils.requireUsername(authentication);
         return ResponseEntity.status(HttpStatus.CREATED).body(puntoExpedicionService.crear(request, username));
     }
 
@@ -62,7 +63,7 @@ public class PuntoExpedicionController {
             @PathVariable Long id,
             @Valid @RequestBody PuntoExpedicionRequestDTO request,
             Authentication authentication) {
-        String username = authentication != null ? authentication.getName() : "admin";
+        String username = AuthUtils.requireUsername(authentication);
         return ResponseEntity.ok(puntoExpedicionService.actualizar(id, request, username));
     }
 
@@ -74,7 +75,7 @@ public class PuntoExpedicionController {
             @RequestBody Map<String, Boolean> body,
             Authentication authentication) {
         Boolean activo = body.getOrDefault("activo", true);
-        String username = authentication != null ? authentication.getName() : "admin";
+        String username = AuthUtils.requireUsername(authentication);
         return ResponseEntity.ok(puntoExpedicionService.cambiarEstado(id, activo, username));
     }
 }

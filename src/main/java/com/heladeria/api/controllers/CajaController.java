@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import com.heladeria.api.security.AuthUtils;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,7 +30,7 @@ public class CajaController {
     @GetMapping("/estado")
     @Operation(summary = "Consultar el estado actual de la caja del usuario autenticado")
     public ResponseEntity<EstadoCajaDTO> obtenerEstado(Authentication authentication) {
-        String username = authentication != null ? authentication.getName() : null;
+        String username = AuthUtils.requireUsername(authentication);
         return ResponseEntity.ok(cajaService.obtenerEstado(username));
     }
 
@@ -38,7 +39,7 @@ public class CajaController {
     public ResponseEntity<ResumenCajaDTO> obtenerResumen(
             @RequestParam(required = false) Long sesionId,
             Authentication authentication) {
-        String username = authentication != null ? authentication.getName() : null;
+        String username = AuthUtils.requireUsername(authentication);
         return ResponseEntity.ok(cajaService.obtenerResumen(sesionId, username));
     }
 
@@ -53,7 +54,7 @@ public class CajaController {
     public ResponseEntity<SesionCajaDTO> abrir(
             @Valid @RequestBody AbrirCajaRequestDTO request,
             Authentication authentication) {
-        String username = authentication != null ? authentication.getName() : "admin";
+        String username = AuthUtils.requireUsername(authentication);
         return ResponseEntity.status(HttpStatus.CREATED).body(cajaService.abrirCaja(request, username));
     }
 
@@ -62,20 +63,20 @@ public class CajaController {
     public ResponseEntity<SesionCajaDTO> cerrar(
             @Valid @RequestBody CerrarCajaRequestDTO request,
             Authentication authentication) {
-        String username = authentication != null ? authentication.getName() : "admin";
+        String username = AuthUtils.requireUsername(authentication);
         return ResponseEntity.ok(cajaService.cerrarCaja(request, username));
     }
 
     @GetMapping("/historial")
     @Operation(summary = "Consultar el historial completo de sesiones de caja ordenadas cronológicamente descendente")
-    public ResponseEntity<List<SesionCajaDTO>> obtenerHistorial() {
-        return ResponseEntity.ok(cajaService.obtenerHistorial());
+    public ResponseEntity<List<SesionCajaDTO>> obtenerHistorial(Authentication authentication) {
+        return ResponseEntity.ok(cajaService.obtenerHistorial(AuthUtils.requireUsername(authentication)));
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Obtener el detalle consolidado de una sesión de caja por ID")
-    public ResponseEntity<SesionCajaDTO> obtenerPorId(@PathVariable Long id) {
-        return ResponseEntity.ok(cajaService.obtenerPorId(id));
+    public ResponseEntity<SesionCajaDTO> obtenerPorId(@PathVariable Long id, Authentication authentication) {
+        return ResponseEntity.ok(cajaService.obtenerPorId(id, AuthUtils.requireUsername(authentication)));
     }
 
     @PostMapping("/movimientos")
@@ -83,13 +84,13 @@ public class CajaController {
     public ResponseEntity<MovimientoCajaDTO> registrarMovimiento(
             @Valid @RequestBody RegistrarMovimientoCajaRequestDTO request,
             Authentication authentication) {
-        String username = authentication != null ? authentication.getName() : "admin";
+        String username = AuthUtils.requireUsername(authentication);
         return ResponseEntity.status(HttpStatus.CREATED).body(cajaService.registrarMovimiento(request, username));
     }
 
     @GetMapping("/{id}/movimientos")
     @Operation(summary = "Listar los movimientos de efectivo registrados en una sesión de caja")
-    public ResponseEntity<List<MovimientoCajaDTO>> obtenerMovimientosPorSesion(@PathVariable Long id) {
-        return ResponseEntity.ok(cajaService.listarMovimientos(id));
+    public ResponseEntity<List<MovimientoCajaDTO>> obtenerMovimientosPorSesion(@PathVariable Long id, Authentication authentication) {
+        return ResponseEntity.ok(cajaService.listarMovimientos(id, AuthUtils.requireUsername(authentication)));
     }
 }

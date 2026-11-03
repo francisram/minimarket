@@ -12,6 +12,7 @@ import com.heladeria.api.entities.enums.TipoItemPedido;
 import com.heladeria.api.entities.enums.TipoIva;
 import com.heladeria.api.exceptions.ReglaDeNegocioException;
 import com.heladeria.api.repositories.*;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -65,8 +66,16 @@ class PedidoServiceTest {
     private Sabor saborAgotado;
     private Topping banioChocolate;
 
+    @AfterEach
+    void limpiarAutenticacion() {
+        SecurityContextHolder.clearContext();
+    }
+
     @BeforeEach
     void setUp() {
+        // El servicio ya no asume un usuario por defecto: el cajero debe venir autenticado.
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("admin", null, List.of(new SimpleGrantedAuthority("ROLE_CAJERO"))));
         Usuario usuarioTest = usuarioRepository.findByUsername("admin").orElseGet(() -> {
             Usuario u = new Usuario();
             u.setUsername("admin_test");

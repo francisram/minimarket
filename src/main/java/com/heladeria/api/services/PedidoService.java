@@ -93,7 +93,7 @@ public class PedidoService {
     @Transactional
     public Pedido crearPedido(PedidoRequestDTO request) {
         var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-        String username = (auth != null && auth.getName() != null) ? auth.getName() : "admin";
+        String username = com.heladeria.api.security.AuthUtils.requireUsername(auth);
         return crearPedido(request, username);
     }
 
@@ -101,7 +101,7 @@ public class PedidoService {
     public Pedido crearPedido(PedidoRequestDTO request, String username) {
         if (username == null || username.isBlank()) {
             var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-            username = (auth != null && auth.getName() != null) ? auth.getName() : "admin";
+            username = com.heladeria.api.security.AuthUtils.requireUsername(auth);
         }
 
         String finalUsername = username;

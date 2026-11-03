@@ -13,6 +13,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import com.heladeria.api.security.AuthUtils;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -51,7 +52,7 @@ public class PedidoController {
     public ResponseEntity<Pedido> crear(
             @Valid @RequestBody PedidoRequestDTO request,
             Authentication authentication) {
-        String username = authentication != null ? authentication.getName() : "admin";
+        String username = AuthUtils.requireUsername(authentication);
         return ResponseEntity.status(HttpStatus.CREATED).body(pedidoService.crearPedido(request, username));
     }
 

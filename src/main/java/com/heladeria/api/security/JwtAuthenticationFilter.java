@@ -36,11 +36,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (jwtService.isTokenValid(token)) {
                 String username = jwtService.extractUsername(token);
                 if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                    UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                    UsernamePasswordAuthenticationToken authToken =
-                            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                    UserDetails userDetails = null;
+                    try {
+                        userDetails = userDetailsService.loadUserByUsername(username);
+                    } catch (org.springframework.security.core.userdetails.UsernameNotFoundException ignored) {
+                        // usuario eliminado: el token deja de ser válido
+                    }
+                    // Un usuario desactivado pierde el acceso de inmediato, aunque su token no haya expirado.
+                    if (userDetails != null && userDetails.isEnabled() && userDetails.isAccountNonLocked()) {
+                        UsernamePasswordAuthenticationToken authToken =
+                                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        SecurityContextHolder.getContext().setAuthentication(authToken);
+                    }
                 }
             }
         }

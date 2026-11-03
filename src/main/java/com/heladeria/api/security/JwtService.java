@@ -19,6 +19,10 @@ public class JwtService {
     public JwtService(
             @Value("${app.jwt.secret:dGhpcy1pcy1hLXZlcnktc2VjdXJlLWFuZC1sb25nLXNlY3JldC1rZXktZm9yLWhlbGFkZXJpYS1hcGktMjU2LWJpdHM=}") String secret,
             @Value("${app.jwt.expiration-ms:86400000}") long expirationMs) {
+        if (secret.startsWith("dGhpcy1pcy1hLXZlcnktc2VjdXJl")) {
+            org.slf4j.LoggerFactory.getLogger(JwtService.class).warn(
+                    "SEGURIDAD: se está usando el secreto JWT por defecto del código fuente. Defina APP_JWT_SECRET antes de producción.");
+        }
         this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expirationMs = expirationMs;
     }

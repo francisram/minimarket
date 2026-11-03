@@ -97,6 +97,9 @@ public class CajaService {
         if (sesionId != null) {
             sesion = sesionCajaRepository.findById(sesionId)
                     .orElseThrow(() -> new RecursoNoEncontradoException("Sesión de caja con id " + sesionId + " no encontrada."));
+            if (username != null) {
+                verificarAccesoSesion(sesion, username);
+            }
         } else {
             if (username != null && !username.isBlank()) {
                 sesion = sesionCajaRepository.findFirstByUsuarioApertura_UsernameAndEstadoOrderByFechaAperturaDesc(username, EstadoSesionCaja.ABIERTA)
@@ -267,24 +270,7 @@ public class CajaService {
                 && sesion.getUsuarioApertura().getUsername() != null
                 && sesion.getUsuarioApertura().getUsername().equalsIgnoreCase(username);
 
-        boolean esAdminOSupervisor = false;
-        if (usuario.getRol() != null && usuario.getRol().getNombreRol() != null) {
-            String nombreRol = usuario.getRol().getNombreRol().trim().toUpperCase();
-            esAdminOSupervisor = "ADMIN".equals(nombreRol) || "ROLE_ADMIN".equals(nombreRol)
-                    || "OWNER".equals(nombreRol) || "ROLE_OWNER".equals(nombreRol);
-        }
-
-        if (!esAdminOSupervisor) {
-            var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-            if (auth != null && auth.getAuthorities() != null) {
-                esAdminOSupervisor = auth.getAuthorities().stream()
-                        .anyMatch(a -> {
-                            String authName = a.getAuthority().trim().toUpperCase();
-                            return "ROLE_ADMIN".equals(authName) || "ADMIN".equals(authName)
-                                    || "ROLE_OWNER".equals(authName) || "OWNER".equals(authName);
-                        });
-            }
-        }
+        boolean esAdminOSupervisor = tieneRolPrivilegiado(username);
 
         if (!esTitular && !esAdminOSupervisor) {
             String titular = sesion.getUsuarioApertura() != null ? sesion.getUsuarioApertura().getUsername() : "el cajero titular";
@@ -425,6 +411,9 @@ public class CajaService {
         if (request.getSesionId() != null) {
             sesion = sesionCajaRepository.findById(request.getSesionId())
                     .orElseThrow(() -> new RecursoNoEncontradoException("Sesión de caja con id " + request.getSesionId() + " no encontrada."));
+            if (username != null) {
+                verificarAccesoSesion(sesion, username);
+            }
         } else {
             sesion = sesionCajaRepository.findFirstByUsuarioApertura_UsernameAndEstadoOrderByFechaAperturaDesc(username, EstadoSesionCaja.ABIERTA)
                     .orElseGet(() -> sesionCajaRepository.findFirstByEstadoOrderByFechaAperturaDesc(EstadoSesionCaja.ABIERTA)
@@ -483,6 +472,70 @@ public class CajaService {
         return movimientoCajaRepository.findBySesionCaja_IdOrderByFechaDesc(sesionId)
                 .stream()
                 .map(MovimientoCajaDTO::fromEntity)
+                .toList();
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Aislamiento entre cajas: solo el titular de la sesión o un rol privilegiado puede verla u operarla.
+    // ---------------------------------------------------------------------------------------------
+
+    private static final java.util.Set<String> ROLES_PRIVILEGIADOS = java.util.Set.of("ADMIN", "OWNER", "SUPERVISOR");
+
+    private static String normalizarRol(String rol) {
+        String r = rol == null ? "" : rol.trim().toUpperCase();
+        return r.startsWith("ROLE_") ? r.substring(5) : r;
+    }
+
+    boolean tieneRolPrivilegiado(String username) {
+        boolean porRol = username != null && usuarioRepository.findByUsername(username)
+                .map(u -> u.getRol() != null && ROLES_PRIVILEGIADOS.contains(normalizarRol(u.getRol().getNombreRol())))
+                .orElse(false);
+        if (porRol) {
+            return true;
+        }
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        return auth != null && auth.getAuthorities() != null && auth.getAuthorities().stream()
+                .anyMatch(a -> ROLES_PRIVILEGIADOS.contains(normalizarRol(a.getAuthority())));
+    }
+
+    private void verificarAccesoSesion(SesionCaja sesion, String username) {
+        boolean esTitular = sesion.getUsuarioApertura() != null
+                && sesion.getUsuarioApertura().getUsername() != null
+                && sesion.getUsuarioApertura().getUsername().equalsIgnoreCase(username);
+        if (!esTitular && !tieneRolPrivilegiado(username)) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "El usuario '" + username + "' no puede acceder a la sesión de caja #" + sesion.getId() + ".");
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public SesionCajaDTO obtenerPorId(Long id, String username) {
+        SesionCaja sesion = sesionCajaRepository.findById(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Sesión de caja con id " + id + " no encontrada."));
+        verificarAccesoSesion(sesion, username);
+        return SesionCajaDTO.fromEntity(sesion);
+    }
+
+    @Transactional(readOnly = true)
+    public List<MovimientoCajaDTO> listarMovimientos(Long sesionId, String username) {
+        if (sesionId == null) {
+            return List.of();
+        }
+        SesionCaja sesion = sesionCajaRepository.findById(sesionId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Sesión de caja con id " + sesionId + " no encontrada."));
+        verificarAccesoSesion(sesion, username);
+        return listarMovimientos(sesionId);
+    }
+
+    /** Un cajero ve solo su historial; ADMIN/OWNER/SUPERVISOR ven todo. */
+    @Transactional(readOnly = true)
+    public List<SesionCajaDTO> obtenerHistorial(String username) {
+        if (tieneRolPrivilegiado(username)) {
+            return obtenerHistorial();
+        }
+        return sesionCajaRepository.findAllByOrderByFechaAperturaDesc().stream()
+                .filter(s -> s.getUsuarioApertura() != null && username.equalsIgnoreCase(s.getUsuarioApertura().getUsername()))
+                .map(SesionCajaDTO::fromEntity)
                 .toList();
     }
 }
