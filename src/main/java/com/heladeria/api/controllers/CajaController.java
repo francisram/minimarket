@@ -44,9 +44,9 @@ public class CajaController {
     }
 
     @GetMapping("/abiertas")
-    @Operation(summary = "Listar todas las sesiones de caja que se encuentran actualmente abiertas")
-    public ResponseEntity<List<SesionCajaDTO>> obtenerSesionesAbiertas() {
-        return ResponseEntity.ok(cajaService.obtenerSesionesAbiertas());
+    @Operation(summary = "Listar las sesiones de caja abiertas (todas para ADMIN/OWNER/SUPERVISOR; solo la propia para un cajero)")
+    public ResponseEntity<List<SesionCajaDTO>> obtenerSesionesAbiertas(Authentication authentication) {
+        return ResponseEntity.ok(cajaService.obtenerSesionesAbiertas(AuthUtils.requireUsername(authentication)));
     }
 
     @PostMapping("/abrir")

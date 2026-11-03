@@ -373,6 +373,17 @@ public class CajaService {
     }
 
     @Transactional(readOnly = true)
+    public List<SesionCajaDTO> obtenerSesionesAbiertas(String username) {
+        // Un cajero ve solo su propia caja; la visión de todas las cajas es de ADMIN/OWNER/SUPERVISOR
+        if (!tieneRolPrivilegiado(username)) {
+            return obtenerSesionesAbiertas().stream()
+                    .filter(s -> username != null && username.equalsIgnoreCase(s.getUsuarioApertura()))
+                    .toList();
+        }
+        return obtenerSesionesAbiertas();
+    }
+
+    @Transactional(readOnly = true)
     public List<SesionCajaDTO> obtenerSesionesAbiertas() {
         return sesionCajaRepository.findByEstadoOrderByFechaAperturaDesc(EstadoSesionCaja.ABIERTA)
                 .stream()

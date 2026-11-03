@@ -147,6 +147,21 @@ class CajaAislamientoTest {
     }
 
     @Test
+    @DisplayName("Las cajas abiertas: un cajero ve solo la suya (o ninguna); el ADMIN ve todas")
+    void cajasAbiertasFiltradasPorUsuario() throws Exception {
+        mockMvc.perform(get("/api/caja/abiertas").header("Authorization", "Bearer " + tokenB))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+        mockMvc.perform(get("/api/caja/abiertas").header("Authorization", "Bearer " + tokenA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].usuarioApertura").value("cajero_a_aisl"));
+        mockMvc.perform(get("/api/caja/abiertas").header("Authorization", "Bearer " + tokenAdmin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.id==" + sesionIdA + ")]", hasSize(1)));
+    }
+
+    @Test
     @DisplayName("Un usuario desactivado pierde el acceso aunque su token no haya expirado (401)")
     void usuarioDesactivadoPierdeAcceso() throws Exception {
         Usuario b = usuarioRepository.findByUsername("cajero_b_aisl").orElseThrow();
