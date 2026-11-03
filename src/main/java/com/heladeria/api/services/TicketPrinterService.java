@@ -87,40 +87,23 @@ public class TicketPrinterService {
         }
     }
 
-    public void imprimirPedidoEnSegundoPlano(Long impresoraId, Pedido pedido) {
-        if (pedido == null) {
-            return;
+    /** Impresora indicada o, si es null, la primera configurada. */
+    public Impresora resolverImpresora(Long impresoraId) {
+        if (impresoraId != null) {
+            return impresoraRepository.findById(impresoraId)
+                    .orElseThrow(() -> new ImpresionException("La impresora con ID " + impresoraId + " no existe"));
         }
-        Thread.ofVirtual().start(() -> {
-            try {
-                imprimirPedido(impresoraId, pedido);
-            } catch (ImpresionException e) {
-                log.warn("No se pudo imprimir en segundo plano el ticket del pedido #{}: {}", pedido.getId(), e.getMessage());
-            } catch (Exception e) {
-                log.error("Error inesperado al intentar imprimir el ticket del pedido #{}", pedido.getId(), e);
-            }
-        });
+        return impresoraRepository.findAll().stream().findFirst()
+                .orElseThrow(() -> new ImpresionException("No hay ninguna impresora configurada en el sistema"));
     }
 
     public void imprimirPedido(Long impresoraId, Pedido pedido) {
         if (pedido == null) {
             return;
         }
-        Optional<Impresora> impresora;
-        if (impresoraId != null) {
-            impresora = impresoraRepository.findById(impresoraId);
-            if (impresora.isEmpty()) {
-                throw new ImpresionException("La impresora con ID " + impresoraId + " no existe");
-            }
-        } else {
-            impresora = impresoraRepository.findAll().stream().findFirst();
-            if (impresora.isEmpty()) {
-                throw new ImpresionException("No hay ninguna impresora configurada en el sistema");
-            }
-        }
-
-        impresionService.imprimir(impresora.get(), construirTicketPedido(pedido));
-        log.info("Ticket del pedido #{} enviado a imprimir en '{}'", pedido.getId(), impresora.get().getNombre());
+        Impresora impresora = resolverImpresora(impresoraId);
+        impresionService.imprimir(impresora, construirTicketPedido(pedido));
+        log.info("Ticket del pedido #{} enviado a imprimir en '{}'", pedido.getId(), impresora.getNombre());
     }
 
     public byte[] construirTicketPedido(Pedido pedido) {

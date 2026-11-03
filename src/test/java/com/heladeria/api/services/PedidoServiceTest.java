@@ -59,6 +59,9 @@ class PedidoServiceTest {
     @Autowired
     private ClienteRepository clienteRepository;
 
+    @Autowired
+    private TrabajoImpresionRepository trabajoImpresionRepository;
+
     private Presentacion poteMedioKg;
     private Sabor dulceDeLeche;
     private Sabor frutilla;
@@ -152,6 +155,32 @@ class PedidoServiceTest {
         assertEquals(0, new BigDecimal("38000.00").compareTo(pedido.getTotal()));
         assertEquals(2, pedido.getDetalles().get(0).getSabores().size());
         assertEquals(1, pedido.getDetalles().get(0).getToppings().size());
+    }
+
+    @Test
+    @DisplayName("Una venta con impresora encola su ticket en el spooler (outbox) en lugar de imprimir en línea")
+    void testVentaEncolaTrabajoDeImpresion() {
+        DetallePedidoRequestDTO item = new DetallePedidoRequestDTO();
+        item.setTipoItem(TipoItemPedido.HELADO);
+        item.setPresentacionId(poteMedioKg.getId());
+        item.setSaborIds(List.of(dulceDeLeche.getId()));
+        item.setCantidad(1);
+
+        PedidoRequestDTO request = new PedidoRequestDTO();
+        request.setClienteNombre("Carlos Gomez");
+        request.setMetodoPago(MetodoPago.EFECTIVO);
+        request.setTipoEntrega(TipoEntrega.MOSTRADOR);
+        request.setItems(List.of(item));
+        request.setImpresoraId(999L);
+
+        Pedido pedido = pedidoService.crearPedido(request);
+
+        List<TrabajoImpresion> trabajos = trabajoImpresionRepository.findAll().stream()
+                .filter(t -> pedido.getId().equals(t.getReferenciaId())).toList();
+        assertEquals(1, trabajos.size());
+        assertEquals(pedido.getId(), trabajos.get(0).getReferenciaId());
+        assertEquals(999L, trabajos.get(0).getImpresoraId());
+        assertEquals(com.heladeria.api.entities.enums.EstadoTrabajoImpresion.PENDIENTE, trabajos.get(0).getEstado());
     }
 
     @Test

@@ -45,6 +45,7 @@ public class PedidoService {
     private final ToppingRepository toppingRepository;
     private final ProductoSimpleRepository productoSimpleRepository;
     private final TicketPrinterService ticketPrinterService;
+    private final TrabajoImpresionService trabajoImpresionService;
     private final SesionCajaRepository sesionCajaRepository;
     private final InstitucionRepository institucionRepository;
     private final ClienteService clienteService;
@@ -64,6 +65,7 @@ public class PedidoService {
                          ToppingRepository toppingRepository,
                          ProductoSimpleRepository productoSimpleRepository,
                          TicketPrinterService ticketPrinterService,
+                         TrabajoImpresionService trabajoImpresionService,
                          SesionCajaRepository sesionCajaRepository,
                          InstitucionRepository institucionRepository,
                          ClienteService clienteService,
@@ -79,6 +81,7 @@ public class PedidoService {
         this.toppingRepository = toppingRepository;
         this.productoSimpleRepository = productoSimpleRepository;
         this.ticketPrinterService = ticketPrinterService;
+        this.trabajoImpresionService = trabajoImpresionService;
         this.sesionCajaRepository = sesionCajaRepository;
         this.institucionRepository = institucionRepository;
         this.clienteService = clienteService;
@@ -614,7 +617,8 @@ public class PedidoService {
         Pedido guardado = pedidoRepository.save(pedido);
 
         if (request.getImpresoraId() != null) {
-            ticketPrinterService.imprimirPedidoEnSegundoPlano(request.getImpresoraId(), guardado);
+            // Outbox: el trabajo se guarda en esta misma transacción y se imprime recién después del commit.
+            trabajoImpresionService.encolarTicketPedido(guardado.getId(), request.getImpresoraId(), username);
         }
 
         return guardado;
