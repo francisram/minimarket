@@ -34,6 +34,10 @@ public class BackupService {
     @Value("${app.backup.dir:/app/backups}")
     private String backupDirPath;
 
+    /** Directorio de copia fuera del servidor (NAS, disco USB, montaje de red). Vacío = sin copia externa. */
+    @Value("${app.backup.copia-externa-dir:}")
+    private String copiaExternaDirPath;
+
     @Value("${spring.datasource.url:}")
     private String dbUrl;
 
@@ -274,6 +278,172 @@ public class BackupService {
             if (e instanceof ReglaDeNegocioException) throw (ReglaDeNegocioException) e;
             log.error("Fallo inesperado al restaurar: ", e);
             throw new ReglaDeNegocioException("Error al restaurar: " + e.getMessage());
+        }
+    }
+
+
+    // ------------------------------------------------------------------------------------------
+    // Respaldos automáticos: copia externa y verificación
+    // ------------------------------------------------------------------------------------------
+
+    public record ResultadoVerificacion(String nivel, String detalle) { }
+
+    public boolean copiaExternaConfigurada() {
+        return copiaExternaDirPath != null && !copiaExternaDirPath.isBlank();
+    }
+
+    public File getBackupDir() {
+        return backupDir;
+    }
+
+    /** Copia el respaldo al directorio externo (archivo temporal + renombrado) y comprueba que el tamaño coincida. */
+    public void copiarACopiaExterna(String nombreArchivo) {
+        validarNombreArchivo(nombreArchivo);
+        if (!copiaExternaConfigurada()) {
+            throw new ReglaDeNegocioException("No hay un directorio de copia externa configurado.");
+        }
+        File origen = new File(backupDir, nombreArchivo);
+        File destinoDir = new File(copiaExternaDirPath);
+        try {
+            Files.createDirectories(destinoDir.toPath());
+            File temporal = new File(destinoDir, nombreArchivo + ".part");
+            File destino = new File(destinoDir, nombreArchivo);
+            Files.copy(origen.toPath(), temporal.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            if (temporal.length() != origen.length()) {
+                temporal.delete();
+                throw new ReglaDeNegocioException("La copia externa quedó incompleta (" + temporal.length() + " de " + origen.length() + " bytes).");
+            }
+            Files.move(temporal.toPath(), destino.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            log.info("Respaldo '{}' copiado a '{}'.", nombreArchivo, destinoDir.getAbsolutePath());
+        } catch (ReglaDeNegocioException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ReglaDeNegocioException("No se pudo copiar el respaldo a '" + copiaExternaDirPath + "': " + e.getMessage());
+        }
+    }
+
+    /**
+     * Verifica que el respaldo realmente sirva: primero su integridad (pg_restore --list) y luego,
+     * si el usuario de la base puede crear bases, lo restaura en una base temporal y compara las tablas con la real.
+     */
+    public ResultadoVerificacion verificarRespaldo(String nombreArchivo) {
+        validarNombreArchivo(nombreArchivo);
+        File archivo = new File(backupDir, nombreArchivo);
+        if (!archivo.exists() || !archivo.isFile() || archivo.length() == 0) {
+            throw new ReglaDeNegocioException("El respaldo '" + nombreArchivo + "' no existe o está vacío.");
+        }
+        DbParams p = parseDbParams();
+
+        // 1) Integridad del archivo: lee el índice del dump sin tocar ninguna base
+        ejecutarConSalida(List.of("pg_restore", "--list", archivo.getAbsolutePath()), p.password, 60);
+
+        // 2) Restauración real en una base temporal
+        String temporal = "verif_restore_" + System.currentTimeMillis();
+        boolean creada = false;
+        try {
+            try {
+                ejecutarConSalida(psql(p, "postgres", "CREATE DATABASE " + temporal), p.password, 60);
+                creada = true;
+            } catch (ReglaDeNegocioException e) {
+                log.warn("No se pudo crear la base temporal de verificación ({}). Solo se verificó la integridad del archivo.", e.getMessage());
+                return new ResultadoVerificacion("INTEGRIDAD", "Archivo íntegro. No se pudo restaurar en una base temporal: " + e.getMessage());
+            }
+
+            ProcessBuilder pb = new ProcessBuilder("pg_restore", "-h", p.host, "-p", String.valueOf(p.port), "-U", p.user,
+                    "-d", temporal, "--no-owner", archivo.getAbsolutePath());
+            ejecutarProcesoRestauracionVerificacion(pb, p.password);
+
+            String tablasRespaldo = ejecutarConSalida(psql(p, temporal, SQL_CONTAR_TABLAS), p.password, 60).trim();
+            String tablasReales = ejecutarConSalida(psql(p, p.database, SQL_CONTAR_TABLAS), p.password, 60).trim();
+            if (tablasRespaldo.isEmpty() || "0".equals(tablasRespaldo)) {
+                throw new ReglaDeNegocioException("El respaldo se restauró pero no contiene tablas.");
+            }
+            if (!tablasRespaldo.equals(tablasReales)) {
+                throw new ReglaDeNegocioException("El respaldo restaurado tiene " + tablasRespaldo + " tablas y la base actual " + tablasReales + ".");
+            }
+            return new ResultadoVerificacion("COMPLETA", "Restauración de prueba correcta (" + tablasRespaldo + " tablas).");
+        } finally {
+            if (creada) {
+                try {
+                    ejecutarConSalida(psql(p, "postgres", "DROP DATABASE IF EXISTS " + temporal), p.password, 60);
+                } catch (Exception e) {
+                    log.error("No se pudo eliminar la base temporal '{}': {}", temporal, e.getMessage());
+                }
+            }
+        }
+    }
+
+    private static final String SQL_CONTAR_TABLAS =
+            "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'";
+
+    private List<String> psql(DbParams p, String database, String sql) {
+        return List.of("psql", "-h", p.host, "-p", String.valueOf(p.port), "-U", p.user, "-d", database,
+                "-v", "ON_ERROR_STOP=1", "-tA", "-c", sql);
+    }
+
+    private void ejecutarProcesoRestauracionVerificacion(ProcessBuilder pb, String password) {
+        if (password != null && !password.isBlank()) {
+            pb.environment().put("PGPASSWORD", password);
+        }
+        pb.redirectErrorStream(true);
+        try {
+            Process process = pb.start();
+            byte[][] salida = new byte[1][];
+            Thread lector = Thread.ofVirtual().start(() -> {
+                try { salida[0] = process.getInputStream().readAllBytes(); } catch (Exception ignored) { }
+            });
+            boolean terminado = process.waitFor(300, TimeUnit.SECONDS);
+            lector.join(2000);
+            if (!terminado) {
+                process.destroyForcibly();
+                throw new ReglaDeNegocioException("La restauración de prueba superó el tiempo límite.");
+            }
+            // pg_restore devuelve 1 con advertencias no fatales; más de 1 es un fallo real
+            if (process.exitValue() > 1) {
+                String detalle = salida[0] != null ? new String(salida[0]).trim() : "";
+                throw new ReglaDeNegocioException("La restauración de prueba falló: " + detalle);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new ReglaDeNegocioException("Verificación interrumpida.");
+        } catch (ReglaDeNegocioException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ReglaDeNegocioException("Error en la restauración de prueba: " + e.getMessage());
+        }
+    }
+
+    /** Ejecuta un comando y devuelve su salida estándar; si falla lanza el error. */
+    private String ejecutarConSalida(List<String> comando, String password, int timeoutSegundos) {
+        ProcessBuilder pb = new ProcessBuilder(comando);
+        if (password != null && !password.isBlank()) {
+            pb.environment().put("PGPASSWORD", password);
+        }
+        try {
+            Process process = pb.start();
+            byte[][] out = new byte[1][];
+            byte[][] err = new byte[1][];
+            Thread t1 = Thread.ofVirtual().start(() -> { try { out[0] = process.getInputStream().readAllBytes(); } catch (Exception ignored) { } });
+            Thread t2 = Thread.ofVirtual().start(() -> { try { err[0] = process.getErrorStream().readAllBytes(); } catch (Exception ignored) { } });
+            boolean terminado = process.waitFor(timeoutSegundos, TimeUnit.SECONDS);
+            t1.join(2000);
+            t2.join(2000);
+            if (!terminado) {
+                process.destroyForcibly();
+                throw new ReglaDeNegocioException("'" + comando.get(0) + "' superó el tiempo límite (" + timeoutSegundos + "s).");
+            }
+            if (process.exitValue() != 0) {
+                String detalle = err[0] != null ? new String(err[0]).trim() : "";
+                throw new ReglaDeNegocioException("'" + comando.get(0) + "' falló: " + detalle);
+            }
+            return out[0] != null ? new String(out[0]) : "";
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new ReglaDeNegocioException("Proceso interrumpido.");
+        } catch (ReglaDeNegocioException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ReglaDeNegocioException("Error al ejecutar '" + comando.get(0) + "': " + e.getMessage());
         }
     }
 

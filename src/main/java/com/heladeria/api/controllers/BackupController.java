@@ -2,6 +2,8 @@ package com.heladeria.api.controllers;
 
 import com.heladeria.api.dto.BackupInfoDTO;
 import com.heladeria.api.dto.BackupResponseDTO;
+import com.heladeria.api.dto.EstadoRespaldoDTO;
+import com.heladeria.api.services.BackupAutomaticoService;
 import com.heladeria.api.services.BackupService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,9 +25,23 @@ import java.util.List;
 public class BackupController {
 
     private final BackupService backupService;
+    private final BackupAutomaticoService backupAutomaticoService;
 
-    public BackupController(BackupService backupService) {
+    public BackupController(BackupService backupService, BackupAutomaticoService backupAutomaticoService) {
         this.backupService = backupService;
+        this.backupAutomaticoService = backupAutomaticoService;
+    }
+
+    @GetMapping("/estado")
+    @Operation(summary = "Estado de salud de los respaldos: último respaldo, verificación, copia externa y alertas")
+    public EstadoRespaldoDTO estado() {
+        return backupAutomaticoService.obtenerEstado();
+    }
+
+    @PostMapping("/verificar/{nombreArchivo}")
+    @Operation(summary = "Verificar un respaldo existente con una restauración de prueba en una base temporal")
+    public BackupService.ResultadoVerificacion verificar(@PathVariable String nombreArchivo) {
+        return backupService.verificarRespaldo(nombreArchivo);
     }
 
     @PostMapping("/crear")

@@ -140,6 +140,7 @@
                     <systemPropertyVariables>
                         <!-- El worker del spooler no debe correr solo durante los tests: se invoca directamente -->
                         <app.impresion.spooler.enabled>false</app.impresion.spooler.enabled>
+                        <app.backup.programado.enabled>false</app.backup.programado.enabled>
                     </systemPropertyVariables>
                 </configuration>
             </plugin>
