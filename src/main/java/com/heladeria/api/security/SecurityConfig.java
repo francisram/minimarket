@@ -27,6 +27,17 @@ import java.util.List;
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    /** Swagger y consola H2 solo se exponen si se habilitaron a propósito (desarrollo local). */
+    @Value("${springdoc.swagger-ui.enabled:false}")
+    private boolean swaggerHabilitado;
+
+    @Value("${spring.h2.console.enabled:false}")
+    private boolean h2Habilitado;
+
+    private org.springframework.security.authorization.AuthorizationManager<org.springframework.security.web.access.intercept.RequestAuthorizationContext> devOnly() {
+        return (authentication, context) -> new org.springframework.security.authorization.AuthorizationDecision(swaggerHabilitado || h2Habilitado);
+    }
+
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final String allowedOrigins;
 
@@ -52,15 +63,18 @@ public class SecurityConfig {
         http
             .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable)) // Soporte para consola H2
+            .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin)) // la consola H2 (solo desarrollo) usa marcos del mismo origen
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers("/api/auth/**").permitAll()
-                    .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/api-docs/**", "/v3/api-docs/**").permitAll()
-                    .requestMatchers("/h2-console/**").permitAll()
+                    .requestMatchers("/error").permitAll()
+                    // Documentación de la API y consola H2: solo existen si se habilitan a propósito (desarrollo)
+                    .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/api-docs/**", "/v3/api-docs/**").access(devOnly())
+                    .requestMatchers("/h2-console/**").access(devOnly())
+                    // Público solo para mostrar el nombre y el logo en el login (el controlador recorta el resto)
                     .requestMatchers(org.springframework.http.HttpMethod.GET, "/institucion", "/api/institucion").permitAll()
                     .requestMatchers("/api/**", "/impresoras/**", "/institucion/**").authenticated()
-                    .anyRequest().permitAll())
+                    .anyRequest().denyAll())
             .exceptionHandling(eh -> eh
                     .authenticationEntryPoint((request, response, ex) -> {
                         response.setStatus(401);

@@ -29,7 +29,8 @@ services:
     container_name: heladeria-api
     restart: unless-stopped
     ports:
-      - "8085:8080"
+      # Solo accesible desde este equipo: los usuarios entran por nginx (puerto 8086/8443), que enruta /api
+      - "127.0.0.1:8085:8080"
     environment:
       TZ: America/Asuncion
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/heladeriadb

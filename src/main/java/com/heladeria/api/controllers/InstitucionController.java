@@ -22,8 +22,12 @@ public class InstitucionController {
 
     @GetMapping
     @Operation(summary = "Consultar datos y logo de la institución")
-    public InstitucionDTO get() {
-        return institucionService.get();
+    public InstitucionDTO get(org.springframework.security.core.Authentication authentication) {
+        InstitucionDTO completa = institucionService.get();
+        boolean autenticado = authentication != null && authentication.isAuthenticated()
+                && !(authentication instanceof org.springframework.security.authentication.AnonymousAuthenticationToken);
+        // Sin sesión (pantalla de login) solo se publican el nombre y el logo: RUC, timbrado y dirección no
+        return autenticado ? completa : new InstitucionDTO(completa.getNombre(), completa.getLogoBase64());
     }
 
     @PutMapping

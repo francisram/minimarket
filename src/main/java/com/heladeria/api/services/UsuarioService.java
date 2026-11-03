@@ -73,10 +73,39 @@ public class UsuarioService {
         if (dto.getRolId() != null) {
             Rol rol = rolRepository.findById(dto.getRolId())
                     .orElseThrow(() -> new RecursoNoEncontradoException("Rol no encontrado con ID: " + dto.getRolId()));
+            exigirAdministrativoSiCorresponde(null, rol);
             usuario.setRol(rol);
         }
 
         return toDTO(usuarioRepository.save(usuario));
+    }
+
+    private static boolean esRolAdministrativo(Rol rol) {
+        return rol != null && rol.getNombreRol() != null
+                && ("ADMIN".equalsIgnoreCase(rol.getNombreRol()) || "OWNER".equalsIgnoreCase(rol.getNombreRol()));
+    }
+
+    private static boolean llamadorEsAdministrativo() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null && auth.getAuthorities().stream().anyMatch(a ->
+                a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ADMIN")
+                        || a.getAuthority().equals("ROLE_OWNER") || a.getAuthority().equals("OWNER"));
+    }
+
+    /**
+     * Quien gestiona usuarios por un permiso de página (sin ser ADMIN/OWNER) no puede tocar cuentas administrativas
+     * ni otorgar un rol administrativo: sería escalar privilegios (cambiar la clave de un administrador y entrar con ella).
+     */
+    private static void exigirAdministrativoSiCorresponde(Usuario objetivo, Rol rolNuevo) {
+        if (llamadorEsAdministrativo()) {
+            return;
+        }
+        boolean toca = (objetivo != null && (esRolAdministrativo(objetivo.getRol())
+                || "admin".equalsIgnoreCase(objetivo.getUsername()) || "owner".equalsIgnoreCase(objetivo.getUsername())))
+                || esRolAdministrativo(rolNuevo);
+        if (toca) {
+            throw new ReglaDeNegocioException("Solo un Administrador o Propietario puede gestionar cuentas administrativas o asignar ese rol.");
+        }
     }
 
     /**
@@ -128,6 +157,8 @@ public class UsuarioService {
     public UsuarioDTO actualizar(Long id, UsuarioDTO dto) {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado con ID: " + id));
+
+        exigirAdministrativoSiCorresponde(usuario, null);
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String currentUsername = auth != null ? auth.getName() : null;
@@ -190,6 +221,7 @@ public class UsuarioService {
         if (dto.getRolId() != null) {
             Rol rol = rolRepository.findById(dto.getRolId())
                     .orElseThrow(() -> new RecursoNoEncontradoException("Rol no encontrado con ID: " + dto.getRolId()));
+            exigirAdministrativoSiCorresponde(null, rol);
             if ("owner".equalsIgnoreCase(usuario.getUsername()) && !"OWNER".equalsIgnoreCase(rol.getNombreRol())) {
                 throw new ReglaDeNegocioException("El usuario 'owner' debe mantener siempre el rol OWNER.");
             }
@@ -211,6 +243,7 @@ public class UsuarioService {
     public void eliminar(Long id) {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado con ID: " + id));
+        exigirAdministrativoSiCorresponde(usuario, null);
 
         // 1. Prohibir eliminación de cuentas protegidas del sistema
         if ("owner".equalsIgnoreCase(usuario.getUsername())) {

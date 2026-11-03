@@ -57,6 +57,7 @@ public class BackupController {
         return backupService.listarRespaldos();
     }
 
+    @PreAuthorize("hasRole('ADMIN') or hasRole('OWNER')")
     @GetMapping("/descargar/{nombreArchivo}")
     @Operation(summary = "Descargar un archivo de respaldo específico")
     public ResponseEntity<Resource> descargar(@PathVariable String nombreArchivo) {
@@ -67,6 +68,7 @@ public class BackupController {
                 .body(recurso);
     }
 
+    @PreAuthorize("hasRole('ADMIN') or hasRole('OWNER')")
     @DeleteMapping("/{nombreArchivo}")
     @Operation(summary = "Eliminar un archivo de respaldo del servidor")
     public ResponseEntity<Void> eliminar(@PathVariable String nombreArchivo) {
@@ -74,6 +76,7 @@ public class BackupController {
         return ResponseEntity.noContent().build();
     }
 
+    @PreAuthorize("hasRole('ADMIN') or hasRole('OWNER')")
     @PostMapping(value = "/restaurar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Restaurar la base de datos a partir de un archivo subido (.dump)")
     public ResponseEntity<BackupResponseDTO> restaurar(@RequestParam("archivo") MultipartFile archivo) {
@@ -81,6 +84,7 @@ public class BackupController {
         return ResponseEntity.ok(new BackupResponseDTO(true, "Base de datos restaurada exitosamente."));
     }
 
+    @PreAuthorize("hasRole('ADMIN') or hasRole('OWNER')")
     @PostMapping("/restaurar-servidor/{nombreArchivo}")
     @Operation(summary = "Restaurar la base de datos utilizando un archivo de respaldo del servidor")
     public ResponseEntity<BackupResponseDTO> restaurarServidor(@PathVariable String nombreArchivo) {
