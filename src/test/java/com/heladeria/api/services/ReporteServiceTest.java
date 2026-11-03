@@ -53,6 +53,14 @@ class ReporteServiceTest {
     private SesionCaja sesion1;
     private SesionCaja sesion2;
 
+    /**
+     * Instante dentro del día de hoy, ordenado como "hace N horas". Antes usaba now().minusHours(8),
+     * que antes de las 08:00 caía en el día anterior y la sesión quedaba fuera del reporte de hoy.
+     */
+    private static LocalDateTime hoy(int horasAtras) {
+        return LocalDate.now().atStartOfDay().plusMinutes(100L + 10L * horasAtras);
+    }
+
     @BeforeEach
     void setUp() {
         pedidoRepository.deleteAll();
@@ -77,8 +85,8 @@ class ReporteServiceTest {
         sesion1 = sesionCajaRepository.save(SesionCaja.builder()
                 .usuarioApertura(cajeroUser)
                 .usuarioCierre(cajeroUser)
-                .fechaApertura(LocalDateTime.now().minusHours(5))
-                .fechaCierre(LocalDateTime.now().minusHours(1))
+                .fechaApertura(hoy(-5))
+                .fechaCierre(hoy(-1))
                 .montoInicial(new BigDecimal("50000"))
                 .montoEsperadoEfectivo(new BigDecimal("80000"))
                 .montoRealEfectivo(new BigDecimal("85000"))
@@ -92,8 +100,8 @@ class ReporteServiceTest {
         sesion2 = sesionCajaRepository.save(SesionCaja.builder()
                 .usuarioApertura(cajeroUser)
                 .usuarioCierre(cajeroUser)
-                .fechaApertura(LocalDateTime.now().minusHours(8))
-                .fechaCierre(LocalDateTime.now().minusHours(6))
+                .fechaApertura(hoy(-8))
+                .fechaCierre(hoy(-6))
                 .montoInicial(new BigDecimal("50000"))
                 .montoEsperadoEfectivo(new BigDecimal("60000"))
                 .montoRealEfectivo(new BigDecimal("58000"))
@@ -137,7 +145,7 @@ class ReporteServiceTest {
                 .metodoPago(MetodoPago.EFECTIVO)
                 .tipoEntrega(TipoEntrega.MOSTRADOR)
                 .estado(EstadoPedido.ENTREGADO)
-                .fechaCreacion(LocalDateTime.now().minusHours(3))
+                .fechaCreacion(hoy(-3))
                 .total(new BigDecimal("35000"))
                 .totalGravada10(new BigDecimal("31818"))
                 .totalIva10(new BigDecimal("3182"))
@@ -169,7 +177,7 @@ class ReporteServiceTest {
                 .metodoPago(MetodoPago.TARJETA_DEBITO)
                 .tipoEntrega(TipoEntrega.TAKE_AWAY)
                 .estado(EstadoPedido.ENTREGADO)
-                .fechaCreacion(LocalDateTime.now().minusHours(2))
+                .fechaCreacion(hoy(-2))
                 .total(new BigDecimal("10000"))
                 .totalGravada5(new BigDecimal("9524"))
                 .totalIva5(new BigDecimal("476"))
@@ -195,7 +203,7 @@ class ReporteServiceTest {
                 .metodoPago(MetodoPago.EFECTIVO)
                 .tipoEntrega(TipoEntrega.MOSTRADOR)
                 .estado(EstadoPedido.CANCELADO)
-                .fechaCreacion(LocalDateTime.now().minusHours(1))
+                .fechaCreacion(hoy(-1))
                 .total(new BigDecimal("20000"))
                 .detalles(new ArrayList<>())
                 .build();
