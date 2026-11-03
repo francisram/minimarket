@@ -22,7 +22,8 @@ import java.util.List;
 public class ClavesPorDefectoCheck {
 
     private static final Logger log = LoggerFactory.getLogger(ClavesPorDefectoCheck.class);
-    private static final List<String> CLAVES_CONOCIDAS = List.of(
+    /** Contraseñas de demostración conocidas: no se aceptan como contraseña nueva. */
+    public static final List<String> CLAVES_CONOCIDAS = List.of(
             "admin123", "owner123", "CambiarEstaPasswordAdmin123!", "CambiarEstaPasswordOwner123!");
 
     private final UsuarioRepository usuarioRepository;

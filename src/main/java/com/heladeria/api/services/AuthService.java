@@ -52,6 +52,13 @@ public class AuthService {
             throw new BadCredentialsException("Usuario o contraseña incorrectos");
         }
 
+        if (dto.getPasswordNueva().equals(dto.getPasswordActual())) {
+            throw new com.heladeria.api.exceptions.ReglaDeNegocioException("La nueva contraseña debe ser distinta de la actual.");
+        }
+        if (com.heladeria.api.config.ClavesPorDefectoCheck.CLAVES_CONOCIDAS.contains(dto.getPasswordNueva())) {
+            throw new com.heladeria.api.exceptions.ReglaDeNegocioException("Esa contraseña es de uso común o de demostración. Elija una propia.");
+        }
+
         usuario.setPasswordHash(passwordEncoder.encode(dto.getPasswordNueva()));
         usuario.setDebeCambiarPassword(false);
         usuarioRepository.save(usuario);
