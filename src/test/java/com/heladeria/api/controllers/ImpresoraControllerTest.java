@@ -77,7 +77,7 @@ class ImpresoraControllerTest {
     private PaginaRepository paginaRepository;
 
     @Autowired
-    private JwtService jwtService;
+    private com.heladeria.api.TestTokens testTokens;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -127,9 +127,9 @@ class ImpresoraControllerTest {
             usuarioRepository.save(operador);
         }
 
-        adminToken = jwtService.generateToken("admin", "ADMIN");
-        cajeroToken = jwtService.generateToken("cajero", "CAJERO");
-        operadorToken = jwtService.generateToken("operador_impresoras", "OPERADOR_IMPRESORAS");
+        adminToken = testTokens.emitir("admin", "ADMIN");
+        cajeroToken = testTokens.emitir("cajero", "CAJERO");
+        operadorToken = testTokens.emitir("operador_impresoras", "OPERADOR_IMPRESORAS");
     }
 
     private Map<String, Object> bodyRed() {

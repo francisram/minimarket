@@ -39,7 +39,7 @@ class ReporteControllerTest {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private JwtService jwtService;
+    private com.heladeria.api.TestTokens testTokens;
 
     private String adminToken;
 
@@ -62,7 +62,7 @@ class ReporteControllerTest {
             usuarioRepository.save(admin);
         }
 
-        adminToken = jwtService.generateToken("admin", "ADMIN");
+        adminToken = testTokens.emitir("admin", "ADMIN");
     }
 
     @Test

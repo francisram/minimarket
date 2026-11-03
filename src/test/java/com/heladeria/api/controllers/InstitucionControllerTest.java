@@ -50,7 +50,7 @@ class InstitucionControllerTest {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private JwtService jwtService;
+    private com.heladeria.api.TestTokens testTokens;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -124,9 +124,9 @@ class InstitucionControllerTest {
             usuarioRepository.save(operador);
         }
 
-        adminToken = jwtService.generateToken("admin", "ADMIN");
-        cajeroToken = jwtService.generateToken("cajero", "CAJERO");
-        operadorInstitucionToken = jwtService.generateToken("operador_inst", "OPERADOR_CONFIG");
+        adminToken = testTokens.emitir("admin", "ADMIN");
+        cajeroToken = testTokens.emitir("cajero", "CAJERO");
+        operadorInstitucionToken = testTokens.emitir("operador_inst", "OPERADOR_CONFIG");
     }
 
     @Test

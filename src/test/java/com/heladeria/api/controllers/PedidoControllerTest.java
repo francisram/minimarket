@@ -45,7 +45,7 @@ class PedidoControllerTest {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private JwtService jwtService;
+    private com.heladeria.api.TestTokens testTokens;
 
     private String adminToken;
     private Pedido pedidoGuardado;
@@ -71,7 +71,7 @@ class PedidoControllerTest {
             usuarioRepository.save(admin);
         }
 
-        adminToken = jwtService.generateToken("admin", "ADMIN");
+        adminToken = testTokens.emitir("admin", "ADMIN");
 
         Pedido pedido = Pedido.builder()
                 .clienteNombre("Cliente Prueba Trx")

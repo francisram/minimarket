@@ -2,7 +2,7 @@
 -- Revocar una sesión (logout, cambio de clave, cierre por administrador) invalida sus tokens de inmediato.
 CREATE TABLE sesiones_auth (
     id varchar(36) PRIMARY KEY,
-    usuario_id bigint NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    usuario_id bigint NOT NULL REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
     refresh_hash varchar(64) NOT NULL,
     refresh_hash_anterior varchar(64),
     rotado_en timestamp(6),

@@ -49,7 +49,7 @@ class ProveedorControllerTest {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private JwtService jwtService;
+    private com.heladeria.api.TestTokens testTokens;
 
     private String adminToken;
 
@@ -70,7 +70,7 @@ class ProveedorControllerTest {
             return usuarioRepository.save(u);
         });
 
-        adminToken = jwtService.generateToken("admin_prov_test", "ADMIN");
+        adminToken = testTokens.emitir("admin_prov_test", "ADMIN");
     }
 
     @Test

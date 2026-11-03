@@ -49,7 +49,7 @@ class ClienteControllerTest {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private JwtService jwtService;
+    private com.heladeria.api.TestTokens testTokens;
 
     private String cajeroToken;
 
@@ -73,7 +73,7 @@ class ClienteControllerTest {
             return usuarioRepository.save(u);
         });
 
-        cajeroToken = jwtService.generateToken("cajero_test", "CAJERO");
+        cajeroToken = testTokens.emitir("cajero_test", "CAJERO");
     }
 
     @Test

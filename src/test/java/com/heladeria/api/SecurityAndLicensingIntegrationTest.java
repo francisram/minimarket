@@ -41,7 +41,7 @@ class SecurityAndLicensingIntegrationTest {
     private ObjectMapper objectMapper;
 
     @Autowired
-    private JwtService jwtService;
+    private com.heladeria.api.TestTokens testTokens;
 
     @Autowired
     private UsuarioRepository usuarioRepository;
@@ -77,9 +77,9 @@ class SecurityAndLicensingIntegrationTest {
             usuarioRepository.save(cajero);
         }
 
-        tokenAdmin = jwtService.generateToken("admin", "ADMIN");
-        tokenOwner = jwtService.generateToken("owner", "OWNER");
-        tokenCajero = jwtService.generateToken("cajero_test", "CAJERO");
+        tokenAdmin = testTokens.emitir("admin", "ADMIN");
+        tokenOwner = testTokens.emitir("owner", "OWNER");
+        tokenCajero = testTokens.emitir("cajero_test", "CAJERO");
     }
 
     @Test

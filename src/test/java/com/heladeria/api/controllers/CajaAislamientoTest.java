@@ -38,7 +38,8 @@ class CajaAislamientoTest {
     @Autowired private UsuarioRepository usuarioRepository;
     @Autowired private RolRepository rolRepository;
     @Autowired private PasswordEncoder passwordEncoder;
-    @Autowired private JwtService jwtService;
+    @Autowired
+    private com.heladeria.api.TestTokens testTokens;
 
     private String tokenA;
     private String tokenB;
@@ -65,9 +66,9 @@ class CajaAislamientoTest {
         sesionCajaRepository.deleteAll();
         crearUsuario("cajero_a_aisl", "CAJERO", true);
         crearUsuario("cajero_b_aisl", "CAJERO", true);
-        tokenA = jwtService.generateToken("cajero_a_aisl", "CAJERO");
-        tokenB = jwtService.generateToken("cajero_b_aisl", "CAJERO");
-        tokenAdmin = jwtService.generateToken("admin", "ADMIN");
+        tokenA = testTokens.emitir("cajero_a_aisl", "CAJERO");
+        tokenB = testTokens.emitir("cajero_b_aisl", "CAJERO");
+        tokenAdmin = testTokens.emitir("admin", "ADMIN");
 
         String json = mockMvc.perform(post("/api/caja/abrir")
                         .header("Authorization", "Bearer " + tokenA)

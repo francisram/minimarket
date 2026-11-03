@@ -51,7 +51,7 @@ class CajaControllerTest {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private JwtService jwtService;
+    private com.heladeria.api.TestTokens testTokens;
 
     private String cajeroToken;
     private String otroCajeroToken;
@@ -84,9 +84,9 @@ class CajaControllerTest {
             usuarioRepository.save(otro);
         }
 
-        cajeroToken = jwtService.generateToken("cajero_caja_ctrl", "CAJERO");
-        otroCajeroToken = jwtService.generateToken("otro_cajero_ctrl", "CAJERO");
-        adminToken = jwtService.generateToken("admin", "ADMIN");
+        cajeroToken = testTokens.emitir("cajero_caja_ctrl", "CAJERO");
+        otroCajeroToken = testTokens.emitir("otro_cajero_ctrl", "CAJERO");
+        adminToken = testTokens.emitir("admin", "ADMIN");
     }
 
     @Test
