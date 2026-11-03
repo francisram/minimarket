@@ -67,7 +67,7 @@ public class SecurityConfig {
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers("/api/auth/**").permitAll()
-                    .requestMatchers("/error").permitAll()
+                    .requestMatchers("/error", "/api/salud").permitAll()
                     // Documentación de la API y consola H2: solo existen si se habilitan a propósito (desarrollo)
                     .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/api-docs/**", "/v3/api-docs/**").access(devOnly())
                     .requestMatchers("/h2-console/**").access(devOnly())

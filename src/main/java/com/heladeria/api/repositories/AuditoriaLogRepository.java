@@ -11,6 +11,8 @@ import java.util.List;
 @Repository
 public interface AuditoriaLogRepository extends JpaRepository<AuditoriaLog, Long>, JpaSpecificationExecutor<AuditoriaLog> {
 
+    List<AuditoriaLog> findByFechaBeforeOrderByFechaAsc(java.time.LocalDateTime limite, org.springframework.data.domain.Pageable pageable);
+
     @Query("SELECT DISTINCT a.usuario FROM AuditoriaLog a WHERE a.usuario IS NOT NULL ORDER BY a.usuario ASC")
     List<String> findDistinctUsuarios();
 

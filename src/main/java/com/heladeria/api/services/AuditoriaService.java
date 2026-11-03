@@ -28,6 +28,9 @@ import java.util.stream.Collectors;
 @Service
 public class AuditoriaService {
 
+    /** Tope de eventos devueltos por consulta; para ver más hay que acotar por fecha, usuario, módulo o texto. */
+    static final int TOPE_CONSULTA = 2000;
+
     private static final Logger log = LoggerFactory.getLogger(AuditoriaService.class);
 
     private final AuditoriaLogRepository auditoriaLogRepository;
@@ -120,7 +123,9 @@ public class AuditoriaService {
         };
 
         Sort sort = Sort.by(Sort.Direction.DESC, "fecha", "id");
-        List<AuditoriaLog> logs = auditoriaLogRepository.findAll(spec, sort);
+        // Los más recientes primero y con tope: la bitácora crece con cada operación del negocio
+        List<AuditoriaLog> logs = auditoriaLogRepository.findAll(spec,
+                org.springframework.data.domain.PageRequest.of(0, TOPE_CONSULTA, sort)).getContent();
 
         return logs.stream().map(AuditoriaLogDTO::new).collect(Collectors.toList());
     }

@@ -2,6 +2,7 @@ package com.heladeria.api.services;
 
 import com.heladeria.api.dto.reportes.*;
 import com.heladeria.api.entities.*;
+import com.heladeria.api.entities.enums.CondicionVenta;
 import com.heladeria.api.entities.enums.EstadoPedido;
 import com.heladeria.api.entities.enums.MetodoPago;
 import com.heladeria.api.entities.enums.TipoComprobante;
@@ -56,6 +57,7 @@ public class ReporteService {
         BigDecimal totalTarjetaDebito = BigDecimal.ZERO;
         BigDecimal totalTarjetaCredito = BigDecimal.ZERO;
         BigDecimal totalTransferenciaQr = BigDecimal.ZERO;
+        BigDecimal totalVentasCredito = BigDecimal.ZERO;
 
         long totalFacturas = 0;
         long totalTickets = 0;
@@ -75,8 +77,10 @@ public class ReporteService {
             BigDecimal totalPedido = MonedaPyUtils.redondearGs(p.getTotal());
             totalVentas = totalVentas.add(totalPedido);
 
-            // Método de pago
-            if (p.getMetodoPago() == MetodoPago.EFECTIVO) {
+            // Método de pago (una venta a crédito todavía no se cobró: no entra en ningún método)
+            if (p.getCondicionVenta() == CondicionVenta.CREDITO) {
+                totalVentasCredito = totalVentasCredito.add(totalPedido);
+            } else if (p.getMetodoPago() == MetodoPago.EFECTIVO) {
                 totalEfectivo = totalEfectivo.add(totalPedido);
             } else if (p.getMetodoPago() == MetodoPago.TARJETA_DEBITO) {
                 totalTarjetaDebito = totalTarjetaDebito.add(totalPedido);
@@ -148,6 +152,36 @@ public class ReporteService {
             }
         }
 
+        // Notas de crédito del período: restan de las ventas, de los métodos de pago, del detalle fiscal y de la serie diaria
+        BigDecimal totalNotasCredito = BigDecimal.ZERO;
+        for (NotaCredito nc : notaCreditoRepository.findByFechaBetweenOrderByFechaDesc(inicio, fin)) {
+            BigDecimal t = nc.getTotal();
+            totalNotasCredito = totalNotasCredito.add(t);
+            totalVentas = totalVentas.subtract(t);
+            Pedido f = nc.getPedido();
+            if (f.getCondicionVenta() == CondicionVenta.CREDITO) {
+                totalVentasCredito = totalVentasCredito.subtract(t);
+            } else if (f.getMetodoPago() == MetodoPago.EFECTIVO) {
+                totalEfectivo = totalEfectivo.subtract(t);
+            } else if (f.getMetodoPago() == MetodoPago.TARJETA_DEBITO) {
+                totalTarjetaDebito = totalTarjetaDebito.subtract(t);
+            } else if (f.getMetodoPago() == MetodoPago.TARJETA_CREDITO) {
+                totalTarjetaCredito = totalTarjetaCredito.subtract(t);
+            } else if (f.getMetodoPago() == MetodoPago.TRANSFERENCIA_QR) {
+                totalTransferenciaQr = totalTransferenciaQr.subtract(t);
+            }
+            totalExentas = totalExentas.subtract(nc.getTotalExentas());
+            totalGravada5 = totalGravada5.subtract(nc.getTotalGravada5());
+            totalIva5 = totalIva5.subtract(nc.getTotalIva5());
+            totalGravada10 = totalGravada10.subtract(nc.getTotalGravada10());
+            totalIva10 = totalIva10.subtract(nc.getTotalIva10());
+            totalIva = totalIva.subtract(nc.getTotalIva());
+            VentaDiariaDTO vd = ventasPorDiaMap.computeIfAbsent(nc.getFecha().toLocalDate(), d -> new VentaDiariaDTO(d, BigDecimal.ZERO, 0));
+            vd.setTotal(vd.getTotal().subtract(t));
+        }
+        dto.setTotalNotasCredito(totalNotasCredito);
+        dto.setTotalVentasCredito(totalVentasCredito);
+
         dto.setTotalVentas(totalVentas);
         dto.setCantidadVentas(pedidos.size());
         if (!pedidos.isEmpty()) {
@@ -211,27 +245,34 @@ public class ReporteService {
         Map<MetodoPago, BigDecimal> resumenMetodos = new HashMap<>();
         List<PedidoResumenReporteDTO> listaDTO = new ArrayList<>();
 
-        for (Pedido p : pedidos) {
+        java.util.function.Predicate<Pedido> filtro = p -> {
             if (metodoPago != null && p.getMetodoPago() != metodoPago) {
-                continue;
+                return false;
             }
             if (tipoComprobante != null && p.getTipoComprobante() != tipoComprobante) {
-                continue;
+                return false;
             }
             if (tipoEntrega != null && p.getTipoEntrega() != tipoEntrega) {
-                continue;
+                return false;
             }
             if (cajero != null && !cajero.isBlank()) {
                 String cajeroPedido = (p.getSesionCaja() != null && p.getSesionCaja().getUsuarioApertura() != null)
                         ? p.getSesionCaja().getUsuarioApertura().getUsername() : null;
                 if (cajeroPedido == null || !cajeroPedido.equalsIgnoreCase(cajero.trim())) {
-                    continue;
+                    return false;
                 }
             }
             if (trxId != null && !trxId.isBlank()) {
                 if (p.getTrxId() == null || !p.getTrxId().toLowerCase().contains(trxId.trim().toLowerCase())) {
-                    continue;
+                    return false;
                 }
+            }
+            return true;
+        };
+
+        for (Pedido p : pedidos) {
+            if (!filtro.test(p)) {
+                continue;
             }
 
             PedidoResumenReporteDTO item = new PedidoResumenReporteDTO();
@@ -261,6 +302,18 @@ public class ReporteService {
                 resumenMetodos.merge(p.getMetodoPago(), tot, BigDecimal::add);
             }
         }
+
+        // Notas de crédito del período (de las facturas que pasan los mismos filtros): restan de las ventas netas
+        BigDecimal totalNotasCredito = BigDecimal.ZERO;
+        for (NotaCredito nc : notaCreditoRepository.findByFechaBetweenOrderByFechaDesc(inicio, fin)) {
+            if (!filtro.test(nc.getPedido())) {
+                continue;
+            }
+            totalNotasCredito = totalNotasCredito.add(nc.getTotal());
+            totalVentas = totalVentas.subtract(nc.getTotal());
+            resumenMetodos.merge(nc.getPedido().getMetodoPago(), nc.getTotal().negate(), BigDecimal::add);
+        }
+        reporte.setTotalNotasCredito(totalNotasCredito);
 
         reporte.setTotalVentas(totalVentas);
         reporte.setCantidadVentas(cantidadVentas);

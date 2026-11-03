@@ -12,7 +12,9 @@ import java.util.Map;
 public class ReporteVentasDTO {
     private LocalDateTime periodoInicio;
     private LocalDateTime periodoFin;
+    /** Ventas netas: ya descuentan las notas de crédito. */
     private BigDecimal totalVentas = BigDecimal.ZERO;
+    private BigDecimal totalNotasCredito = BigDecimal.ZERO;
     private long cantidadVentas = 0;
     private Map<MetodoPago, BigDecimal> resumenMetodosPago = new HashMap<>();
     private List<PedidoResumenReporteDTO> pedidos = new ArrayList<>();
@@ -67,4 +69,7 @@ public class ReporteVentasDTO {
     public void setPedidos(List<PedidoResumenReporteDTO> pedidos) {
         this.pedidos = pedidos;
     }
+
+    public BigDecimal getTotalNotasCredito() { return totalNotasCredito; }
+    public void setTotalNotasCredito(BigDecimal v) { this.totalNotasCredito = v; }
 }

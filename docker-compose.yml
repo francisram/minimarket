@@ -2,6 +2,11 @@ services:
   db:
     image: postgres:16-alpine
     container_name: heladeria-postgres
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     restart: unless-stopped
     environment:
       POSTGRES_DB: heladeriadb
@@ -27,6 +32,18 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: heladeria-api
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    healthcheck:
+      # La API contesta y la base de datos responde (/api/salud hace un SELECT 1)
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/api/salud || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
     restart: unless-stopped
     ports:
       # Solo accesible desde este equipo: los usuarios entran por nginx (puerto 8086/8443), que enruta /api

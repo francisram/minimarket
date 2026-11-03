@@ -203,4 +203,25 @@ class NotaCreditoServiceTest {
         assertEquals(0, new BigDecimal("-909").compareTo(nc.getIva10()));
         assertEquals(0, new BigDecimal("20000").compareTo(libro.getGranTotal()), "30.000 de la factura menos 10.000 de la nota");
     }
+
+    @Test
+    @DisplayName("El dashboard y el reporte de ventas muestran ventas netas: descuentan las notas de crédito")
+    void reportesDeVentasSonNetos() {
+        cargarSerie();
+        notaCreditoService.emitir(factura.getId(), parcial(1, true), "admin");
+
+        var dash = reporteService.obtenerDashboard(LocalDate.now(), LocalDate.now());
+        assertEquals(0, new BigDecimal("10000").compareTo(dash.getTotalNotasCredito()));
+        assertEquals(0, new BigDecimal("20000").compareTo(dash.getTotalVentas()), "30.000 vendidos menos 10.000 acreditados");
+        assertEquals(0, new BigDecimal("20000").compareTo(dash.getTotalEfectivo()), "la venta fue en efectivo");
+        assertEquals(0, new BigDecimal("1818").compareTo(dash.getTotalIva()), "IVA 2.727 menos 909");
+
+        var ventas = reporteService.obtenerReporteVentas(LocalDate.now(), LocalDate.now(), null, null, null, null, null);
+        assertEquals(0, new BigDecimal("10000").compareTo(ventas.getTotalNotasCredito()));
+        assertEquals(0, new BigDecimal("20000").compareTo(ventas.getTotalVentas()));
+
+        // con un filtro que excluye a la factura (otro método de pago), la nota tampoco resta
+        var otraForma = reporteService.obtenerReporteVentas(LocalDate.now(), LocalDate.now(), MetodoPago.TARJETA_DEBITO, null, null, null, null);
+        assertEquals(0, BigDecimal.ZERO.compareTo(otraForma.getTotalNotasCredito()));
+    }
 }

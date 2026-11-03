@@ -142,6 +142,7 @@
                         <app.impresion.spooler.enabled>false</app.impresion.spooler.enabled>
                         <app.backup.programado.enabled>false</app.backup.programado.enabled>
                         <app.licencia.control-reloj.enabled>false</app.licencia.control-reloj.enabled>
+                        <app.auditoria.retencion.enabled>false</app.auditoria.retencion.enabled>
                     </systemPropertyVariables>
                 </configuration>
             </plugin>

@@ -29,6 +29,8 @@ public interface SesionCajaRepository extends JpaRepository<SesionCaja, Long> {
     List<SesionCaja> findByUsuarioApertura_UsernameAndFechaAperturaBetweenOrderByFechaAperturaDesc(String username, LocalDateTime inicio, LocalDateTime fin);
 
     List<SesionCaja> findAllByOrderByFechaAperturaDesc();
+    List<SesionCaja> findAllByOrderByFechaAperturaDesc(org.springframework.data.domain.Pageable pageable);
+    List<SesionCaja> findByUsuarioApertura_UsernameOrderByFechaAperturaDesc(String username, org.springframework.data.domain.Pageable pageable);
 
     boolean existsByPuntoExpedicion_IdAndEstado(Long puntoId, EstadoSesionCaja estado);
 

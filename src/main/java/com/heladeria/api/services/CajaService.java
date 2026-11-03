@@ -8,6 +8,7 @@ import com.heladeria.api.entities.SesionCaja;
 import com.heladeria.api.entities.Usuario;
 import com.heladeria.api.entities.enums.EstadoPedido;
 import com.heladeria.api.entities.enums.EstadoSesionCaja;
+import com.heladeria.api.entities.enums.CondicionVenta;
 import com.heladeria.api.entities.enums.MetodoPago;
 import com.heladeria.api.entities.enums.TipoMovimientoCaja;
 import com.heladeria.api.exceptions.RecursoNoEncontradoException;
@@ -117,6 +118,7 @@ public class CajaService {
         BigDecimal totalTarjetaCredito = BigDecimal.ZERO;
         BigDecimal totalTransferenciaQr = BigDecimal.ZERO;
         BigDecimal totalVentas = BigDecimal.ZERO;
+        BigDecimal totalCredito = BigDecimal.ZERO;
         int cantidadVouchers = 0;
         int cantidadTransferencias = 0;
 
@@ -124,7 +126,10 @@ public class CajaService {
             BigDecimal totalPedido = MonedaPyUtils.redondearGs(p.getTotal());
             totalVentas = totalVentas.add(totalPedido);
 
-            if (p.getMetodoPago() == MetodoPago.EFECTIVO) {
+            // Una venta a crédito no cobró nada: cuenta en las ventas pero no en el efectivo, tarjeta ni transferencias
+            if (p.getCondicionVenta() == CondicionVenta.CREDITO) {
+                totalCredito = totalCredito.add(totalPedido);
+            } else if (p.getMetodoPago() == MetodoPago.EFECTIVO) {
                 totalEfectivo = totalEfectivo.add(totalPedido);
             } else if (p.getMetodoPago() == MetodoPago.TARJETA_DEBITO) {
                 totalTarjetaDebito = totalTarjetaDebito.add(totalPedido);
@@ -172,6 +177,7 @@ public class CajaService {
                 .totalTarjetaCredito(totalTarjetaCredito)
                 .totalTransferenciaQr(totalTransferenciaQr)
                 .totalVentas(totalVentas)
+                .totalVentasCredito(totalCredito)
                 .totalIngresosCaja(totalIngresos)
                 .totalEgresosCaja(totalEgresos)
                 .movimientos(movimientosDTO)
@@ -289,7 +295,10 @@ public class CajaService {
             BigDecimal totalPedido = MonedaPyUtils.redondearGs(p.getTotal());
             totalVentasGeneral = totalVentasGeneral.add(totalPedido);
 
-            if (p.getMetodoPago() == MetodoPago.EFECTIVO) {
+            // Una venta a crédito no cobró nada: cuenta en las ventas pero no en el efectivo, tarjeta ni transferencias
+            if (p.getCondicionVenta() == CondicionVenta.CREDITO) {
+                continue;
+            } else if (p.getMetodoPago() == MetodoPago.EFECTIVO) {
                 totalEfectivo = totalEfectivo.add(totalPedido);
             } else if (p.getMetodoPago() == MetodoPago.TARJETA_DEBITO) {
                 totalTarjetaDebito = totalTarjetaDebito.add(totalPedido);
@@ -393,7 +402,8 @@ public class CajaService {
 
     @Transactional(readOnly = true)
     public List<SesionCajaDTO> obtenerHistorial() {
-        return sesionCajaRepository.findAllByOrderByFechaAperturaDesc()
+        // Las sesiones más recientes (el historial completo crece sin límite con los años)
+        return sesionCajaRepository.findAllByOrderByFechaAperturaDesc(org.springframework.data.domain.PageRequest.of(0, TOPE_HISTORIAL))
                 .stream()
                 .map(SesionCajaDTO::fromEntity)
                 .toList();
@@ -493,6 +503,9 @@ public class CajaService {
     // Aislamiento entre cajas: solo el titular de la sesión o un rol privilegiado puede verla u operarla.
     // ---------------------------------------------------------------------------------------------
 
+    /** Tope de sesiones de caja devueltas en el historial. */
+    static final int TOPE_HISTORIAL = 500;
+
     private static final java.util.Set<String> ROLES_PRIVILEGIADOS = java.util.Set.of("ADMIN", "OWNER", "SUPERVISOR");
 
     private static String normalizarRol(String rol) {
@@ -547,8 +560,8 @@ public class CajaService {
         if (tieneRolPrivilegiado(username)) {
             return obtenerHistorial();
         }
-        return sesionCajaRepository.findAllByOrderByFechaAperturaDesc().stream()
-                .filter(s -> s.getUsuarioApertura() != null && username.equalsIgnoreCase(s.getUsuarioApertura().getUsername()))
+        return sesionCajaRepository.findByUsuarioApertura_UsernameOrderByFechaAperturaDesc(username,
+                        org.springframework.data.domain.PageRequest.of(0, TOPE_HISTORIAL)).stream()
                 .map(SesionCajaDTO::fromEntity)
                 .toList();
     }

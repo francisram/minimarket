@@ -9,7 +9,11 @@ public class DashboardReporteDTO {
     private LocalDateTime periodoInicio;
     private LocalDateTime periodoFin;
 
+    /** Ventas netas: ya descuentan las notas de crédito del período. */
     private BigDecimal totalVentas = BigDecimal.ZERO;
+    private BigDecimal totalNotasCredito = BigDecimal.ZERO;
+    /** Ventas a crédito (no cobradas todavía): no figuran en ningún método de pago. */
+    private BigDecimal totalVentasCredito = BigDecimal.ZERO;
     private long cantidadVentas = 0;
     private BigDecimal ticketPromedio = BigDecimal.ZERO;
 
@@ -198,4 +202,9 @@ public class DashboardReporteDTO {
     public void setVentasPorDia(List<VentaDiariaDTO> ventasPorDia) {
         this.ventasPorDia = ventasPorDia;
     }
+
+    public BigDecimal getTotalNotasCredito() { return totalNotasCredito; }
+    public void setTotalNotasCredito(BigDecimal v) { this.totalNotasCredito = v; }
+    public BigDecimal getTotalVentasCredito() { return totalVentasCredito; }
+    public void setTotalVentasCredito(BigDecimal v) { this.totalVentasCredito = v; }
 }

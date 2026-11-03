@@ -582,12 +582,17 @@ public class PedidoService {
             return pedidoRepository.findByFechaCreacionBetweenOrderByFechaCreacionDesc(inicio, fin);
         }
 
+        // Sin fecha el listado podría ser toda la historia del negocio: se acota a los más recientes
+        org.springframework.data.domain.Pageable recientes = org.springframework.data.domain.PageRequest.of(0, TOPE_LISTADO_PEDIDOS);
         if (estado != null) {
-            return pedidoRepository.findByEstado(estado);
+            return pedidoRepository.findByEstadoOrderByFechaCreacionDesc(estado, recientes);
         }
 
-        return pedidoRepository.findAllByOrderByFechaCreacionDesc();
+        return pedidoRepository.findAllByOrderByFechaCreacionDesc(recientes);
     }
+
+    /** Tope de pedidos devueltos cuando el listado no se filtra por fecha. */
+    static final int TOPE_LISTADO_PEDIDOS = 500;
 
     @Transactional(readOnly = true)
     public Pedido obtenerPorId(Long id) {

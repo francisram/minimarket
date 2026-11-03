@@ -21,6 +21,8 @@ public class ResumenCajaDTO {
     private BigDecimal totalEsperadoTarjeta;
     private BigDecimal totalIngresosCaja = BigDecimal.ZERO;
     private BigDecimal totalEgresosCaja = BigDecimal.ZERO;
+    /** Ventas a crédito de la sesión: están en totalVentas pero no entraron dinero, así que no figuran en ningún método de pago. */
+    private BigDecimal totalVentasCredito = BigDecimal.ZERO;
     private java.util.List<MovimientoCajaDTO> movimientos = new java.util.ArrayList<>();
     private Integer totalPedidos;
     private Integer cantidadVouchers;
@@ -219,6 +221,9 @@ public class ResumenCajaDTO {
         this.puntoExpedicion = puntoExpedicion;
     }
 
+    public BigDecimal getTotalVentasCredito() { return totalVentasCredito; }
+    public void setTotalVentasCredito(BigDecimal totalVentasCredito) { this.totalVentasCredito = totalVentasCredito; }
+
     public static class ResumenCajaDTOBuilder {
         private Long sesionId;
         private EstadoSesionCaja estado;
@@ -234,6 +239,7 @@ public class ResumenCajaDTO {
         private BigDecimal totalEsperadoTarjeta;
         private BigDecimal totalIngresosCaja = BigDecimal.ZERO;
         private BigDecimal totalEgresosCaja = BigDecimal.ZERO;
+        private BigDecimal totalVentasCredito = BigDecimal.ZERO;
         private java.util.List<MovimientoCajaDTO> movimientos = new java.util.ArrayList<>();
         private Integer totalPedidos;
         private Integer cantidadVouchers;
@@ -254,6 +260,7 @@ public class ResumenCajaDTO {
         public ResumenCajaDTOBuilder totalEsperadoTarjeta(BigDecimal totalEsperadoTarjeta) { this.totalEsperadoTarjeta = totalEsperadoTarjeta; return this; }
         public ResumenCajaDTOBuilder totalIngresosCaja(BigDecimal totalIngresosCaja) { this.totalIngresosCaja = totalIngresosCaja; return this; }
         public ResumenCajaDTOBuilder totalEgresosCaja(BigDecimal totalEgresosCaja) { this.totalEgresosCaja = totalEgresosCaja; return this; }
+        public ResumenCajaDTOBuilder totalVentasCredito(BigDecimal totalVentasCredito) { this.totalVentasCredito = totalVentasCredito; return this; }
         public ResumenCajaDTOBuilder movimientos(java.util.List<MovimientoCajaDTO> movimientos) { this.movimientos = movimientos; return this; }
         public ResumenCajaDTOBuilder totalPedidos(Integer totalPedidos) { this.totalPedidos = totalPedidos; return this; }
         public ResumenCajaDTOBuilder cantidadVouchers(Integer cantidadVouchers) { this.cantidadVouchers = cantidadVouchers; return this; }
@@ -267,6 +274,7 @@ public class ResumenCajaDTO {
                     totalPedidos, cantidadVouchers, cantidadTransferencias);
             dto.setTotalIngresosCaja(totalIngresosCaja);
             dto.setTotalEgresosCaja(totalEgresosCaja);
+            dto.setTotalVentasCredito(totalVentasCredito);
             dto.setMovimientos(movimientos);
             dto.setPuntoExpedicion(puntoExpedicion);
             return dto;
