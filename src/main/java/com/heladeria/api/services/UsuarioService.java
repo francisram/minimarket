@@ -22,6 +22,9 @@ public class UsuarioService {
     @org.springframework.beans.factory.annotation.Autowired
     private SesionAuthService sesionAuthService;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private AuditoriaService auditoriaService;
+
     private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
     private final PasswordEncoder passwordEncoder;
@@ -71,6 +74,50 @@ public class UsuarioService {
         }
 
         return toDTO(usuarioRepository.save(usuario));
+    }
+
+    /**
+     * Restablece la contraseña de un usuario que la olvidó. No hay correo en el sistema: el administrador recibe una
+     * contraseña temporal (una sola vez) y se la entrega al usuario, que está obligado a cambiarla al ingresar.
+     * Todas las sesiones abiertas del usuario se cierran.
+     */
+    @Transactional
+    public String restablecerPassword(Long id) {
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado con ID: " + id));
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && usuario.getUsername().equalsIgnoreCase(auth.getName())) {
+            throw new ReglaDeNegocioException("Para cambiar tu propia contraseña usa la opción de cambio de contraseña.");
+        }
+        boolean llamadorEsOwner = auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_OWNER") || a.getAuthority().equals("OWNER"));
+        String rolDestino = usuario.getRol() != null ? usuario.getRol().getNombreRol() : "";
+        boolean destinoPrivilegiado = "OWNER".equalsIgnoreCase(rolDestino) || "ADMIN".equalsIgnoreCase(rolDestino)
+                || "owner".equalsIgnoreCase(usuario.getUsername());
+        if (destinoPrivilegiado && !llamadorEsOwner) {
+            throw new ReglaDeNegocioException("Solo el Propietario (OWNER) puede restablecer la contraseña de un Administrador o del Propietario.");
+        }
+
+        String temporal = generarPasswordTemporal();
+        usuario.setPasswordHash(passwordEncoder.encode(temporal));
+        usuario.setDebeCambiarPassword(true);
+        usuarioRepository.save(usuario);
+        sesionAuthService.revocarTodas(usuario.getId());
+        auditoriaService.registrar("USUARIOS", "RESTABLECER_PASSWORD", usuario.getId(), usuario.getUsername(),
+                "Contraseña restablecida por " + (auth != null ? auth.getName() : "el sistema") + "; se exige cambio al ingresar.");
+        return temporal;
+    }
+
+    /** 12 caracteres al azar sin símbolos ambiguos (0/O, 1/l/I), fáciles de dictar. */
+    public static String generarPasswordTemporal() {
+        final String alfabeto = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+        java.security.SecureRandom random = new java.security.SecureRandom();
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 12; i++) {
+            sb.append(alfabeto.charAt(random.nextInt(alfabeto.length())));
+        }
+        return sb.toString();
     }
 
     @Transactional

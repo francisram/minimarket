@@ -55,4 +55,11 @@ public class UsuarioController {
         usuarioService.eliminar(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{id}/restablecer-password")
+    @PreAuthorize("hasRole('OWNER') or hasRole('ADMIN')")
+    @Operation(summary = "Restablecer la contraseña de un usuario: devuelve una contraseña temporal (una sola vez) y exige cambiarla al ingresar")
+    public ResponseEntity<java.util.Map<String, String>> restablecerPassword(@PathVariable Long id) {
+        return ResponseEntity.ok(java.util.Map.of("passwordTemporal", usuarioService.restablecerPassword(id)));
+    }
 }
