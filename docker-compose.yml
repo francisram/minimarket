@@ -6,12 +6,16 @@ services:
     environment:
       POSTGRES_DB: heladeriadb
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD en el archivo .env - genere una con openssl rand -hex 24}"
+      # Usuario de solo lectura para DBeaver (se crea solo al inicializar un volumen nuevo; vacío = no se crea)
+      DB_CONSULTA_PASSWORD: ${DB_CONSULTA_PASSWORD:-}
       TZ: America/Asuncion
     ports:
-      - "5435:5432"
+      # Solo accesible desde el propio servidor (p. ej. DBeaver local o por escritorio remoto); no desde la red
+      - "127.0.0.1:5435:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./docker/initdb:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d heladeriadb"]
       interval: 5s
@@ -30,7 +34,7 @@ services:
       TZ: America/Asuncion
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/heladeriadb
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_DATASOURCE_PASSWORD: "${POSTGRES_PASSWORD}"
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
       SPRING_FLYWAY_ENABLED: "true"
       # Secretos: se leen del archivo .env (ver .env.example). Sin APP_JWT_SECRET el compose no arranca.
