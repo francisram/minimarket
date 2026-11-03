@@ -19,6 +19,9 @@ import java.util.stream.Collectors;
 @Service
 public class UsuarioService {
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private SesionAuthService sesionAuthService;
+
     private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
     private final PasswordEncoder passwordEncoder;
@@ -111,13 +114,19 @@ public class UsuarioService {
             throw new IllegalArgumentException("Ya existe un usuario con el nombre: " + dto.getUsername());
         }
 
+        boolean renombrado = !usuario.getUsername().equals(dto.getUsername());
         usuario.setUsername(dto.getUsername());
-        if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
+        boolean cambioClave = dto.getPassword() != null && !dto.getPassword().isBlank();
+        if (cambioClave) {
             usuario.setPasswordHash(passwordEncoder.encode(dto.getPassword()));
         }
 
         if (dto.getEstado() != null) {
             usuario.setEstado(dto.getEstado());
+        }
+        // Nueva clave, usuario desactivado o renombrado: las sesiones abiertas dejan de servir
+        if (cambioClave || renombrado || Boolean.FALSE.equals(dto.getEstado())) {
+            sesionAuthService.revocarTodas(usuario.getId());
         }
         if (dto.getPasswordNuncaExpira() != null) {
             usuario.setPasswordNuncaExpira(dto.getPasswordNuncaExpira());

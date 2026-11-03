@@ -20,15 +20,23 @@ public class AuthService {
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final SesionAuthService sesionAuthService;
 
-    public AuthService(UsuarioRepository usuarioRepository, PasswordEncoder passwordEncoder, JwtService jwtService) {
+    public AuthService(UsuarioRepository usuarioRepository, PasswordEncoder passwordEncoder, JwtService jwtService,
+                       SesionAuthService sesionAuthService) {
+        this.sesionAuthService = sesionAuthService;
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public LoginResponseDTO login(LoginRequestDTO dto) {
+        return login(dto, null);
+    }
+
+    @Transactional
+    public LoginResponseDTO login(LoginRequestDTO dto, String dispositivo) {
         Usuario usuario = usuarioRepository.findByUsername(dto.getUsername())
                 .filter(u -> Boolean.TRUE.equals(u.getEstado()))
                 .orElseThrow(() -> new BadCredentialsException("Usuario o contraseña incorrectos"));
@@ -39,11 +47,16 @@ public class AuthService {
 
         verificarVigenciaPassword(usuario);
 
-        return emitirToken(usuario);
+        return emitirToken(sesionAuthService.crear(usuario, dispositivo));
     }
 
     @Transactional
     public LoginResponseDTO cambiarPassword(CambiarPasswordDTO dto) {
+        return cambiarPassword(dto, null);
+    }
+
+    @Transactional
+    public LoginResponseDTO cambiarPassword(CambiarPasswordDTO dto, String dispositivo) {
         Usuario usuario = usuarioRepository.findByUsername(dto.getUsername())
                 .filter(u -> Boolean.TRUE.equals(u.getEstado()))
                 .orElseThrow(() -> new BadCredentialsException("Usuario o contraseña incorrectos"));
@@ -63,7 +76,9 @@ public class AuthService {
         usuario.setDebeCambiarPassword(false);
         usuarioRepository.save(usuario);
 
-        return emitirToken(usuario);
+        // Cambiar la contraseña cierra todas las sesiones abiertas (p. ej. un token copiado deja de servir)
+        sesionAuthService.revocarTodas(usuario.getId());
+        return emitirToken(sesionAuthService.crear(usuario, dispositivo));
     }
 
     private void verificarVigenciaPassword(Usuario usuario) {
@@ -77,9 +92,29 @@ public class AuthService {
         }
     }
 
-    private LoginResponseDTO emitirToken(Usuario usuario) {
+    /** Renueva el token de acceso con el de refresco (que se rota). */
+    @Transactional(noRollbackFor = BadCredentialsException.class)
+    public LoginResponseDTO refrescar(String refreshToken) {
+        return emitirToken(sesionAuthService.renovar(refreshToken));
+    }
+
+    @Transactional
+    public void cerrarSesion(String refreshToken) {
+        sesionAuthService.revocarPorRefresh(refreshToken);
+    }
+
+    /** Cierra todas las sesiones de un usuario (acción de administrador). */
+    @Transactional
+    public int cerrarSesionesDe(String username) {
+        Usuario u = usuarioRepository.findByUsername(username)
+                .orElseThrow(() -> new com.heladeria.api.exceptions.RecursoNoEncontradoException("Usuario no encontrado: " + username));
+        return sesionAuthService.revocarTodas(u.getId());
+    }
+
+    private LoginResponseDTO emitirToken(SesionAuthService.SesionEmitida sesion) {
+        Usuario usuario = sesion.usuario();
         String rolNombre = usuario.getRol() != null ? usuario.getRol().getNombreRol() : null;
-        String token = jwtService.generateToken(usuario.getUsername(), rolNombre);
-        return new LoginResponseDTO(token, usuario.getUsername(), rolNombre);
+        String token = jwtService.generateToken(usuario.getUsername(), rolNombre, sesion.sesionId());
+        return new LoginResponseDTO(token, sesion.refreshToken(), usuario.getUsername(), rolNombre);
     }
 }

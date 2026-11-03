@@ -19,8 +19,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final CustomUserDetailsService userDetailsService;
+    private final com.heladeria.api.services.SesionAuthService sesionAuthService;
 
-    public JwtAuthenticationFilter(JwtService jwtService, CustomUserDetailsService userDetailsService) {
+    public JwtAuthenticationFilter(JwtService jwtService, CustomUserDetailsService userDetailsService,
+                                   com.heladeria.api.services.SesionAuthService sesionAuthService) {
+        this.sesionAuthService = sesionAuthService;
         this.jwtService = jwtService;
         this.userDetailsService = userDetailsService;
     }
@@ -33,7 +36,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String header = request.getHeader("Authorization");
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(7);
-            if (jwtService.isTokenValid(token)) {
+            // El token debe pertenecer a una sesión vigente: logout, cambio de clave o cierre por un administrador lo invalidan
+            if (jwtService.isTokenValid(token) && sesionAuthService.estaActiva(jwtService.extractSesionId(token))) {
                 String username = jwtService.extractUsername(token);
                 if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                     UserDetails userDetails = null;

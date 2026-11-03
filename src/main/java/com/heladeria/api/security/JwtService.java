@@ -21,7 +21,7 @@ public class JwtService {
 
     public JwtService(
             @Value("${app.jwt.secret:dGhpcy1pcy1hLXZlcnktc2VjdXJlLWFuZC1sb25nLXNlY3JldC1rZXktZm9yLWhlbGFkZXJpYS1hcGktMjU2LWJpdHM=}") String secret,
-            @Value("${app.jwt.expiration-ms:86400000}") long expirationMs,
+            @Value("${app.jwt.expiration-ms:900000}") long expirationMs,
             @Value("${spring.datasource.url:}") String datasourceUrl) {
         // Con PostgreSQL (producción) un secreto débil o por defecto impide arrancar; con H2 (desarrollo/tests) solo advierte.
         validarSecreto(secret, datasourceUrl != null && datasourceUrl.startsWith("jdbc:postgresql"));
@@ -44,11 +44,17 @@ public class JwtService {
     }
 
     public String generateToken(String username, String rol) {
+        return generateToken(username, rol, null);
+    }
+
+    /** Token de acceso de vida corta; "sid" lo vincula a una sesión revocable. */
+    public String generateToken(String username, String rol, String sesionId) {
         Date now = new Date();
         Date expiration = new Date(now.getTime() + expirationMs);
         return Jwts.builder()
                 .subject(username)
                 .claim("rol", rol)
+                .claim("sid", sesionId)
                 .issuedAt(now)
                 .expiration(expiration)
                 .signWith(signingKey)
@@ -61,6 +67,10 @@ public class JwtService {
 
     public String extractRol(String token) {
         return parseClaims(token).get("rol", String.class);
+    }
+
+    public String extractSesionId(String token) {
+        return parseClaims(token).get("sid", String.class);
     }
 
     public boolean isTokenValid(String token) {
