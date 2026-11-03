@@ -567,6 +567,35 @@ class PedidoServiceTest {
     }
 
     @Test
+    @DisplayName("Reenviar la misma venta (mismo trxId) devuelve el pedido original sin consumir otro número ni stock")
+    void testReenvioConMismoTrxIdEsIdempotente() {
+        DetallePedidoRequestDTO itemHelado = new DetallePedidoRequestDTO();
+        itemHelado.setTipoItem(TipoItemPedido.HELADO);
+        itemHelado.setPresentacionId(poteMedioKg.getId());
+        itemHelado.setSaborIds(List.of(dulceDeLeche.getId()));
+        itemHelado.setCantidad(1);
+
+        PedidoRequestDTO request = new PedidoRequestDTO();
+        request.setTipoComprobante(TipoComprobante.FACTURA);
+        request.setClienteRuc("80012345-6");
+        request.setClienteNombre("Acme Corp S.A.");
+        request.setMetodoPago(MetodoPago.EFECTIVO);
+        request.setTipoEntrega(TipoEntrega.MOSTRADOR);
+        request.setTrxId("TRX-REENVIO-1");
+        request.setItems(List.of(itemHelado));
+
+        Pedido primero = pedidoService.crearPedido(request);
+        Double stockTrasPrimera = saborRepository.findById(dulceDeLeche.getId()).orElseThrow().getStockKilos();
+
+        Pedido segundo = pedidoService.crearPedido(request);
+
+        assertEquals(primero.getId(), segundo.getId());
+        assertEquals(primero.getNumeroFactura(), segundo.getNumeroFactura());
+        assertEquals(stockTrasPrimera,
+                saborRepository.findById(dulceDeLeche.getId()).orElseThrow().getStockKilos());
+    }
+
+    @Test
     @DisplayName("Debe fallar al solicitar factura sin RUC o sin Razón Social")
     void testCrearPedidoFacturaSinRucOFalla() {
         DetallePedidoRequestDTO itemHelado = new DetallePedidoRequestDTO();

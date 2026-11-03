@@ -103,11 +103,37 @@ public class PedidoService {
         return crearPedido(request, username);
     }
 
+    /** Recupera el pedido ya registrado con ese trxId (para reenvíos y carreras de doble envío). */
+    @Transactional(readOnly = true)
+    public Pedido recuperarPorReenvio(String trxId, String username) {
+        Pedido existente = pedidoRepository.findByTrxId(trxId.trim())
+                .orElseThrow(() -> new ReglaDeNegocioException("No se pudo registrar la venta: conflicto de datos."));
+        return validarReenvio(existente, username);
+    }
+
+    private Pedido validarReenvio(Pedido existente, String username) {
+        String duenio = existente.getSesionCaja() != null && existente.getSesionCaja().getUsuarioApertura() != null
+                ? existente.getSesionCaja().getUsuarioApertura().getUsername() : null;
+        if (duenio != null && !duenio.equals(username)) {
+            throw new ReglaDeNegocioException("El identificador de transacción ya fue utilizado por otra venta.");
+        }
+        return existente;
+    }
+
     @Transactional
     public Pedido crearPedido(PedidoRequestDTO request, String username) {
         if (username == null || username.isBlank()) {
             var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
             username = com.heladeria.api.security.AuthUtils.requireUsername(auth);
+        }
+
+        // Idempotencia: si el POS reenvía la misma venta (doble clic, reintento por red lenta),
+        // se devuelve la ya registrada en vez de cobrar de nuevo o fallar con un conflicto.
+        if (request.getTrxId() != null && !request.getTrxId().isBlank()) {
+            Pedido existente = pedidoRepository.findByTrxId(request.getTrxId().trim()).orElse(null);
+            if (existente != null) {
+                return validarReenvio(existente, username);
+            }
         }
 
         String finalUsername = username;
@@ -122,6 +148,7 @@ public class PedidoService {
         TipoComprobante tipoComprobante = request.getTipoComprobante() != null ? request.getTipoComprobante() : TipoComprobante.TICKET;
         CondicionVenta condicionVenta = request.getCondicionVenta() != null ? request.getCondicionVenta() : CondicionVenta.CONTADO;
         String numeroFactura = null;
+        String timbradoEmision = null;
 
         if ((request.getMetodoPago() == MetodoPago.TARJETA_DEBITO || request.getMetodoPago() == MetodoPago.TARJETA_CREDITO)
                 && (request.getNumeroVoucher() == null || request.getNumeroVoucher().trim().isEmpty())) {
@@ -206,6 +233,7 @@ public class PedidoService {
             String estab = (puntoLock.getEstablecimiento() != null && !puntoLock.getEstablecimiento().isBlank()) ? puntoLock.getEstablecimiento() : "001";
             String pto = (puntoLock.getPuntoEmision() != null && !puntoLock.getPuntoEmision().isBlank()) ? puntoLock.getPuntoEmision() : "001";
             numeroFactura = String.format("%s-%s-%07d", estab, pto, sig);
+            timbradoEmision = timbrado;
 
             puntoLock.setUltimoNumeroFactura(sig);
             puntoExpedicionRepository.save(puntoLock);
@@ -263,6 +291,7 @@ public class PedidoService {
                 .clienteRuc(clienteRuc)
                 .clienteDireccion(clienteDireccion)
                 .numeroFactura(numeroFactura)
+                .timbrado(timbradoEmision)
                 .numeroVoucher(request.getNumeroVoucher() != null ? request.getNumeroVoucher().trim() : null)
                 .trxId(trxId)
                 .metodoPago(request.getMetodoPago())

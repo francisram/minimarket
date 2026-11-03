@@ -79,6 +79,9 @@ public class Pedido {
     @Column(length = 30)
     private String numeroFactura;
 
+    @Column(name = "timbrado", length = 30)
+    private String timbrado;
+
     @Column(name = "numero_voucher", length = 50)
     private String numeroVoucher;
 
@@ -285,6 +288,9 @@ public class Pedido {
     public String getNumeroVoucher() { return numeroVoucher; }
     public void setNumeroVoucher(String numeroVoucher) { this.numeroVoucher = numeroVoucher; }
 
+    public String getTimbrado() { return timbrado; }
+    public void setTimbrado(String timbrado) { this.timbrado = timbrado; }
+
     public String getTrxId() { return trxId; }
     public void setTrxId(String trxId) { this.trxId = trxId; }
 
@@ -337,6 +343,7 @@ public class Pedido {
         private String numeroFactura;
         private String numeroVoucher;
         private String trxId;
+        private String timbrado;
         private BigDecimal totalExentas = BigDecimal.ZERO;
         private BigDecimal totalGravada5 = BigDecimal.ZERO;
         private BigDecimal totalGravada10 = BigDecimal.ZERO;
@@ -362,6 +369,7 @@ public class Pedido {
         public PedidoBuilder numeroFactura(String numeroFactura) { this.numeroFactura = numeroFactura; return this; }
         public PedidoBuilder numeroVoucher(String numeroVoucher) { this.numeroVoucher = numeroVoucher; return this; }
         public PedidoBuilder trxId(String trxId) { this.trxId = trxId; return this; }
+        public PedidoBuilder timbrado(String timbrado) { this.timbrado = timbrado; return this; }
         public PedidoBuilder totalExentas(BigDecimal totalExentas) { this.totalExentas = totalExentas; return this; }
         public PedidoBuilder totalGravada5(BigDecimal totalGravada5) { this.totalGravada5 = totalGravada5; return this; }
         public PedidoBuilder totalGravada10(BigDecimal totalGravada10) { this.totalGravada10 = totalGravada10; return this; }
@@ -374,6 +382,7 @@ public class Pedido {
                     sesionCaja, tipoComprobante, condicionVenta, clienteRuc, clienteDireccion, numeroFactura,
                     totalExentas, totalGravada5, totalGravada10, totalIva5, totalIva10, totalIva, numeroVoucher);
             p.setTrxId(trxId);
+            p.setTimbrado(timbrado);
             p.setPuntoExpedicion(puntoExpedicion);
             return p;
         }

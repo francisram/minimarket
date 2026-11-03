@@ -53,7 +53,14 @@ public class PedidoController {
             @Valid @RequestBody PedidoRequestDTO request,
             Authentication authentication) {
         String username = AuthUtils.requireUsername(authentication);
-        return ResponseEntity.status(HttpStatus.CREATED).body(pedidoService.crearPedido(request, username));
+        try {
+            return ResponseEntity.status(HttpStatus.CREATED).body(pedidoService.crearPedido(request, username));
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            // Dos envíos simultáneos con el mismo trxId: el segundo pierde la carrera en el índice único.
+            // La transacción ya hizo rollback; se devuelve la venta que sí quedó registrada.
+            if (request.getTrxId() == null || request.getTrxId().isBlank()) throw e;
+            return ResponseEntity.ok(pedidoService.recuperarPorReenvio(request.getTrxId(), username));
+        }
     }
 
     @PatchMapping("/{id}/estado")
