@@ -1,6 +1,8 @@
 package com.heladeria.api.controllers;
 
 import com.heladeria.api.dto.LicenciaDTO;
+import com.heladeria.api.dto.LicenciaEstadoDTO;
+import com.heladeria.api.services.ControlRelojService;
 import com.heladeria.api.services.LicenciaService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -16,9 +18,26 @@ import org.springframework.web.bind.annotation.*;
 public class LicenciaController {
 
     private final LicenciaService licenciaService;
+    private final ControlRelojService controlRelojService;
 
-    public LicenciaController(LicenciaService licenciaService) {
+    public LicenciaController(LicenciaService licenciaService, ControlRelojService controlRelojService) {
         this.licenciaService = licenciaService;
+        this.controlRelojService = controlRelojService;
+    }
+
+    @GetMapping("/estado")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Estado informativo de la licencia (vigente, por vencer, vencida) y alerta de retroceso de reloj")
+    public ResponseEntity<LicenciaEstadoDTO> estado() {
+        return ResponseEntity.ok(licenciaService.obtenerEstado());
+    }
+
+    @PostMapping("/reloj/reconocer")
+    @PreAuthorize("hasRole('OWNER')")
+    @Operation(summary = "Reconocer la alerta de retroceso de reloj una vez corregida la hora del servidor (Solo OWNER)")
+    public ResponseEntity<LicenciaEstadoDTO> reconocerReloj(org.springframework.security.core.Authentication authentication) {
+        controlRelojService.reconocerRetroceso(com.heladeria.api.security.AuthUtils.requireUsername(authentication));
+        return ResponseEntity.ok(licenciaService.obtenerEstado());
     }
 
     @GetMapping

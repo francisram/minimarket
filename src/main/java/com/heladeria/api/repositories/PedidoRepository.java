@@ -11,6 +11,11 @@ import java.util.Optional;
 
 @Repository
 public interface PedidoRepository extends JpaRepository<Pedido, Long> {
+
+    /** Fecha del pedido más reciente: sirve de piso para detectar un reloj atrasado. */
+    @org.springframework.data.jpa.repository.Query("select max(p.fechaCreacion) from Pedido p")
+    java.time.LocalDateTime maxFechaCreacion();
+
     Optional<Pedido> findByTrxId(String trxId);
     List<Pedido> findByEstado(EstadoPedido estado);
     List<Pedido> findByFechaCreacionBetweenOrderByFechaCreacionDesc(LocalDateTime inicio, LocalDateTime fin);

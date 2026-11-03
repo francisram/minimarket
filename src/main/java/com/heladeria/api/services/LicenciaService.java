@@ -1,6 +1,8 @@
 package com.heladeria.api.services;
 
 import com.heladeria.api.dto.LicenciaDTO;
+import com.heladeria.api.dto.LicenciaEstadoDTO;
+import com.heladeria.api.entities.ControlReloj;
 import com.heladeria.api.entities.Licencia;
 import com.heladeria.api.entities.Pagina;
 import com.heladeria.api.entities.PlanLicencia;
@@ -10,6 +12,8 @@ import com.heladeria.api.repositories.PlanLicenciaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -20,11 +24,58 @@ public class LicenciaService {
     private static final Long ID_UNICO = 1L;
 
     private final LicenciaRepository licenciaRepository;
-    private final PlanLicenciaRepository planLicenciaRepository;
+    private static final long DIAS_AVISO_PREVIO = 15;
 
-    public LicenciaService(LicenciaRepository licenciaRepository, PlanLicenciaRepository planLicenciaRepository) {
+    private final PlanLicenciaRepository planLicenciaRepository;
+    private final ControlRelojService controlRelojService;
+
+    public LicenciaService(LicenciaRepository licenciaRepository, PlanLicenciaRepository planLicenciaRepository,
+                           ControlRelojService controlRelojService) {
         this.licenciaRepository = licenciaRepository;
         this.planLicenciaRepository = planLicenciaRepository;
+        this.controlRelojService = controlRelojService;
+    }
+
+    @Transactional(readOnly = true)
+    public LicenciaEstadoDTO obtenerEstado() {
+        return obtenerEstado(LocalDate.now());
+    }
+
+    /** Estado informativo de la licencia (no bloquea nada) más la alerta de retroceso de reloj. */
+    @Transactional(readOnly = true)
+    public LicenciaEstadoDTO obtenerEstado(LocalDate hoy) {
+        ControlReloj reloj = controlRelojService.obtener();
+        String detalleReloj = reloj.isRetrocesoDetectado()
+                ? "El reloj del servidor se atrasó " + reloj.getDesfaseMinutos() + " min respecto de la última fecha registrada ("
+                  + reloj.getReferenciaRetroceso() + "). Verifique la hora del servidor."
+                : null;
+
+        var licencia = licenciaRepository.findById(ID_UNICO);
+        if (licencia.isEmpty() || licencia.get().getPlan() == null) {
+            return new LicenciaEstadoDTO("SIN_LICENCIA", null, null, null, "No hay una licencia registrada en esta instalación.",
+                    reloj.isRetrocesoDetectado(), detalleReloj, reloj.getUltimaFechaVista());
+        }
+        Licencia l = licencia.get();
+        String plan = l.getPlan().getNombre();
+        if (l.getFechaVencimiento() == null) {
+            return new LicenciaEstadoDTO("PERPETUA", plan, null, null, "Licencia perpetua.",
+                    reloj.isRetrocesoDetectado(), detalleReloj, reloj.getUltimaFechaVista());
+        }
+        long dias = ChronoUnit.DAYS.between(hoy, l.getFechaVencimiento());
+        String estado;
+        String mensaje;
+        if (dias < 0) {
+            estado = "VENCIDA";
+            mensaje = "La licencia venció hace " + (-dias) + " día(s). Contacte al proveedor para renovarla.";
+        } else if (dias <= DIAS_AVISO_PREVIO) {
+            estado = "POR_VENCER";
+            mensaje = dias == 0 ? "La licencia vence hoy." : "La licencia vence en " + dias + " día(s).";
+        } else {
+            estado = "VIGENTE";
+            mensaje = "Licencia vigente hasta " + l.getFechaVencimiento() + ".";
+        }
+        return new LicenciaEstadoDTO(estado, plan, l.getFechaVencimiento(), dias, mensaje,
+                reloj.isRetrocesoDetectado(), detalleReloj, reloj.getUltimaFechaVista());
     }
 
     @Transactional(readOnly = true)
