@@ -21,10 +21,12 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final SesionAuthService sesionAuthService;
+    private final LimitadorIntentos limitadorIntentos;
 
     public AuthService(UsuarioRepository usuarioRepository, PasswordEncoder passwordEncoder, JwtService jwtService,
-                       SesionAuthService sesionAuthService) {
+                       SesionAuthService sesionAuthService, LimitadorIntentos limitadorIntentos) {
         this.sesionAuthService = sesionAuthService;
+        this.limitadorIntentos = limitadorIntentos;
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -37,13 +39,18 @@ public class AuthService {
 
     @Transactional
     public LoginResponseDTO login(LoginRequestDTO dto, String dispositivo) {
+        String claveLimite = claveLimite(dto.getUsername());
+        limitadorIntentos.verificarNoBloqueado(claveLimite);
+
+        // Usuario inexistente o inactivo también cuenta como fallo, para no revelar qué usuarios existen
         Usuario usuario = usuarioRepository.findByUsername(dto.getUsername())
                 .filter(u -> Boolean.TRUE.equals(u.getEstado()))
-                .orElseThrow(() -> new BadCredentialsException("Usuario o contraseña incorrectos"));
-
-        if (!passwordEncoder.matches(dto.getPassword(), usuario.getPasswordHash())) {
+                .orElse(null);
+        if (usuario == null || !passwordEncoder.matches(dto.getPassword(), usuario.getPasswordHash())) {
+            limitadorIntentos.registrarFallo(claveLimite);
             throw new BadCredentialsException("Usuario o contraseña incorrectos");
         }
+        limitadorIntentos.registrarExito(claveLimite);
 
         verificarVigenciaPassword(usuario);
 
@@ -57,13 +64,17 @@ public class AuthService {
 
     @Transactional
     public LoginResponseDTO cambiarPassword(CambiarPasswordDTO dto, String dispositivo) {
+        String claveLimite = claveLimite(dto.getUsername());
+        limitadorIntentos.verificarNoBloqueado(claveLimite);
+
         Usuario usuario = usuarioRepository.findByUsername(dto.getUsername())
                 .filter(u -> Boolean.TRUE.equals(u.getEstado()))
-                .orElseThrow(() -> new BadCredentialsException("Usuario o contraseña incorrectos"));
-
-        if (!passwordEncoder.matches(dto.getPasswordActual(), usuario.getPasswordHash())) {
+                .orElse(null);
+        if (usuario == null || !passwordEncoder.matches(dto.getPasswordActual(), usuario.getPasswordHash())) {
+            limitadorIntentos.registrarFallo(claveLimite);
             throw new BadCredentialsException("Usuario o contraseña incorrectos");
         }
+        limitadorIntentos.registrarExito(claveLimite);
 
         if (dto.getPasswordNueva().equals(dto.getPasswordActual())) {
             throw new com.heladeria.api.exceptions.ReglaDeNegocioException("La nueva contraseña debe ser distinta de la actual.");
@@ -79,6 +90,11 @@ public class AuthService {
         // Cambiar la contraseña cierra todas las sesiones abiertas (p. ej. un token copiado deja de servir)
         sesionAuthService.revocarTodas(usuario.getId());
         return emitirToken(sesionAuthService.crear(usuario, dispositivo));
+    }
+
+    /** Clave del limitador: los intentos de login y de cambio de contraseña de un usuario cuentan juntos. */
+    public static String claveLimite(String username) {
+        return "login:" + (username == null ? "" : username.trim());
     }
 
     private void verificarVigenciaPassword(Usuario usuario) {

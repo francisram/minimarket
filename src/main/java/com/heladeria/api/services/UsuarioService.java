@@ -25,6 +25,9 @@ public class UsuarioService {
     @org.springframework.beans.factory.annotation.Autowired
     private AuditoriaService auditoriaService;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private LimitadorIntentos limitadorIntentos;
+
     private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
     private final PasswordEncoder passwordEncoder;
@@ -104,6 +107,7 @@ public class UsuarioService {
         usuario.setDebeCambiarPassword(true);
         usuarioRepository.save(usuario);
         sesionAuthService.revocarTodas(usuario.getId());
+        limitadorIntentos.registrarExito(AuthService.claveLimite(usuario.getUsername())); // por si estaba bloqueado
         auditoriaService.registrar("USUARIOS", "RESTABLECER_PASSWORD", usuario.getId(), usuario.getUsername(),
                 "Contraseña restablecida por " + (auth != null ? auth.getName() : "el sistema") + "; se exige cambio al ingresar.");
         return temporal;

@@ -1,17 +1,30 @@
 package com.heladeria.api.services;
 
 import com.heladeria.api.exceptions.DemasiadosIntentosException;
+import com.heladeria.api.repositories.IntentoFallidoRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
 import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@DisplayName("Límite de intentos fallidos")
+@SpringBootTest
+@DisplayName("Límite de intentos fallidos (persistente en la base)")
 class LimitadorIntentosTest {
 
-    private final LimitadorIntentos limitador = new LimitadorIntentos();
+    @Autowired private LimitadorIntentos limitador;
+    @Autowired private IntentoFallidoRepository repository;
+
+    @AfterEach
+    void limpiar() {
+        // el limitador escribe en su propia transacción: no se deshace solo
+        repository.deleteAll();
+    }
+
     private final Instant t0 = Instant.parse("2026-11-03T12:00:00Z");
 
     @Test
@@ -48,5 +61,33 @@ class LimitadorIntentosTest {
         for (int i = 0; i < 3; i++) limitador.registrarFallo("v", t0);
         assertFalse(limitador.registrarFallo("v", t0.plusSeconds(20 * 60)), "Fuera de la ventana de 15 min se reinicia");
         assertFalse(limitador.registrarFallo("v", t0.plusSeconds(20 * 60 + 1)));
+    }
+
+    @Test
+    @DisplayName("Los contadores sobreviven a un reinicio: están en la base, no en la memoria del proceso")
+    void persisteEnLaBase() {
+        for (int i = 0; i < 5; i++) limitador.registrarFallo("anular:persistente", t0);
+        assertTrue(repository.findById("anular:persistente").isPresent());
+        assertNotNull(repository.findById("anular:persistente").get().getBloqueadoHasta());
+    }
+
+    @Test
+    @DisplayName("Fallos simultáneos de la misma clave se cuentan todos (sin perder ninguno)")
+    void fallosSimultaneosSeCuentan() throws Exception {
+        int n = 4;
+        var pool = java.util.concurrent.Executors.newFixedThreadPool(n);
+        var barrera = new java.util.concurrent.CyclicBarrier(n);
+        var futuros = new java.util.ArrayList<java.util.concurrent.Future<?>>();
+        for (int i = 0; i < n; i++) {
+            futuros.add(pool.submit(() -> {
+                barrera.await();
+                limitador.registrarFallo("login:carrera", t0);
+                return null;
+            }));
+        }
+        for (var f : futuros) f.get(30, java.util.concurrent.TimeUnit.SECONDS);
+        pool.shutdown();
+
+        assertEquals(n, repository.findById("login:carrera").orElseThrow().getFallos());
     }
 }

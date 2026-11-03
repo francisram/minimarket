@@ -38,6 +38,7 @@ class SesionesAuthTest {
     @Autowired private UsuarioRepository usuarioRepository;
     @Autowired private RolRepository rolRepository;
     @Autowired private SesionAuthRepository sesionAuthRepository;
+    @Autowired private com.heladeria.api.services.LimitadorIntentos limitador;
     @Autowired private PasswordEncoder passwordEncoder;
     private final ObjectMapper mapper = new ObjectMapper();
 
@@ -45,6 +46,8 @@ class SesionesAuthTest {
 
     @BeforeEach
     void setUp() {
+        // el limitador escribe en su propia transacción: lo dejado por otras pruebas no se deshace solo
+        limitador.registrarExito(com.heladeria.api.services.AuthService.claveLimite("u_sesiones"));
         Rol rol = rolRepository.findByNombreRol("CAJERO").orElseThrow();
         Usuario u = new Usuario();
         u.setUsername("u_sesiones");
@@ -168,5 +171,39 @@ class SesionesAuthTest {
         s.setExpiraEn(LocalDateTime.now().minusMinutes(1));
         sesionAuthRepository.saveAndFlush(s);
         assertEquals(401, refrescar(r.get("refreshToken").asText()));
+    }
+
+    @Test
+    @DisplayName("Tras 5 contraseñas incorrectas el login se bloquea (429) incluso con la clave correcta")
+    void loginSeBloqueaPorFuerzaBruta() throws Exception {
+        String mala = "{\"username\":\"u_sesiones\",\"password\":\"incorrecta\"}";
+        for (int i = 0; i < 4; i++) {
+            mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(mala))
+                    .andExpect(status().isUnauthorized());
+        }
+        mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(mala))
+                .andExpect(status().isUnauthorized());
+        // bloqueado: ni la clave correcta pasa
+        mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"u_sesiones\",\"password\":\"" + CLAVE + "\"}"))
+                .andExpect(status().isTooManyRequests());
+        limitador.registrarExito(com.heladeria.api.services.AuthService.claveLimite("u_sesiones"));
+    }
+
+    @Test
+    @DisplayName("Un login correcto reinicia el contador de fallos")
+    void loginCorrectoReiniciaContador() throws Exception {
+        String mala = "{\"username\":\"u_sesiones\",\"password\":\"incorrecta\"}";
+        for (int i = 0; i < 4; i++) {
+            mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(mala))
+                    .andExpect(status().isUnauthorized());
+        }
+        login(); // acierta: borra los 4 fallos
+        for (int i = 0; i < 4; i++) {
+            mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(mala))
+                    .andExpect(status().isUnauthorized());
+        }
+        login(); // sigue sin bloquearse
+        limitador.registrarExito(com.heladeria.api.services.AuthService.claveLimite("u_sesiones"));
     }
 }
