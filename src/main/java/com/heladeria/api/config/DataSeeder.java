@@ -299,9 +299,10 @@ public class DataSeeder implements CommandLineRunner {
         if (puntoExpedicionRepository.count() == 0) {
             String estab = (inst != null && inst.getEstablecimiento() != null && !inst.getEstablecimiento().isBlank()) ? inst.getEstablecimiento() : "001";
             String pto1 = (inst != null && inst.getPuntoEmision() != null && !inst.getPuntoEmision().isBlank()) ? inst.getPuntoEmision() : "001";
-            String timbrado = (inst != null && inst.getTimbrado() != null) ? inst.getTimbrado() : "17894561";
-            LocalDate vencimiento = (inst != null && inst.getTimbradoVencimiento() != null) ? inst.getTimbradoVencimiento() : LocalDate.now().plusYears(1);
-            LocalDate inicio = (inst != null && inst.getTimbradoInicio() != null) ? inst.getTimbradoInicio() : LocalDate.now().minusMonths(1);
+            // En producción no se inventa un timbrado: queda vacío (y no se puede facturar) hasta cargar el real
+            String timbrado = (inst != null && inst.getTimbrado() != null) ? inst.getTimbrado() : (produccion ? null : "17894561");
+            LocalDate vencimiento = (inst != null && inst.getTimbradoVencimiento() != null) ? inst.getTimbradoVencimiento() : (produccion ? null : LocalDate.now().plusYears(1));
+            LocalDate inicio = (inst != null && inst.getTimbradoInicio() != null) ? inst.getTimbradoInicio() : (produccion ? null : LocalDate.now().minusMonths(1));
             Long ultimo = (inst != null && inst.getUltimoNumeroFactura() != null) ? inst.getUltimoNumeroFactura() : 0L;
 
             PuntoExpedicion p1 = PuntoExpedicion.builder()
