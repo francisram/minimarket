@@ -10,7 +10,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 
-/** Registra la fecha vista al arrancar y cada 5 minutos. Se desactiva con app.licencia.control-reloj.enabled=false. */
+/** Registra la fecha vista al arrancar y periódicamente (por defecto cada 5 minutos, app.licencia.control-reloj.intervalo-ms). Se desactiva con app.licencia.control-reloj.enabled=false. */
 @Configuration
 @EnableScheduling
 @ConditionalOnProperty(name = "app.licencia.control-reloj.enabled", havingValue = "true", matchIfMissing = true)
@@ -28,7 +28,8 @@ public class ControlRelojScheduler {
         registrar();
     }
 
-    @Scheduled(fixedDelay = 300_000, initialDelay = 300_000)
+    @Scheduled(fixedDelayString = "${app.licencia.control-reloj.intervalo-ms:300000}",
+               initialDelayString = "${app.licencia.control-reloj.intervalo-ms:300000}")
     public void periodico() {
         registrar();
     }
