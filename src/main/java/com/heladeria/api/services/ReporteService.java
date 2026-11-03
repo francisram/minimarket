@@ -26,6 +26,9 @@ import java.util.*;
 public class ReporteService {
 
     private final PedidoRepository pedidoRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.heladeria.api.repositories.NotaCreditoRepository notaCreditoRepository;
     private final SesionCajaRepository sesionCajaRepository;
 
     private static final DateTimeFormatter FORMATO_FECHA_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -339,6 +342,37 @@ public class ReporteService {
             totalIva = totalIva.add(totIva);
             granTotal = granTotal.add(tot);
         }
+
+        // Las notas de crédito del período restan: entran al libro con importes negativos
+        for (NotaCredito nc : notaCreditoRepository.findByFechaBetweenOrderByFechaDesc(inicio, fin)) {
+            Pedido f = nc.getPedido();
+            ItemLibroIvaDTO item = new ItemLibroIvaDTO();
+            item.setPedidoId(f.getId());
+            item.setFecha(nc.getFecha());
+            item.setTipoComprobante(TipoComprobante.NOTA_CREDITO);
+            item.setCondicionVenta(f.getCondicionVenta());
+            item.setNumeroComprobante(nc.getNumero());
+            item.setClienteRuc(f.getClienteRuc() != null && !f.getClienteRuc().isBlank() ? f.getClienteRuc() : "44444401-7");
+            item.setClienteNombre(f.getClienteNombre() != null && !f.getClienteNombre().isBlank() ? f.getClienteNombre() : "Consumidor Final");
+            item.setExentas(nc.getTotalExentas().negate());
+            item.setGravada5(nc.getTotalGravada5().negate());
+            item.setIva5(nc.getTotalIva5().negate());
+            item.setGravada10(nc.getTotalGravada10().negate());
+            item.setIva10(nc.getTotalIva10().negate());
+            item.setTotalIva(nc.getTotalIva().negate());
+            item.setTotal(nc.getTotal().negate());
+            items.add(item);
+
+            totalExentas = totalExentas.add(item.getExentas());
+            totalGravada5 = totalGravada5.add(item.getGravada5());
+            totalIva5 = totalIva5.add(item.getIva5());
+            totalGravada10 = totalGravada10.add(item.getGravada10());
+            totalIva10 = totalIva10.add(item.getIva10());
+            totalIva = totalIva.add(item.getTotalIva());
+            granTotal = granTotal.add(item.getTotal());
+            comprobantesVigentes++;
+        }
+        items.sort(java.util.Comparator.comparing(ItemLibroIvaDTO::getFecha, java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder())));
 
         libro.setTotalExentas(totalExentas);
         libro.setTotalGravada5(totalGravada5);

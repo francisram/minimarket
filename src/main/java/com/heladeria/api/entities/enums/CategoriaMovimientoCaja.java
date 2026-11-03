@@ -7,6 +7,7 @@ public enum CategoriaMovimientoCaja {
     PAGO_PROVEEDOR,
     CAMBIO_SENCILLO,
     OTRO_EGRESO,
+    DEVOLUCION_CLIENTE,
 
     // Categorías de INGRESO
     INGRESO_EXTRA,

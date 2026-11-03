@@ -17,6 +17,7 @@ public interface PedidoRepository extends JpaRepository<Pedido, Long> {
     java.time.LocalDateTime maxFechaCreacion();
 
     Optional<Pedido> findByTrxId(String trxId);
+    List<Pedido> findByNumeroFacturaOrderByFechaCreacionDesc(String numeroFactura);
     List<Pedido> findByEstado(EstadoPedido estado);
     List<Pedido> findByFechaCreacionBetweenOrderByFechaCreacionDesc(LocalDateTime inicio, LocalDateTime fin);
     List<Pedido> findByFechaCreacionBetweenAndEstadoNotOrderByFechaCreacionDesc(LocalDateTime inicio, LocalDateTime fin, EstadoPedido estado);

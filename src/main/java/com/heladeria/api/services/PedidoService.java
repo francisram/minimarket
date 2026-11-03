@@ -825,92 +825,7 @@ public class PedidoService {
 
         // Reintegrar stock de productos simples, envases y sabores si se cancela
         for (DetallePedido detalle : pedido.getDetalles()) {
-            Optional<Producto> comboCompuesto = (detalle.getTipoItem() == TipoItemPedido.PRODUCTO_SIMPLE && detalle.getProductoSimple() != null)
-                    ? resolverComboCompuesto(detalle.getProductoSimple()) : Optional.empty();
-            if (comboCompuesto.isPresent()) {
-                // Combo compuesto: la venta descontó cada componente, así que se devuelven los componentes
-                List<ComboComponente> componentes = new ArrayList<>(comboCompuesto.get().getComponentes());
-                componentes.sort(java.util.Comparator.comparing(cc -> cc.getComponente().getId()));
-                for (ComboComponente cc : componentes) {
-                    BigDecimal factor = cc.getCantidad() != null ? cc.getCantidad() : BigDecimal.ONE;
-                    reintegrarComponenteDeCombo(cc.getComponente(), factor.multiply(BigDecimal.valueOf(detalle.getCantidad())),
-                            detalleLog, usuarioCancelacion);
-                }
-            } else if (detalle.getTipoItem() == TipoItemPedido.PRODUCTO_SIMPLE && detalle.getProductoSimple() != null) {
-                ProductoSimple prod = detalle.getProductoSimple();
-                if (prod.getStock() != null) {
-                    productoSimpleRepository.aumentarStock(prod.getId(), detalle.getCantidad());
-                    entityManager.refresh(prod);
-                    stockMaestroService.espejarProductoSimple(prod, BigDecimal.valueOf(detalle.getCantidad()));
-                    double stockPost = prod.getStock().doubleValue();
-                    double stockAnt = stockPost - detalle.getCantidad();
-                    inventarioService.registrarMovimientoInterno(
-                            TipoItemStock.PRODUCTO,
-                            prod.getId(),
-                            prod.getNombre(),
-                            TipoMovimientoStock.REINTEGRO_CANCELACION,
-                            detalle.getCantidad().doubleValue(),
-                            stockAnt,
-                            stockPost,
-                            detalleLog,
-                            usuarioCancelacion
-                    );
-                }
-            } else if (detalle.getTipoItem() == TipoItemPedido.HELADO) {
-                // Reintegrar envases/cucuruchos
-                if (detalle.getPresentacion() != null && detalle.getPresentacion().getStock() != null) {
-                    Presentacion pres = detalle.getPresentacion();
-                    presentacionRepository.aumentarStock(pres.getId(), detalle.getCantidad());
-                    entityManager.refresh(pres);
-                    stockMaestroService.espejarPresentacion(pres, BigDecimal.valueOf(detalle.getCantidad()));
-                    double stockPost = pres.getStock().doubleValue();
-                    double stockAnt = stockPost - detalle.getCantidad();
-                    inventarioService.registrarMovimientoInterno(
-                            TipoItemStock.ENVASE,
-                            pres.getId(),
-                            pres.getNombre(),
-                            TipoMovimientoStock.REINTEGRO_CANCELACION,
-                            detalle.getCantidad().doubleValue(),
-                            stockAnt,
-                            stockPost,
-                            detalleLog,
-                            usuarioCancelacion
-                    );
-                }
-
-                // Reintegrar kilos de sabores
-                if (detalle.getPresentacion() != null && detalle.getPresentacion().getPesoGramosAprox() != null
-                        && detalle.getPresentacion().getPesoGramosAprox() > 0
-                        && detalle.getSabores() != null && !detalle.getSabores().isEmpty()) {
-                    double kilosPorSabor = Math.round((((double) detalle.getPresentacion().getPesoGramosAprox() * detalle.getCantidad())
-                            / (1000.0 * detalle.getSabores().size())) * 1000.0) / 1000.0;
-
-                    for (Sabor sabor : detalle.getSabores()) {
-                        if (sabor.getStockKilos() != null) {
-                            saborRepository.aumentarStockKilos(sabor.getId(), kilosPorSabor);
-                            entityManager.refresh(sabor);
-                            stockMaestroService.espejarSabor(sabor, BigDecimal.valueOf(kilosPorSabor));
-                            double nuevoStock = Math.round(sabor.getStockKilos() * 1000.0) / 1000.0;
-                            double stockAnt = Math.round((nuevoStock - kilosPorSabor) * 1000.0) / 1000.0;
-                            if (nuevoStock > 0.001 && !Boolean.TRUE.equals(sabor.getDisponible())) {
-                                sabor.setDisponible(true);
-                                saborRepository.save(sabor);
-                            }
-                            inventarioService.registrarMovimientoInterno(
-                                    TipoItemStock.SABOR,
-                                    sabor.getId(),
-                                    sabor.getNombre(),
-                                    TipoMovimientoStock.REINTEGRO_CANCELACION,
-                                    kilosPorSabor,
-                                    stockAnt,
-                                    nuevoStock,
-                                    detalleLog,
-                                    usuarioCancelacion
-                            );
-                        }
-                    }
-                }
-            }
+            reintegrarStockDetalle(detalle, detalle.getCantidad(), detalleLog, usuarioCancelacion);
         }
 
         pedido.setEstado(EstadoPedido.CANCELADO);
@@ -928,6 +843,99 @@ public class PedidoService {
         );
 
         return guardado;
+    }
+
+    /**
+     * Devuelve al inventario la cantidad indicada de una línea de venta (anulación total o devolución parcial
+     * con nota de crédito). Un combo compuesto devuelve sus componentes; un helado, el envase y los kilos de sabor.
+     */
+    public void reintegrarStockDetalle(DetallePedido detalle, int cantidad, String detalleLog, String usuarioCancelacion) {
+        Optional<Producto> comboCompuesto = (detalle.getTipoItem() == TipoItemPedido.PRODUCTO_SIMPLE && detalle.getProductoSimple() != null)
+                ? resolverComboCompuesto(detalle.getProductoSimple()) : Optional.empty();
+        if (comboCompuesto.isPresent()) {
+            // Combo compuesto: la venta descontó cada componente, así que se devuelven los componentes
+            List<ComboComponente> componentes = new ArrayList<>(comboCompuesto.get().getComponentes());
+            componentes.sort(java.util.Comparator.comparing(cc -> cc.getComponente().getId()));
+            for (ComboComponente cc : componentes) {
+                BigDecimal factor = cc.getCantidad() != null ? cc.getCantidad() : BigDecimal.ONE;
+                reintegrarComponenteDeCombo(cc.getComponente(), factor.multiply(BigDecimal.valueOf(cantidad)),
+                        detalleLog, usuarioCancelacion);
+            }
+        } else if (detalle.getTipoItem() == TipoItemPedido.PRODUCTO_SIMPLE && detalle.getProductoSimple() != null) {
+            ProductoSimple prod = detalle.getProductoSimple();
+            if (prod.getStock() != null) {
+                productoSimpleRepository.aumentarStock(prod.getId(), cantidad);
+                entityManager.refresh(prod);
+                stockMaestroService.espejarProductoSimple(prod, BigDecimal.valueOf(cantidad));
+                double stockPost = prod.getStock().doubleValue();
+                double stockAnt = stockPost - cantidad;
+                inventarioService.registrarMovimientoInterno(
+                        TipoItemStock.PRODUCTO,
+                        prod.getId(),
+                        prod.getNombre(),
+                        TipoMovimientoStock.REINTEGRO_CANCELACION,
+                        (double) cantidad,
+                        stockAnt,
+                        stockPost,
+                        detalleLog,
+                        usuarioCancelacion
+                );
+            }
+        } else if (detalle.getTipoItem() == TipoItemPedido.HELADO) {
+            // Reintegrar envases/cucuruchos
+            if (detalle.getPresentacion() != null && detalle.getPresentacion().getStock() != null) {
+                Presentacion pres = detalle.getPresentacion();
+                presentacionRepository.aumentarStock(pres.getId(), cantidad);
+                entityManager.refresh(pres);
+                stockMaestroService.espejarPresentacion(pres, BigDecimal.valueOf(cantidad));
+                double stockPost = pres.getStock().doubleValue();
+                double stockAnt = stockPost - cantidad;
+                inventarioService.registrarMovimientoInterno(
+                        TipoItemStock.ENVASE,
+                        pres.getId(),
+                        pres.getNombre(),
+                        TipoMovimientoStock.REINTEGRO_CANCELACION,
+                        (double) cantidad,
+                        stockAnt,
+                        stockPost,
+                        detalleLog,
+                        usuarioCancelacion
+                );
+            }
+
+            // Reintegrar kilos de sabores
+            if (detalle.getPresentacion() != null && detalle.getPresentacion().getPesoGramosAprox() != null
+                    && detalle.getPresentacion().getPesoGramosAprox() > 0
+                    && detalle.getSabores() != null && !detalle.getSabores().isEmpty()) {
+                double kilosPorSabor = Math.round((((double) detalle.getPresentacion().getPesoGramosAprox() * cantidad)
+                        / (1000.0 * detalle.getSabores().size())) * 1000.0) / 1000.0;
+
+                for (Sabor sabor : detalle.getSabores()) {
+                    if (sabor.getStockKilos() != null) {
+                        saborRepository.aumentarStockKilos(sabor.getId(), kilosPorSabor);
+                        entityManager.refresh(sabor);
+                        stockMaestroService.espejarSabor(sabor, BigDecimal.valueOf(kilosPorSabor));
+                        double nuevoStock = Math.round(sabor.getStockKilos() * 1000.0) / 1000.0;
+                        double stockAnt = Math.round((nuevoStock - kilosPorSabor) * 1000.0) / 1000.0;
+                        if (nuevoStock > 0.001 && !Boolean.TRUE.equals(sabor.getDisponible())) {
+                            sabor.setDisponible(true);
+                            saborRepository.save(sabor);
+                        }
+                        inventarioService.registrarMovimientoInterno(
+                                TipoItemStock.SABOR,
+                                sabor.getId(),
+                                sabor.getNombre(),
+                                TipoMovimientoStock.REINTEGRO_CANCELACION,
+                                kilosPorSabor,
+                                stockAnt,
+                                nuevoStock,
+                                detalleLog,
+                                usuarioCancelacion
+                        );
+                    }
+                }
+            }
+        }
     }
 
     @Transactional(readOnly = true)
