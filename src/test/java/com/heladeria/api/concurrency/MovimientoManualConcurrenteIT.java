@@ -60,13 +60,13 @@ class MovimientoManualConcurrenteIT {
     @Autowired ProductoSimpleRepository productoSimpleRepository;
 
     @Test
-    @DisplayName("8 entradas manuales simultaneas suman 8: no se pierden actualizaciones")
+    @DisplayName("20 entradas manuales simultaneas suman 20: no se pierden actualizaciones")
     void entradasSimultaneasNoPierdenStock() throws Exception {
         ProductoSimple prod = productoSimpleRepository.save(ProductoSimple.builder()
                 .nombre("Alfajor Manual " + UUID.randomUUID())
                 .precio(new BigDecimal("5000")).stock(0).activo(true).build());
 
-        int n = 8;
+        int n = 20;
         ExecutorService pool = Executors.newFixedThreadPool(n);
         CyclicBarrier barrera = new CyclicBarrier(n);
         List<Future<?>> futuros = new ArrayList<>();
@@ -85,6 +85,6 @@ class MovimientoManualConcurrenteIT {
         for (Future<?> f : futuros) f.get(60, TimeUnit.SECONDS);
         pool.shutdown();
 
-        assertEquals(8, productoSimpleRepository.findById(prod.getId()).orElseThrow().getStock());
+        assertEquals(20, productoSimpleRepository.findById(prod.getId()).orElseThrow().getStock());
     }
 }
