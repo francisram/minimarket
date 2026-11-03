@@ -38,6 +38,8 @@ public class DataSeeder implements CommandLineRunner {
     private final String defaultOwnerPassword;
     /** true con PostgreSQL: no se siembran usuarios con contraseñas conocidas. */
     private final boolean produccion;
+    /** Datos de demostración (catálogo, proveedores, 2.ª caja, datos fiscales y de contacto de ejemplo). */
+    private final boolean datosDemo;
 
     public DataSeeder(PaginaRepository paginaRepository,
                       PlanLicenciaRepository planLicenciaRepository,
@@ -52,8 +54,10 @@ public class DataSeeder implements CommandLineRunner {
                       ProveedorRepository proveedorRepository,
                       @Value("${app.security.default-admin-password:}") String defaultAdminPassword,
                       @Value("${app.security.default-owner-password:}") String defaultOwnerPassword,
-                      @Value("${spring.datasource.url:}") String datasourceUrl) {
+                      @Value("${spring.datasource.url:}") String datasourceUrl,
+                      @Value("${app.seed.datos-demo:}") String datosDemoConfigurado) {
         this.produccion = datasourceUrl != null && datasourceUrl.startsWith("jdbc:postgresql");
+        this.datosDemo = datosDemoActivos(datosDemoConfigurado, produccion);
         this.paginaRepository = paginaRepository;
         this.planLicenciaRepository = planLicenciaRepository;
         this.licenciaRepository = licenciaRepository;
@@ -67,6 +71,15 @@ public class DataSeeder implements CommandLineRunner {
         this.proveedorRepository = proveedorRepository;
         this.defaultAdminPassword = defaultAdminPassword;
         this.defaultOwnerPassword = defaultOwnerPassword;
+    }
+
+    /**
+     * Sin configurar, los datos de demostración solo existen en desarrollo (H2). En producción (PostgreSQL) la base
+     * arranca limpia: solo lo imprescindible (páginas, planes, roles, usuarios admin/owner, institución y la 1.ª caja).
+     * APP_SEED_DATOS_DEMO=true/false fuerza el comportamiento (p. ej. un equipo de pruebas con catálogo de ejemplo).
+     */
+    public static boolean datosDemoActivos(String configurado, boolean produccion) {
+        return configurado != null && !configurado.isBlank() ? Boolean.parseBoolean(configurado.trim()) : !produccion;
     }
 
     @Override
@@ -251,7 +264,7 @@ public class DataSeeder implements CommandLineRunner {
         }
         // RUC y timbrado de demostración solo en desarrollo: en producción un dato fiscal inventado
         // acabaría impreso en comprobantes, así que se deja vacío (y no se puede facturar) hasta cargar el real.
-        if (!produccion) {
+        if (datosDemo) {
             if (inst.getRuc() == null) {
                 inst.setRuc("80099887-1");
             }
@@ -280,14 +293,16 @@ public class DataSeeder implements CommandLineRunner {
         if (inst.getUltimoNumeroFactura() == null) {
             inst.setUltimoNumeroFactura(0L);
         }
-        if (inst.getDireccion() == null) {
-            inst.setDireccion("Av. Mariscal López 1234");
-        }
-        if (inst.getTelefono() == null) {
-            inst.setTelefono("021-123456");
-        }
-        if (inst.getCiudad() == null) {
-            inst.setCiudad("Asunción");
+        if (datosDemo) {
+            if (inst.getDireccion() == null) {
+                inst.setDireccion("Av. Mariscal López 1234");
+            }
+            if (inst.getTelefono() == null) {
+                inst.setTelefono("021-123456");
+            }
+            if (inst.getCiudad() == null) {
+                inst.setCiudad("Asunción");
+            }
         }
 
         Institucion instGuardada = institucionRepository.save(inst);
@@ -300,9 +315,9 @@ public class DataSeeder implements CommandLineRunner {
             String estab = (inst != null && inst.getEstablecimiento() != null && !inst.getEstablecimiento().isBlank()) ? inst.getEstablecimiento() : "001";
             String pto1 = (inst != null && inst.getPuntoEmision() != null && !inst.getPuntoEmision().isBlank()) ? inst.getPuntoEmision() : "001";
             // En producción no se inventa un timbrado: queda vacío (y no se puede facturar) hasta cargar el real
-            String timbrado = (inst != null && inst.getTimbrado() != null) ? inst.getTimbrado() : (produccion ? null : "17894561");
-            LocalDate vencimiento = (inst != null && inst.getTimbradoVencimiento() != null) ? inst.getTimbradoVencimiento() : (produccion ? null : LocalDate.now().plusYears(1));
-            LocalDate inicio = (inst != null && inst.getTimbradoInicio() != null) ? inst.getTimbradoInicio() : (produccion ? null : LocalDate.now().minusMonths(1));
+            String timbrado = (inst != null && inst.getTimbrado() != null) ? inst.getTimbrado() : (!datosDemo ? null : "17894561");
+            LocalDate vencimiento = (inst != null && inst.getTimbradoVencimiento() != null) ? inst.getTimbradoVencimiento() : (!datosDemo ? null : LocalDate.now().plusYears(1));
+            LocalDate inicio = (inst != null && inst.getTimbradoInicio() != null) ? inst.getTimbradoInicio() : (!datosDemo ? null : LocalDate.now().minusMonths(1));
             Long ultimo = (inst != null && inst.getUltimoNumeroFactura() != null) ? inst.getUltimoNumeroFactura() : 0L;
 
             PuntoExpedicion p1 = PuntoExpedicion.builder()
@@ -331,8 +346,13 @@ public class DataSeeder implements CommandLineRunner {
                     .activo(true)
                     .build();
 
-            puntoExpedicionRepository.saveAll(List.of(p1, p2));
-            log.info("[SEED] Puntos de expedición inicializados: Caja 1 ({}-{}) y Caja 2 ({}-002).", estab, pto1, estab);
+            if (datosDemo) {
+                puntoExpedicionRepository.saveAll(List.of(p1, p2));
+                log.info("[SEED] Puntos de expedición de demostración: Caja 1 ({}-{}) y Caja 2 ({}-002).", estab, pto1, estab);
+            } else {
+                puntoExpedicionRepository.save(p1);
+                log.info("[SEED] Punto de expedición inicial: Caja 1 ({}-{}). Falta cargar el timbrado real.", estab, pto1);
+            }
         }
     }
 
@@ -346,6 +366,10 @@ public class DataSeeder implements CommandLineRunner {
             consumidorFinal.setFechaCreacion(LocalDateTime.now());
             clienteRepository.save(consumidorFinal);
 
+            if (!datosDemo) {
+                log.info("[SEED] Cliente 'Consumidor Final' creado.");
+                return;
+            }
             Cliente distribuidora = new Cliente();
             distribuidora.setRuc("80012345-6");
             distribuidora.setRazonSocial("Distribuidora Central S.R.L.");
@@ -360,7 +384,7 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private void sembrarProveedores() {
-        if (proveedorRepository.count() == 0) {
+        if (datosDemo && proveedorRepository.count() == 0) {
             Proveedor lacteos = new Proveedor();
             lacteos.setRuc("80098765-4");
             lacteos.setRazonSocial("Lácteos del Valle S.A.");

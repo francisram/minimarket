@@ -29,6 +29,7 @@ public class DataInitializer implements CommandLineRunner {
     private final ProductoService productoService;
     private final CategoriaRepository categoriaRepository;
     private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+    private final boolean datosDemo;
 
     public DataInitializer(SaborRepository saborRepository,
                            PresentacionRepository presentacionRepository,
@@ -39,7 +40,11 @@ public class DataInitializer implements CommandLineRunner {
                            CompraRepository compraRepository,
                            ProductoService productoService,
                            CategoriaRepository categoriaRepository,
-                           org.springframework.jdbc.core.JdbcTemplate jdbcTemplate) {
+                           org.springframework.jdbc.core.JdbcTemplate jdbcTemplate,
+                           @org.springframework.beans.factory.annotation.Value("${spring.datasource.url:}") String datasourceUrl,
+                           @org.springframework.beans.factory.annotation.Value("${app.seed.datos-demo:}") String datosDemoConfigurado) {
+        this.datosDemo = DataSeeder.datosDemoActivos(datosDemoConfigurado,
+                datasourceUrl != null && datasourceUrl.startsWith("jdbc:postgresql"));
         this.saborRepository = saborRepository;
         this.presentacionRepository = presentacionRepository;
         this.toppingRepository = toppingRepository;
@@ -93,6 +98,13 @@ public class DataInitializer implements CommandLineRunner {
                 Categoria.builder().nombre("Maquinaria & Frío").descripcion("Freezers, heladeras exhibidoras, pozos de frío y balanzas").tipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.ACTIVO_FIJO).activo(true).build(),
                 Categoria.builder().nombre("Mobiliario & Salón").descripcion("Mesas, sillas, sombrillas y cartelería del local").tipoArticulo(com.heladeria.api.entities.enums.TipoArticulo.ACTIVO_FIJO).activo(true).build()
             ));
+        }
+
+        if (!datosDemo) {
+            // Instalación limpia: quedan las categorías (estructura), pero ningún sabor, producto, compra ni proveedor de ejemplo
+            log.info("Instalación limpia: no se precarga el catálogo de demostración.");
+            sincronizarCatalogosExistentes();
+            return;
         }
 
         if (saborRepository.count() == 0) {

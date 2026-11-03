@@ -65,6 +65,8 @@ services:
       # (ruta del host: NAS, disco USB o montaje de red; debe ser escribible por el usuario de la API).
       APP_BACKUP_COPIA_EXTERNA_DIR: ${BACKUP_EXTERNAL_DIR:+/app/backups-externos}
       # Orígenes CORS permitidos (el front en nginx usa el proxy /api, o sea mismo origen)
+      # Instalación limpia por defecto (sin catálogo de demostración). APP_SEED_DATOS_DEMO=true en .env carga datos de ejemplo.
+      APP_SEED_DATOS_DEMO: ${APP_SEED_DATOS_DEMO:-false}
       APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://localhost:8086,https://localhost:8443}
       SPRING_JPA_HIBERNATE_DDL_AUTO: validate
     volumes:
