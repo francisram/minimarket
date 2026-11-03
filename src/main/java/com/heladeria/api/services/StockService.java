@@ -13,11 +13,15 @@ import com.heladeria.api.repositories.SaborRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
 public class StockService {
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private StockMaestroService stockMaestroService;
 
     private final ProductoSimpleRepository productoSimpleRepository;
     private final SaborRepository saborRepository;
@@ -141,7 +145,9 @@ public class StockService {
                 .orElseThrow(() -> new RecursoNoEncontradoException("Producto con id " + id + " no encontrado"));
 
         if (dto.getStock() != null) {
+            int anterior = prod.getStock() != null ? prod.getStock() : 0;
             prod.setStock(dto.getStock());
+            stockMaestroService.espejarProductoSimple(prod, BigDecimal.valueOf(dto.getStock() - anterior));
         }
         if (dto.getStockMinimo() != null) {
             prod.setStockMinimo(dto.getStockMinimo());
@@ -156,7 +162,9 @@ public class StockService {
                 .orElseThrow(() -> new RecursoNoEncontradoException("Sabor con id " + id + " no encontrado"));
 
         if (dto.getStockKilos() != null) {
+            double anterior = sabor.getStockKilos() != null ? sabor.getStockKilos() : 0.0;
             sabor.setStockKilos(dto.getStockKilos());
+            stockMaestroService.espejarSabor(sabor, BigDecimal.valueOf(dto.getStockKilos() - anterior));
             if (dto.getStockKilos() > 0.001) {
                 sabor.setDisponible(true);
             } else {
@@ -176,7 +184,9 @@ public class StockService {
                 .orElseThrow(() -> new RecursoNoEncontradoException("Presentación con id " + id + " no encontrada"));
 
         if (dto.getStock() != null) {
+            int anterior = pres.getStock() != null ? pres.getStock() : 0;
             pres.setStock(dto.getStock());
+            stockMaestroService.espejarPresentacion(pres, BigDecimal.valueOf(dto.getStock() - anterior));
         }
         if (dto.getStockMinimo() != null) {
             pres.setStockMinimo(dto.getStockMinimo());

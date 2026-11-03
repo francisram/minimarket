@@ -399,7 +399,7 @@ public class DataInitializer implements CommandLineRunner {
                         productoRepository.save(prod);
                     }
                 }
-                productoService.sincronizarConCatalogoOperativo(prod);
+                productoService.sincronizarConCatalogoOperativo(prod, true);
             }
             log.info("Homologación de catálogos existentes completada.");
         } catch (Exception e) {

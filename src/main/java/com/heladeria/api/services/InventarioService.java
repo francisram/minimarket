@@ -55,6 +55,9 @@ public class InventarioService {
     @PersistenceContext
     private EntityManager entityManager;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private StockMaestroService stockMaestroService;
+
     @Transactional
     public MovimientoStockDTO registrarMovimientoManual(RegistrarMovimientoDTO dto, String usuario) {
         if (dto.getCantidad() == null || dto.getCantidad() <= 0) {
@@ -82,6 +85,7 @@ public class InventarioService {
             entityManager.flush();
             entityManager.refresh(prod);
             stockPosterior = prod.getStock().doubleValue();
+            stockMaestroService.espejarProductoSimple(prod, BigDecimal.valueOf(stockPosterior - stockAnterior));
 
         } else if (dto.getTipoItem() == TipoItemStock.SABOR) {
             Sabor sabor = saborRepository.findById(dto.getItemId())
@@ -98,6 +102,7 @@ public class InventarioService {
             entityManager.flush();
             entityManager.refresh(sabor);
             stockPosterior = Math.round(sabor.getStockKilos() * 1000.0) / 1000.0;
+            stockMaestroService.espejarSabor(sabor, BigDecimal.valueOf(stockPosterior - stockAnterior));
             sabor.setStockKilos(stockPosterior);
             sabor.setDisponible(stockPosterior > 0.001);
             saborRepository.save(sabor);
@@ -118,6 +123,7 @@ public class InventarioService {
             entityManager.flush();
             entityManager.refresh(pres);
             stockPosterior = pres.getStock().doubleValue();
+            stockMaestroService.espejarPresentacion(pres, BigDecimal.valueOf(stockPosterior - stockAnterior));
         }
 
         MovimientoStock movimiento = MovimientoStock.builder()
@@ -357,6 +363,7 @@ public class InventarioService {
                         totalDiferencias++;
                         prod.setStock((int) Math.round(item.getStockFisico()));
                         productoSimpleRepository.save(prod);
+                        stockMaestroService.espejarProductoSimple(prod, BigDecimal.valueOf(Math.round(item.getStockFisico()) - stockSistema));
 
                         registrarMovimientoInterno(
                                 TipoItemStock.PRODUCTO,
@@ -388,6 +395,7 @@ public class InventarioService {
                         sabor.setStockKilos(nuevoStock);
                         sabor.setDisponible(nuevoStock > 0.001);
                         saborRepository.save(sabor);
+                        stockMaestroService.espejarSabor(sabor, BigDecimal.valueOf(nuevoStock - stockSistema));
 
                         registrarMovimientoInterno(
                                 TipoItemStock.SABOR,
@@ -416,6 +424,7 @@ public class InventarioService {
                         totalDiferencias++;
                         pres.setStock((int) Math.round(item.getStockFisico()));
                         presentacionRepository.save(pres);
+                        stockMaestroService.espejarPresentacion(pres, BigDecimal.valueOf(Math.round(item.getStockFisico()) - stockSistema));
 
                         registrarMovimientoInterno(
                                 TipoItemStock.ENVASE,

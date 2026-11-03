@@ -60,6 +60,9 @@ public class PedidoService {
     @PersistenceContext
     private EntityManager entityManager;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private StockMaestroService stockMaestroService;
+
     public PedidoService(PedidoRepository pedidoRepository,
                          PresentacionRepository presentacionRepository,
                          SaborRepository saborRepository,
@@ -347,6 +350,7 @@ public class PedidoService {
                         throw new ReglaDeNegocioException("Stock insuficiente de envases para '" + presentacion.getNombre() +
                                 "'. Disponible: " + presentacion.getStock() + ", Solicitado: " + cant);
                     }
+                    stockMaestroService.espejarPresentacion(presentacion, BigDecimal.valueOf(-cant));
                     double stockPost = presentacion.getStock().doubleValue();
                     double stockAnt = stockPost + cant;
                     inventarioService.registrarMovimientoInterno(
@@ -402,6 +406,7 @@ public class PedidoService {
                                         "Stock insuficiente de helado para el sabor '%s'. Disponible: %.2f kg, Solicitado: %.2f kg",
                                         sabor.getNombre(), sabor.getStockKilos(), kilosPorSabor));
                             }
+                            stockMaestroService.espejarSabor(sabor, BigDecimal.valueOf(-kilosPorSabor));
                             double nuevoStock = sabor.getStockKilos();
                             double stockAnt = Math.round((nuevoStock + kilosPorSabor) * 1000.0) / 1000.0;
                             if (nuevoStock <= 0.001) {
@@ -481,6 +486,7 @@ public class PedidoService {
                             throw new ReglaDeNegocioException("Stock insuficiente para '" + prod.getNombre() +
                                     "'. Disponible: " + prod.getStock() + ", Solicitado: " + cant);
                         }
+                        stockMaestroService.espejarProductoSimple(prod, BigDecimal.valueOf(-cant));
                         double stockPost = prod.getStock().doubleValue();
                         double stockAnt = stockPost + cant;
                         inventarioService.registrarMovimientoInterno(
@@ -831,6 +837,7 @@ public class PedidoService {
                 if (prod.getStock() != null) {
                     productoSimpleRepository.aumentarStock(prod.getId(), detalle.getCantidad());
                     entityManager.refresh(prod);
+                    stockMaestroService.espejarProductoSimple(prod, BigDecimal.valueOf(detalle.getCantidad()));
                     double stockPost = prod.getStock().doubleValue();
                     double stockAnt = stockPost - detalle.getCantidad();
                     inventarioService.registrarMovimientoInterno(
@@ -851,6 +858,7 @@ public class PedidoService {
                     Presentacion pres = detalle.getPresentacion();
                     presentacionRepository.aumentarStock(pres.getId(), detalle.getCantidad());
                     entityManager.refresh(pres);
+                    stockMaestroService.espejarPresentacion(pres, BigDecimal.valueOf(detalle.getCantidad()));
                     double stockPost = pres.getStock().doubleValue();
                     double stockAnt = stockPost - detalle.getCantidad();
                     inventarioService.registrarMovimientoInterno(
@@ -877,6 +885,7 @@ public class PedidoService {
                         if (sabor.getStockKilos() != null) {
                             saborRepository.aumentarStockKilos(sabor.getId(), kilosPorSabor);
                             entityManager.refresh(sabor);
+                            stockMaestroService.espejarSabor(sabor, BigDecimal.valueOf(kilosPorSabor));
                             double nuevoStock = Math.round(sabor.getStockKilos() * 1000.0) / 1000.0;
                             double stockAnt = Math.round((nuevoStock - kilosPorSabor) * 1000.0) / 1000.0;
                             if (nuevoStock > 0.001 && !Boolean.TRUE.equals(sabor.getDisponible())) {

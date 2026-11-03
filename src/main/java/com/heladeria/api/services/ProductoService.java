@@ -154,7 +154,7 @@ public class ProductoService {
                 ", Precio Venta: Gs. " + guardado.getPrecioVenta() + ", Costo: Gs. " + guardado.getPrecioCosto()
         );
 
-        sincronizarConCatalogoOperativo(guardado);
+        sincronizarConCatalogoOperativo(guardado, true);
         return mapToDTO(guardado);
     }
 
@@ -165,6 +165,7 @@ public class ProductoService {
 
         validarUnicidad(dto.getNombre(), dto.getCodigoBarra(), id);
 
+        boolean stockEditado = dto.getStock() != null && (producto.getStock() == null || dto.getStock().compareTo(producto.getStock()) != 0);
         StringBuilder cambios = new StringBuilder();
         if (dto.getPrecioVenta() != null && (producto.getPrecioVenta() == null || dto.getPrecioVenta().compareTo(producto.getPrecioVenta()) != 0)) {
             cambios.append("Precio venta: Gs. ").append(producto.getPrecioVenta()).append(" ➔ Gs. ").append(dto.getPrecioVenta()).append("; ");
@@ -267,7 +268,7 @@ public class ProductoService {
                 cambios.toString().trim()
         );
 
-        sincronizarConCatalogoOperativo(producto);
+        sincronizarConCatalogoOperativo(producto, stockEditado);
         return mapToDTO(producto);
     }
 
@@ -462,8 +463,20 @@ public class ProductoService {
         return dto;
     }
 
+    /** Sincroniza datos del maestro hacia el operativo SIN pisar el stock operativo existente. */
     @Transactional
     public void sincronizarConCatalogoOperativo(Producto p) {
+        sincronizarConCatalogoOperativo(p, false);
+    }
+
+    /**
+     * @param forzarStock true solo cuando alguien editó el stock del maestro a propósito (alta o edición manual):
+     *                    ahí el valor se copia tal cual. En cualquier otro caso el stock del registro operativo
+     *                    ya existente se respeta, porque las ventas lo mueven y copiar el del maestro (que puede
+     *                    estar atrasado) lo "resucitaba".
+     */
+    @Transactional
+    public void sincronizarConCatalogoOperativo(Producto p, boolean forzarStock) {
         if (p == null || p.getTipoArticulo() == null) {
             return;
         }
@@ -483,7 +496,7 @@ public class ProductoService {
                     s.setSinAzucar(Boolean.TRUE.equals(p.getSinAzucar()));
                     s.setDisponible(p.getActivo() == null || p.getActivo());
                     s.setImagenUrl(p.getImagenUrl());
-                    if (p.getStock() != null) {
+                    if (p.getStock() != null && (opt.isEmpty() || forzarStock)) {
                         s.setStockKilos(p.getStock().doubleValue());
                     }
                     if (p.getStockMinimo() != null) {
@@ -504,7 +517,7 @@ public class ProductoService {
                     pres.setPesoGramosAprox(p.getPesoGramosAprox() != null ? p.getPesoGramosAprox() : (pres.getPesoGramosAprox() != null ? pres.getPesoGramosAprox() : 250));
                     pres.setActivo(p.getActivo() == null || p.getActivo());
                     pres.setImagenUrl(p.getImagenUrl());
-                    if (p.getStock() != null) {
+                    if (p.getStock() != null && (opt.isEmpty() || forzarStock)) {
                         pres.setStock(p.getStock().intValue());
                     }
                     if (p.getStockMinimo() != null) {
@@ -597,7 +610,7 @@ public class ProductoService {
                     if (p.getTipoIva() != null) {
                         ps.setTipoIva(p.getTipoIva());
                     }
-                    if (p.getStock() != null) {
+                    if (p.getStock() != null && (opt.isEmpty() || forzarStock)) {
                         ps.setStock(p.getStock().intValue());
                     }
                     if (p.getStockMinimo() != null) {

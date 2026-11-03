@@ -40,6 +40,7 @@ public class CompraService {
     private final MovimientoStockRepository movimientoStockRepository;
     private final AuditoriaService auditoriaService;
     private final ProductoService productoService;
+    private final StockMaestroService stockMaestroService;
 
     public CompraService(CompraRepository compraRepository,
                          DetalleCompraRepository detalleCompraRepository,
@@ -48,7 +49,8 @@ public class CompraService {
                          ProductoProveedorRepository productoProveedorRepository,
                          MovimientoStockRepository movimientoStockRepository,
                          AuditoriaService auditoriaService,
-                         ProductoService productoService) {
+                         ProductoService productoService,
+                         StockMaestroService stockMaestroService) {
         this.compraRepository = compraRepository;
         this.detalleCompraRepository = detalleCompraRepository;
         this.proveedorRepository = proveedorRepository;
@@ -57,6 +59,7 @@ public class CompraService {
         this.movimientoStockRepository = movimientoStockRepository;
         this.auditoriaService = auditoriaService;
         this.productoService = productoService;
+        this.stockMaestroService = stockMaestroService;
     }
 
     @Transactional(readOnly = true)
@@ -181,6 +184,7 @@ public class CompraService {
             double cantDouble = cantidad.doubleValue();
             productoRepository.aumentarStock(producto.getId(), cantidad);
             entityManager.refresh(producto);
+            stockMaestroService.aplicarEnOperativo(producto, cantidad);
             double stockPosterior = producto.getStock().doubleValue();
             double stockAnterior = stockPosterior - cantDouble;
 
@@ -269,6 +273,7 @@ public class CompraService {
                 double cantDouble = cantRev.doubleValue();
                 productoRepository.reducirStockHastaCero(producto.getId(), cantRev);
                 entityManager.refresh(producto);
+                stockMaestroService.aplicarEnOperativo(producto, cantRev.negate());
                 double stockPosterior = producto.getStock().doubleValue();
                 producto = productoRepository.save(producto);
                 productoService.sincronizarConCatalogoOperativo(producto);
