@@ -3,6 +3,7 @@ package com.heladeria.api.repositories;
 import com.heladeria.api.entities.Producto;
 import com.heladeria.api.entities.enums.TipoArticulo;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -41,4 +42,9 @@ public interface ProductoRepository extends JpaRepository<Producto, Long> {
            "(p.codigoBarra IS NOT NULL AND LOWER(p.codigoBarra) LIKE LOWER(CONCAT('%', :filtro, '%'))) OR " +
            "(p.sku IS NOT NULL AND LOWER(p.sku) LIKE LOWER(CONCAT('%', :filtro, '%')))")
     List<Producto> buscarPorFiltro(@Param("filtro") String filtro);
+
+    /** Descuento atómico del maestro de productos: 0 filas afectadas si el stock no alcanza. */
+    @Modifying(flushAutomatically = true)
+    @Query("update Producto p set p.stock = p.stock - :cantidad where p.id = :id and p.stock >= :cantidad")
+    int descontarStock(@Param("id") Long id, @Param("cantidad") java.math.BigDecimal cantidad);
 }

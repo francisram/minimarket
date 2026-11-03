@@ -57,6 +57,7 @@ class StockConcurrenciaIT {
     @Autowired ProductoSimpleRepository productoSimpleRepository;
     @Autowired SaborRepository saborRepository;
     @Autowired PresentacionRepository presentacionRepository;
+    @Autowired ProductoRepository productoRepository;
 
     private List<String> crearCajeros(int n) {
         List<String> usernames = new ArrayList<>();
@@ -175,5 +176,46 @@ class StockConcurrenciaIT {
         assertEquals(3, r[1]);
         Sabor finalSabor = saborRepository.findById(sabor.getId()).orElseThrow();
         assertEquals(0.0, finalSabor.getStockKilos(), 0.0005);
+    }
+
+    @Test
+    @DisplayName("Combo con un componente de 1 unidad: solo una de 6 ventas concurrentes prospera y nada queda negativo")
+    void ultimaUnidadDeComponenteDeCombo() throws Exception {
+        String sufijo = UUID.randomUUID().toString().substring(0, 8);
+        ProductoSimple gaseosaOp = productoSimpleRepository.save(ProductoSimple.builder().nombre("Gaseosa " + sufijo)
+                .precio(new BigDecimal("8000")).stock(1).activo(true).build());
+        ProductoSimple comboVenta = productoSimpleRepository.save(ProductoSimple.builder().nombre("Combo " + sufijo)
+                .precio(new BigDecimal("20000")).stock(0).activo(true).build());
+        Producto gaseosaM = productoRepository.save(maestro("Gaseosa " + sufijo, TipoArticulo.VENTA_DIRECTA, 1));
+        Producto combo = maestro("Combo " + sufijo, TipoArticulo.COMBO, 0);
+        combo.agregarComponente(gaseosaM, BigDecimal.ONE, null);
+        productoRepository.save(combo);
+
+        DetallePedidoRequestDTO item = new DetallePedidoRequestDTO();
+        item.setTipoItem(TipoItemPedido.PRODUCTO_SIMPLE);
+        item.setProductoSimpleId(comboVenta.getId());
+        item.setCantidad(1);
+        PedidoRequestDTO req = new PedidoRequestDTO();
+        req.setClienteNombre("Consumidor Final");
+        req.setMetodoPago(MetodoPago.EFECTIVO);
+        req.setTipoEntrega(TipoEntrega.MOSTRADOR);
+        req.setItems(List.of(item));
+
+        int[] r = venderEnParalelo(crearCajeros(6), req);
+
+        assertEquals(1, r[0], "Solo una venta debe prosperar");
+        assertEquals(5, r[1]);
+        assertEquals(0, productoSimpleRepository.findById(gaseosaOp.getId()).orElseThrow().getStock());
+        assertEquals(0, BigDecimal.ZERO.compareTo(productoRepository.findById(gaseosaM.getId()).orElseThrow().getStock()));
+    }
+
+    private Producto maestro(String nombre, TipoArticulo tipo, int stock) {
+        Producto p = new Producto();
+        p.setNombre(nombre);
+        p.setTipoArticulo(tipo);
+        p.setPrecioVenta(new BigDecimal("1000"));
+        p.setStock(new BigDecimal(stock));
+        p.setActivo(true);
+        return p;
     }
 }
