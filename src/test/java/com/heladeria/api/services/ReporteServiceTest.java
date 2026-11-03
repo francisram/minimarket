@@ -296,6 +296,39 @@ class ReporteServiceTest {
     }
 
     @Test
+    @DisplayName("Una factura anulada figura en el libro IVA con importes en cero y no suma a los totales")
+    void testLibroIvaListaFacturasAnuladas() {
+        pedidoRepository.save(Pedido.builder()
+                .sesionCaja(sesion1)
+                .tipoComprobante(TipoComprobante.FACTURA)
+                .condicionVenta(CondicionVenta.CONTADO)
+                .clienteRuc("80012345-6")
+                .clienteNombre("Cliente Anulado SA")
+                .numeroFactura("001-001-0000099")
+                .trxId("TRX-ANULADA-099")
+                .metodoPago(MetodoPago.EFECTIVO)
+                .tipoEntrega(TipoEntrega.MOSTRADOR)
+                .estado(EstadoPedido.CANCELADO)
+                .fechaCreacion(hoy(0))
+                .total(new BigDecimal("77000"))
+                .build());
+
+        LibroVentasIvaDTO libro = reporteService.obtenerLibroVentasIva(LocalDate.now(), LocalDate.now());
+
+        assertEquals(2, libro.getCantidadComprobantes(), "las anuladas no cuentan como emitidas");
+        assertEquals(0, new BigDecimal("45000").compareTo(libro.getGranTotal()), "ni suman al total");
+        var anulada = libro.getItems().stream().filter(i -> "001-001-0000099".equals(i.getNumeroComprobante())).findFirst().orElseThrow();
+        assertTrue(anulada.isAnulada());
+        assertEquals(0, BigDecimal.ZERO.compareTo(anulada.getTotal()));
+
+        String csv = new String(reporteService.generarLibroVentasCsv(LocalDate.now(), LocalDate.now()), StandardCharsets.UTF_8);
+        assertTrue(csv.contains("001-001-0000099"));
+        assertTrue(csv.contains("ANULADA"));
+        // el ticket cancelado (no fiscal) sigue sin aparecer
+        assertEquals(3, libro.getItems().size());
+    }
+
+    @Test
     @DisplayName("Reporte de cajas consolida sobrantes y faltantes de dinero")
     void testObtenerReporteCajas() {
         ReporteCajasDTO reporteCajas = reporteService.obtenerReporteCajas(LocalDate.now(), LocalDate.now(), null);

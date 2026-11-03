@@ -57,6 +57,9 @@ class PedidoServiceTest {
     private InstitucionRepository institucionRepository;
 
     @Autowired
+    private PuntoExpedicionRepository puntoExpedicionRepository;
+
+    @Autowired
     private ClienteRepository clienteRepository;
 
     @Autowired
@@ -623,6 +626,65 @@ class PedidoServiceTest {
 
         ReglaDeNegocioException ex2 = assertThrows(ReglaDeNegocioException.class, () -> pedidoService.crearPedido(requestSinNombre));
         assertTrue(ex2.getMessage().contains("debe indicar el RUC y la Razón Social"));
+    }
+
+    @Test
+    @DisplayName("No se puede facturar si no hay timbrado cargado (no se imprime uno inventado)")
+    void testCrearPedidoFacturaFallaSinTimbrado() {
+        Institucion inst = institucionRepository.findById(1L).orElseGet(() -> new Institucion(1L, "Heladería", null));
+        inst.setTimbrado(null);
+        inst.setTimbradoVencimiento(null);
+        institucionRepository.save(inst);
+        puntoExpedicionRepository.findAll().forEach(pe -> {
+            pe.setTimbrado(null);
+            pe.setTimbradoVencimiento(null);
+            puntoExpedicionRepository.save(pe);
+        });
+
+        DetallePedidoRequestDTO itemHelado = new DetallePedidoRequestDTO();
+        itemHelado.setTipoItem(TipoItemPedido.HELADO);
+        itemHelado.setPresentacionId(poteMedioKg.getId());
+        itemHelado.setSaborIds(List.of(dulceDeLeche.getId()));
+        itemHelado.setCantidad(1);
+
+        PedidoRequestDTO request = new PedidoRequestDTO();
+        request.setTipoComprobante(TipoComprobante.FACTURA);
+        request.setClienteRuc("80012345-6");
+        request.setClienteNombre("Acme Corp S.A.");
+        request.setMetodoPago(MetodoPago.EFECTIVO);
+        request.setTipoEntrega(TipoEntrega.MOSTRADOR);
+        request.setItems(List.of(itemHelado));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> pedidoService.crearPedido(request));
+        assertTrue(ex.getMessage().contains("No hay un timbrado fiscal cargado"), ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("La factura guarda el timbrado y su vigencia de la emisión")
+    void testFacturaGuardaTimbradoYVigencia() {
+        Institucion inst = institucionRepository.findById(1L).orElseGet(() -> new Institucion(1L, "Heladería", null));
+        inst.setTimbrado("12345678");
+        inst.setTimbradoVencimiento(java.time.LocalDate.now().plusMonths(6));
+        institucionRepository.save(inst);
+
+        DetallePedidoRequestDTO itemHelado = new DetallePedidoRequestDTO();
+        itemHelado.setTipoItem(TipoItemPedido.HELADO);
+        itemHelado.setPresentacionId(poteMedioKg.getId());
+        itemHelado.setSaborIds(List.of(dulceDeLeche.getId()));
+        itemHelado.setCantidad(1);
+
+        PedidoRequestDTO request = new PedidoRequestDTO();
+        request.setTipoComprobante(TipoComprobante.FACTURA);
+        request.setClienteRuc("80012345-6");
+        request.setClienteNombre("Acme Corp S.A.");
+        request.setMetodoPago(MetodoPago.EFECTIVO);
+        request.setTipoEntrega(TipoEntrega.MOSTRADOR);
+        request.setItems(List.of(itemHelado));
+
+        Pedido pedido = pedidoService.crearPedido(request);
+
+        assertEquals("12345678", pedido.getTimbrado());
+        assertEquals(java.time.LocalDate.now().plusMonths(6), pedido.getTimbradoVencimiento());
     }
 
     @Test

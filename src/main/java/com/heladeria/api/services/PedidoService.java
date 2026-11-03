@@ -155,6 +155,9 @@ public class PedidoService {
                 timbradoVencimiento = inst.getTimbradoVencimiento();
             }
         }
+        if (timbrado == null || timbrado.isBlank()) {
+            throw new IllegalStateException("No hay un timbrado fiscal cargado. Cárguelo en Datos del negocio / Puntos de expedición antes de emitir facturas.");
+        }
         if (timbradoVencimiento != null && timbradoVencimiento.isBefore(LocalDate.now())) {
             throw new IllegalStateException("El timbrado fiscal N° " + timbrado + " ha vencido el " + timbradoVencimiento + ". Debe renovar el timbrado para poder emitir facturas legales.");
         }
@@ -170,6 +173,7 @@ public class PedidoService {
         String pto = (puntoLock.getPuntoEmision() != null && !puntoLock.getPuntoEmision().isBlank()) ? puntoLock.getPuntoEmision() : "001";
         pedido.setNumeroFactura(String.format("%s-%s-%07d", estab, pto, sig));
         pedido.setTimbrado(timbrado);
+        pedido.setTimbradoVencimiento(timbradoVencimiento);
 
         puntoLock.setUltimoNumeroFactura(sig);
         puntoExpedicionRepository.save(puntoLock);

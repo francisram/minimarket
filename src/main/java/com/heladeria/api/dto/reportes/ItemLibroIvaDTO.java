@@ -21,6 +21,7 @@ public class ItemLibroIvaDTO {
     private BigDecimal iva10 = BigDecimal.ZERO;
     private BigDecimal totalIva = BigDecimal.ZERO;
     private BigDecimal total = BigDecimal.ZERO;
+    private boolean anulada = false;
 
     public ItemLibroIvaDTO() {
     }
@@ -136,4 +137,7 @@ public class ItemLibroIvaDTO {
     public void setTotal(BigDecimal total) {
         this.total = total;
     }
+
+    public boolean isAnulada() { return anulada; }
+    public void setAnulada(boolean anulada) { this.anulada = anulada; }
 }

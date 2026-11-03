@@ -249,17 +249,21 @@ public class DataSeeder implements CommandLineRunner {
         if (inst.getNombre() == null || inst.getNombre().isBlank()) {
             inst.setNombre("Heladería Artesanal");
         }
-        if (inst.getRuc() == null) {
-            inst.setRuc("80099887-1");
-        }
-        if (inst.getTimbrado() == null) {
-            inst.setTimbrado("17894561");
-        }
-        if (inst.getTimbradoVencimiento() == null) {
-            inst.setTimbradoVencimiento(LocalDate.now().plusYears(1));
-        }
-        if (inst.getTimbradoInicio() == null) {
-            inst.setTimbradoInicio(LocalDate.now().minusMonths(1));
+        // RUC y timbrado de demostración solo en desarrollo: en producción un dato fiscal inventado
+        // acabaría impreso en comprobantes, así que se deja vacío (y no se puede facturar) hasta cargar el real.
+        if (!produccion) {
+            if (inst.getRuc() == null) {
+                inst.setRuc("80099887-1");
+            }
+            if (inst.getTimbrado() == null) {
+                inst.setTimbrado("17894561");
+            }
+            if (inst.getTimbradoVencimiento() == null) {
+                inst.setTimbradoVencimiento(LocalDate.now().plusYears(1));
+            }
+            if (inst.getTimbradoInicio() == null) {
+                inst.setTimbradoInicio(LocalDate.now().minusMonths(1));
+            }
         }
         if (inst.getNumeroInicioFactura() == null) {
             inst.setNumeroInicioFactura(1L);

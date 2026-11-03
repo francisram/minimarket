@@ -82,6 +82,9 @@ public class Pedido {
     @Column(name = "timbrado", length = 30)
     private String timbrado;
 
+    @Column(name = "timbrado_vencimiento")
+    private LocalDate timbradoVencimiento;
+
     @Column(name = "numero_voucher", length = 50)
     private String numeroVoucher;
 
@@ -287,6 +290,9 @@ public class Pedido {
 
     public String getNumeroVoucher() { return numeroVoucher; }
     public void setNumeroVoucher(String numeroVoucher) { this.numeroVoucher = numeroVoucher; }
+
+    public LocalDate getTimbradoVencimiento() { return timbradoVencimiento; }
+    public void setTimbradoVencimiento(LocalDate timbradoVencimiento) { this.timbradoVencimiento = timbradoVencimiento; }
 
     public String getTimbrado() { return timbrado; }
     public void setTimbrado(String timbrado) { this.timbrado = timbrado; }

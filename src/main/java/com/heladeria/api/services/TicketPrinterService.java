@@ -136,13 +136,18 @@ public class TicketPrinterService {
             }
         }
 
-        if (esFactura && inst != null) {
+        if (esFactura) {
             escribirLinea(out, "--------------------------------");
-            if (inst.getTimbrado() != null && !inst.getTimbrado().isBlank()) {
-                escribirLinea(out, "TIMBRADO N°: " + inst.getTimbrado());
+            // Datos de la emisión (guardados en el pedido); pedidos viejos caen a los de la institución
+            String timbrado = pedido.getTimbrado() != null && !pedido.getTimbrado().isBlank()
+                    ? pedido.getTimbrado() : (inst != null ? inst.getTimbrado() : null);
+            java.time.LocalDate vigencia = pedido.getTimbradoVencimiento() != null
+                    ? pedido.getTimbradoVencimiento() : (inst != null ? inst.getTimbradoVencimiento() : null);
+            if (timbrado != null && !timbrado.isBlank()) {
+                escribirLinea(out, "TIMBRADO N°: " + timbrado);
             }
-            if (inst.getTimbradoVencimiento() != null) {
-                escribirLinea(out, "VIGENCIA: " + FORMATO_SOLO_FECHA.format(inst.getTimbradoVencimiento()));
+            if (vigencia != null) {
+                escribirLinea(out, "VIGENCIA: " + FORMATO_SOLO_FECHA.format(vigencia));
             }
             escribirLinea(out, "IVA INCLUIDO");
         }
@@ -150,7 +155,7 @@ public class TicketPrinterService {
         escribirLinea(out, "--------------------------------");
         out.writeBytes(NEGRITA_ON);
         if (esFactura) {
-            escribirLinea(out, "FACTURA N°: " + (pedido.getNumeroFactura() != null ? pedido.getNumeroFactura() : "001-001-0000001"));
+            escribirLinea(out, "FACTURA N°: " + (pedido.getNumeroFactura() != null ? pedido.getNumeroFactura() : "S/N"));
         } else {
             escribirLinea(out, "NUMERO DE TICKET: #" + pedido.getId());
         }

@@ -272,7 +272,12 @@ public class ReporteService {
         LocalDateTime inicio = fechaInicio != null ? fechaInicio.atStartOfDay() : LocalDate.now().withDayOfMonth(1).atStartOfDay();
         LocalDateTime fin = fechaFin != null ? fechaFin.atTime(LocalTime.MAX) : LocalDate.now().atTime(LocalTime.MAX);
 
-        List<Pedido> pedidos = pedidoRepository.findByFechaCreacionBetweenAndEstadoNotOrderByFechaCreacionDesc(inicio, fin, EstadoPedido.CANCELADO);
+        // Las facturas anuladas se listan (con importes en cero) para que el correlativo no muestre huecos;
+        // los tickets no fiscales cancelados no van al libro.
+        List<Pedido> pedidos = pedidoRepository.findByFechaCreacionBetweenOrderByFechaCreacionDesc(inicio, fin).stream()
+                .filter(p -> p.getEstado() != EstadoPedido.CANCELADO || (p.getTipoComprobante() == TipoComprobante.FACTURA && p.getNumeroFactura() != null))
+                .toList();
+        int comprobantesVigentes = 0;
 
         LibroVentasIvaDTO libro = new LibroVentasIvaDTO();
         libro.setPeriodoInicio(inicio);
@@ -289,7 +294,9 @@ public class ReporteService {
         List<ItemLibroIvaDTO> items = new ArrayList<>();
 
         for (Pedido p : pedidos) {
+            boolean anulada = p.getEstado() == EstadoPedido.CANCELADO;
             ItemLibroIvaDTO item = new ItemLibroIvaDTO();
+            item.setAnulada(anulada);
             item.setPedidoId(p.getId());
             item.setFecha(p.getFechaCreacion());
             item.setTipoComprobante(p.getTipoComprobante());
@@ -298,6 +305,14 @@ public class ReporteService {
             item.setClienteRuc(p.getClienteRuc() != null && !p.getClienteRuc().isBlank() ? p.getClienteRuc() : "44444401-7");
             item.setClienteNombre(p.getClienteNombre() != null && !p.getClienteNombre().isBlank() ? p.getClienteNombre() : "Consumidor Final");
 
+            if (anulada) {
+                // Anulada: figura en el libro con importes en cero
+                item.setClienteRuc("-");
+                item.setClienteNombre("ANULADA");
+                items.add(item);
+                continue;
+            }
+            comprobantesVigentes++;
             BigDecimal exentas = p.getTotalExentas() != null ? p.getTotalExentas() : BigDecimal.ZERO;
             BigDecimal grav5 = p.getTotalGravada5() != null ? p.getTotalGravada5() : BigDecimal.ZERO;
             BigDecimal iva5 = p.getTotalIva5() != null ? p.getTotalIva5() : BigDecimal.ZERO;
@@ -332,7 +347,7 @@ public class ReporteService {
         libro.setTotalIva10(totalIva10);
         libro.setTotalIva(totalIva);
         libro.setGranTotal(granTotal);
-        libro.setCantidadComprobantes(pedidos.size());
+        libro.setCantidadComprobantes(comprobantesVigentes);
         libro.setItems(items);
 
         return libro;
@@ -347,7 +362,7 @@ public class ReporteService {
         sb.append('\uFEFF');
 
         // Encabezado CSV con separador punto y coma (;)
-        sb.append("Fecha;Tipo Comprobante;Condicion;Numero Comprobante;RUC / C.I.;Cliente / Razon Social;Exentas (Gs.);Gravadas 5% (Gs.);IVA 5% (Gs.);Gravadas 10% (Gs.);IVA 10% (Gs.);Total IVA (Gs.);Total Comprobante (Gs.)\r\n");
+        sb.append("Fecha;Tipo Comprobante;Condicion;Numero Comprobante;RUC / C.I.;Cliente / Razon Social;Exentas (Gs.);Gravadas 5% (Gs.);IVA 5% (Gs.);Gravadas 10% (Gs.);IVA 10% (Gs.);Total IVA (Gs.);Total Comprobante (Gs.);Estado\r\n");
 
         for (ItemLibroIvaDTO item : libro.getItems()) {
             sb.append(item.getFecha() != null ? FORMATO_FECHA_HORA.format(item.getFecha()) : "").append(";")
@@ -362,7 +377,8 @@ public class ReporteService {
                     .append(item.getGravada10()).append(";")
                     .append(item.getIva10()).append(";")
                     .append(item.getTotalIva()).append(";")
-                    .append(item.getTotal()).append("\r\n");
+                    .append(item.getTotal()).append(";")
+                    .append(item.isAnulada() ? "ANULADA" : "EMITIDA").append("\r\n");
         }
 
         // Fila de resumen total
@@ -373,7 +389,7 @@ public class ReporteService {
                 .append(libro.getTotalGravada10()).append(";")
                 .append(libro.getTotalIva10()).append(";")
                 .append(libro.getTotalIva()).append(";")
-                .append(libro.getGranTotal()).append("\r\n");
+                .append(libro.getGranTotal()).append(";\r\n");
 
         return sb.toString().getBytes(StandardCharsets.UTF_8);
     }
