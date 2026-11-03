@@ -24,7 +24,7 @@ public class SpoolerImpresionScheduler {
     @Scheduled(fixedDelayString = "${app.impresion.spooler.intervalo-ms:3000}", initialDelayString = "${app.impresion.spooler.intervalo-ms:3000}")
     public void procesar() {
         try {
-            service.procesarPendientes(10);
+            service.procesarPendientesAsync(20);
         } catch (Exception e) {
             log.error("Error inesperado en el spooler de impresión", e);
         }

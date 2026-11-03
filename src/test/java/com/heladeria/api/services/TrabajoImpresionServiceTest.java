@@ -158,4 +158,61 @@ class TrabajoImpresionServiceTest {
         assertEquals(1800, TrabajoImpresionService.esperaSegundos(6));
         assertEquals(1800, TrabajoImpresionService.esperaSegundos(20));
     }
+
+    private EstadoTrabajoImpresion estadoDe(Long id) {
+        return repository.findById(id).orElseThrow().getEstado();
+    }
+
+    @Test
+    @DisplayName("Una impresora caída no retrasa a las demás: cada impresora tiene su propio carril")
+    void impresoraCaidaNoFrenaALasDemas() throws Exception {
+        Impresora caida = new Impresora();
+        caida.setNombre("CAIDA");
+        Impresora sana = new Impresora();
+        sana.setNombre("SANA");
+        when(ticketPrinterService.resolverImpresora(1L)).thenReturn(caida);
+        when(ticketPrinterService.resolverImpresora(2L)).thenReturn(sana);
+        doAnswer(inv -> {
+            Impresora i = inv.getArgument(0);
+            if ("CAIDA".equals(i.getNombre())) {
+                Thread.sleep(1500);
+                throw new ImpresionException("conexión rechazada");
+            }
+            return null;
+        }).when(impresionService).imprimir(any(Impresora.class), any(byte[].class));
+
+        TrabajoImpresion a1 = service.encolarTicketPedido(1L, 1L, "c");
+        TrabajoImpresion a2 = service.encolarTicketPedido(2L, 1L, "c");
+        TrabajoImpresion b1 = service.encolarTicketPedido(3L, 2L, "c");
+
+        assertEquals(3, service.procesarPendientesAsync(10));
+
+        // La impresora sana termina enseguida, mientras la caída sigue ocupada con su primer trabajo
+        long limite = System.currentTimeMillis() + 1000;
+        while (estadoDe(b1.getId()) != EstadoTrabajoImpresion.IMPRESO && System.currentTimeMillis() < limite) {
+            Thread.sleep(20);
+        }
+        assertEquals(EstadoTrabajoImpresion.IMPRESO, estadoDe(b1.getId()), "El ticket de la impresora sana no esperó a la caída");
+        assertEquals(EstadoTrabajoImpresion.IMPRIMIENDO, estadoDe(a1.getId()));
+
+        // Mientras el carril de la impresora caída está ocupado no se le asignan más trabajos, pero sí a las demás
+        TrabajoImpresion a3 = service.encolarTicketPedido(4L, 1L, "c");
+        TrabajoImpresion b2 = service.encolarTicketPedido(5L, 2L, "c");
+        assertEquals(1, service.procesarPendientesAsync(10));
+        long limite2 = System.currentTimeMillis() + 1000;
+        while (estadoDe(b2.getId()) != EstadoTrabajoImpresion.IMPRESO && System.currentTimeMillis() < limite2) {
+            Thread.sleep(20);
+        }
+        assertEquals(EstadoTrabajoImpresion.IMPRESO, estadoDe(b2.getId()));
+        assertEquals(EstadoTrabajoImpresion.PENDIENTE, estadoDe(a3.getId()), "El carril ocupado no recibió otro trabajo");
+
+        // Al terminar, los trabajos de la impresora caída quedan reprogramados con su espera
+        long limite3 = System.currentTimeMillis() + 6000;
+        while (estadoDe(a2.getId()) == EstadoTrabajoImpresion.IMPRIMIENDO && System.currentTimeMillis() < limite3) {
+            Thread.sleep(50);
+        }
+        assertEquals(EstadoTrabajoImpresion.PENDIENTE, estadoDe(a1.getId()));
+        assertEquals(1, repository.findById(a1.getId()).orElseThrow().getIntentos());
+        assertEquals(EstadoTrabajoImpresion.PENDIENTE, estadoDe(a2.getId()));
+    }
 }

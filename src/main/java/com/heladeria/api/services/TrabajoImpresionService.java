@@ -16,11 +16,21 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import jakarta.annotation.PreDestroy;
+
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.EnumMap;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Spooler de impresión: cola persistente con reintentos exponenciales y dead letter.
@@ -35,13 +45,23 @@ public class TrabajoImpresionService {
     private static final Logger log = LoggerFactory.getLogger(TrabajoImpresionService.class);
     public static final String TIPO_TICKET_PEDIDO = "TICKET_PEDIDO";
     private static final int[] ESPERA_SEGUNDOS = {5, 15, 60, 300, 900, 1800};
-    private static final Duration TIEMPO_MAXIMO_IMPRIMIENDO = Duration.ofMinutes(2);
+    private static final Duration TIEMPO_MAXIMO_IMPRIMIENDO = Duration.ofMinutes(5);
+    /** Carril de la impresora por defecto (trabajos sin impresora indicada). */
+    private static final Long CARRIL_POR_DEFECTO = -1L;
 
     private final TrabajoImpresionRepository repository;
     private final PedidoRepository pedidoRepository;
     private final TicketPrinterService ticketPrinterService;
     private final ImpresionService impresionService;
     private final TransactionTemplate tx;
+
+    /**
+     * Un carril por impresora: dentro de un carril los trabajos van en orden y de a uno; los carriles corren en paralelo.
+     * Así una impresora caída (con sus esperas de red) no retrasa los tickets de las demás.
+     */
+    private final Set<Long> carrilesOcupados = ConcurrentHashMap.newKeySet();
+    private final ExecutorService ejecutor = Executors.newVirtualThreadPerTaskExecutor();
+    private final ReentrantLock reclamo = new ReentrantLock();
 
     public TrabajoImpresionService(TrabajoImpresionRepository repository,
                                    PedidoRepository pedidoRepository,
@@ -72,24 +92,82 @@ public class TrabajoImpresionService {
         return repository.save(t);
     }
 
-    /** Procesa hasta {@code lote} trabajos listos. Devuelve cuántos intentó. */
+    /** Procesa hasta {@code lote} trabajos listos y espera a que terminen. Devuelve cuántos intentó. */
     public int procesarPendientes(int lote) {
-        recuperarAtascados();
-        List<Long> ids = tx.execute(status -> {
-            LocalDateTime ahora = LocalDateTime.now();
-            List<TrabajoImpresion> reclamados = repository.reclamar(EstadoTrabajoImpresion.PENDIENTE, ahora, PageRequest.of(0, lote));
-            for (TrabajoImpresion t : reclamados) {
-                t.setEstado(EstadoTrabajoImpresion.IMPRIMIENDO);
-                t.setIntentos(t.getIntentos() + 1);
-                t.setFechaActualizacion(ahora);
+        List<Future<?>> tareas = new ArrayList<>();
+        int reclamados = reclamarYLanzar(lote, tareas);
+        for (Future<?> t : tareas) {
+            try {
+                t.get();
+            } catch (Exception e) {
+                log.error("Error esperando un carril de impresión: {}", e.getMessage());
             }
-            return reclamados.stream().map(TrabajoImpresion::getId).toList();
-        });
-        if (ids == null) {
-            return 0;
         }
-        ids.forEach(this::imprimir);
-        return ids.size();
+        return reclamados;
+    }
+
+    /** Igual que {@link #procesarPendientes(int)} pero sin esperar: lo usa el programador para no frenar a las demás impresoras. */
+    public int procesarPendientesAsync(int lote) {
+        return reclamarYLanzar(lote, new ArrayList<>());
+    }
+
+    private int reclamarYLanzar(int lote, List<Future<?>> tareas) {
+        recuperarAtascados();
+        Map<Long, List<Long>> porCarril = new LinkedHashMap<>();
+        reclamo.lock();
+        try {
+            List<Long> excluidas = new ArrayList<>(carrilesOcupados);
+            excluidas.remove(CARRIL_POR_DEFECTO);
+            if (excluidas.isEmpty()) {
+                excluidas.add(-2L); // la cláusula IN no admite una lista vacía
+            }
+            boolean incluirSinImpresora = !carrilesOcupados.contains(CARRIL_POR_DEFECTO);
+
+            List<TrabajoImpresion> reclamados = tx.execute(status -> {
+                LocalDateTime ahora = LocalDateTime.now();
+                List<TrabajoImpresion> lista = repository.reclamar(EstadoTrabajoImpresion.PENDIENTE, ahora, excluidas,
+                        incluirSinImpresora, PageRequest.of(0, lote));
+                for (TrabajoImpresion t : lista) {
+                    t.setEstado(EstadoTrabajoImpresion.IMPRIMIENDO);
+                    t.setIntentos(t.getIntentos() + 1);
+                    t.setFechaActualizacion(ahora);
+                }
+                return lista;
+            });
+            if (reclamados == null || reclamados.isEmpty()) {
+                return 0;
+            }
+            for (TrabajoImpresion t : reclamados) {
+                porCarril.computeIfAbsent(carril(t.getImpresoraId()), k -> new ArrayList<>()).add(t.getId());
+            }
+            carrilesOcupados.addAll(porCarril.keySet());
+        } finally {
+            reclamo.unlock();
+        }
+
+        int total = 0;
+        for (Map.Entry<Long, List<Long>> e : porCarril.entrySet()) {
+            total += e.getValue().size();
+            tareas.add(ejecutor.submit(() -> {
+                try {
+                    e.getValue().forEach(this::imprimir);
+                } catch (Exception ex) {
+                    log.error("Error inesperado en el carril de impresión {}: {}", e.getKey(), ex.getMessage());
+                } finally {
+                    carrilesOcupados.remove(e.getKey());
+                }
+            }));
+        }
+        return total;
+    }
+
+    private static Long carril(Long impresoraId) {
+        return impresoraId != null ? impresoraId : CARRIL_POR_DEFECTO;
+    }
+
+    @PreDestroy
+    void detener() {
+        ejecutor.shutdown();
     }
 
     private record Preparado(Impresora impresora, byte[] datos) { }
@@ -155,6 +233,9 @@ public class TrabajoImpresionService {
             LocalDateTime ahora = LocalDateTime.now();
             for (TrabajoImpresion t : repository.findByEstadoAndFechaActualizacionBefore(
                     EstadoTrabajoImpresion.IMPRIMIENDO, ahora.minus(TIEMPO_MAXIMO_IMPRIMIENDO))) {
+                if (carrilesOcupados.contains(carril(t.getImpresoraId()))) {
+                    continue; // su carril sigue trabajando: no está atascado, solo espera su turno
+                }
                 t.setEstado(EstadoTrabajoImpresion.PENDIENTE);
                 t.setProximoIntento(ahora);
                 t.setFechaActualizacion(ahora);

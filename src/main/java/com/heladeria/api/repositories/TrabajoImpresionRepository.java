@@ -21,12 +21,18 @@ public interface TrabajoImpresionRepository extends JpaRepository<TrabajoImpresi
     /**
      * Reclama trabajos listos para imprimir con SELECT ... FOR UPDATE SKIP LOCKED (lock.timeout = -2):
      * si hay varias instancias de la API, cada una toma trabajos distintos sin bloquearse ni duplicar.
+     * Se excluyen las impresoras cuyo carril está ocupado (ver TrabajoImpresionService).
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @QueryHints(@QueryHint(name = "jakarta.persistence.lock.timeout", value = "-2"))
-    @Query("select t from TrabajoImpresion t where t.estado = :estado and t.proximoIntento <= :ahora order by t.proximoIntento, t.id")
+    @Query("select t from TrabajoImpresion t where t.estado = :estado and t.proximoIntento <= :ahora "
+            + "and (t.impresoraId is null or t.impresoraId not in :excluidas) "
+            + "and (:incluirSinImpresora = true or t.impresoraId is not null) "
+            + "order by t.proximoIntento, t.id")
     List<TrabajoImpresion> reclamar(@Param("estado") EstadoTrabajoImpresion estado,
                                     @Param("ahora") LocalDateTime ahora,
+                                    @Param("excluidas") java.util.Collection<Long> excluidas,
+                                    @Param("incluirSinImpresora") boolean incluirSinImpresora,
                                     Pageable pageable);
 
     List<TrabajoImpresion> findByEstadoAndFechaActualizacionBefore(EstadoTrabajoImpresion estado, LocalDateTime limite);
