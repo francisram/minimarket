@@ -47,4 +47,9 @@ public interface ProductoRepository extends JpaRepository<Producto, Long> {
     @Modifying(flushAutomatically = true)
     @Query("update Producto p set p.stock = p.stock - :cantidad where p.id = :id and p.stock >= :cantidad")
     int descontarStock(@Param("id") Long id, @Param("cantidad") java.math.BigDecimal cantidad);
+
+    /** Reintegro atómico al maestro de productos (anulación de ventas). */
+    @Modifying(flushAutomatically = true)
+    @Query("update Producto p set p.stock = p.stock + :cantidad where p.id = :id and p.stock is not null")
+    int aumentarStock(@Param("id") Long id, @Param("cantidad") java.math.BigDecimal cantidad);
 }

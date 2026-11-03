@@ -128,4 +128,21 @@ class ComboStockTest {
         ReglaDeNegocioException e = assertThrows(ReglaDeNegocioException.class, () -> pedidoService.crearPedido(ventaCombo(2)));
         assertTrue(e.getMessage().contains("Stock insuficiente del componente 'Vaso " + sufijo + "'"), e.getMessage());
     }
+
+    @Test
+    @DisplayName("Anular una venta de combo devuelve los componentes al maestro y al catálogo operativo")
+    void anularRestituyeComponentes() {
+        Usuario admin = usuarioRepository.findByUsername("admin").orElseThrow();
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("admin", null, List.of(new SimpleGrantedAuthority("ROLE_CAJERO"), new SimpleGrantedAuthority("ROLE_ADMIN"))));
+        Pedido pedido = pedidoService.crearPedido(ventaCombo(2));
+        assertEquals(3, productoSimpleRepository.findById(gaseosaOperativa.getId()).orElseThrow().getStock());
+
+        pedidoService.cancelarPedido(pedido.getId());
+
+        assertEquals(0, new BigDecimal("5").compareTo(productoRepository.findById(gaseosaMaestro.getId()).orElseThrow().getStock()));
+        assertEquals(0, new BigDecimal("5").compareTo(productoRepository.findById(vasoMaestro.getId()).orElseThrow().getStock()));
+        assertEquals(5, productoSimpleRepository.findById(gaseosaOperativa.getId()).orElseThrow().getStock());
+        assertEquals(5, presentacionRepository.findById(vasoOperativo.getId()).orElseThrow().getStock());
+    }
 }

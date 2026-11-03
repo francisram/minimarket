@@ -455,16 +455,7 @@ public class PedidoService {
                 }
 
                 // Verificar si este producto es un COMBO con componentes registrados
-                Optional<Producto> optCombo = Optional.empty();
-                if (prod.getCodigo() != null && !prod.getCodigo().isBlank()) {
-                    optCombo = productoRepository.findBySkuIgnoreCase(prod.getCodigo().trim());
-                }
-                if (optCombo.isEmpty() && prod.getCodigoBarra() != null && !prod.getCodigoBarra().isBlank()) {
-                    optCombo = productoRepository.findByCodigoBarraIgnoreCase(prod.getCodigoBarra().trim());
-                }
-                if (optCombo.isEmpty()) {
-                    optCombo = productoRepository.findByNombreIgnoreCase(prod.getNombre().trim());
-                }
+                Optional<Producto> optCombo = resolverComboCompuesto(prod);
 
                 if (optCombo.isPresent() && optCombo.get().getTipoArticulo() == TipoArticulo.COMBO
                         && optCombo.get().getComponentes() != null && !optCombo.get().getComponentes().isEmpty()) {
@@ -614,6 +605,73 @@ public class PedidoService {
     // Componentes de combos: descuento atómico con validación de stock (misma garantía que la venta directa)
     // ---------------------------------------------------------------------------------------------
 
+    /** Devuelve el maestro del producto si es un combo compuesto (con componentes registrados). */
+    private Optional<Producto> resolverComboCompuesto(ProductoSimple prod) {
+        Optional<Producto> opt = Optional.empty();
+        if (prod.getCodigo() != null && !prod.getCodigo().isBlank()) {
+            opt = productoRepository.findBySkuIgnoreCase(prod.getCodigo().trim());
+        }
+        if (opt.isEmpty() && prod.getCodigoBarra() != null && !prod.getCodigoBarra().isBlank()) {
+            opt = productoRepository.findByCodigoBarraIgnoreCase(prod.getCodigoBarra().trim());
+        }
+        if (opt.isEmpty()) {
+            opt = productoRepository.findByNombreIgnoreCase(prod.getNombre().trim());
+        }
+        return opt.filter(c -> c.getTipoArticulo() == TipoArticulo.COMBO
+                && c.getComponentes() != null && !c.getComponentes().isEmpty());
+    }
+
+    /** Inverso de {@link #descontarComponenteDeCombo}: devuelve el stock de un componente al anular la venta. */
+    private void reintegrarComponenteDeCombo(Producto comp, BigDecimal cantidad, String concepto, String usuario) {
+        if (comp.getStock() != null) {
+            productoRepository.aumentarStock(comp.getId(), cantidad);
+            entityManager.refresh(comp);
+        }
+
+        String nombre = comp.getNombre().trim();
+        if (comp.getTipoArticulo() == TipoArticulo.ENVASE) {
+            presentacionRepository.findByNombreIgnoreCase(nombre).ifPresent(pres -> {
+                if (pres.getStock() != null) {
+                    int cant = (int) Math.round(cantidad.doubleValue());
+                    presentacionRepository.aumentarStock(pres.getId(), cant);
+                    entityManager.refresh(pres);
+                    double post = pres.getStock().doubleValue();
+                    inventarioService.registrarMovimientoInterno(TipoItemStock.ENVASE, pres.getId(), pres.getNombre(),
+                            TipoMovimientoStock.REINTEGRO_CANCELACION, cantidad.doubleValue(), post - cant, post, concepto, usuario);
+                }
+            });
+        } else if (comp.getTipoArticulo() == TipoArticulo.TOPPING) {
+            toppingRepository.findByNombreIgnoreCase(nombre).ifPresent(top ->
+                    inventarioService.registrarMovimientoInterno(TipoItemStock.PRODUCTO, top.getId(), top.getNombre(),
+                            TipoMovimientoStock.REINTEGRO_CANCELACION, cantidad.doubleValue(), 0.0, 0.0, concepto, usuario));
+        } else if (comp.getTipoArticulo() == TipoArticulo.SABOR) {
+            saborRepository.findByNombreIgnoreCase(nombre).ifPresent(sab -> {
+                if (sab.getStockKilos() != null) {
+                    saborRepository.aumentarStockKilos(sab.getId(), cantidad.doubleValue());
+                    entityManager.refresh(sab);
+                    double post = sab.getStockKilos();
+                    if (post > 0.001 && !Boolean.TRUE.equals(sab.getDisponible())) {
+                        sab.setDisponible(true);
+                        saborRepository.save(sab);
+                    }
+                    inventarioService.registrarMovimientoInterno(TipoItemStock.SABOR, sab.getId(), sab.getNombre(),
+                            TipoMovimientoStock.REINTEGRO_CANCELACION, cantidad.doubleValue(), post - cantidad.doubleValue(), post, concepto, usuario);
+                }
+            });
+        } else {
+            productoSimpleRepository.findByNombreIgnoreCase(nombre).ifPresent(ps -> {
+                if (ps.getStock() != null) {
+                    int cant = (int) Math.round(cantidad.doubleValue());
+                    productoSimpleRepository.aumentarStock(ps.getId(), cant);
+                    entityManager.refresh(ps);
+                    double post = ps.getStock().doubleValue();
+                    inventarioService.registrarMovimientoInterno(TipoItemStock.PRODUCTO, ps.getId(), ps.getNombre(),
+                            TipoMovimientoStock.REINTEGRO_CANCELACION, cantidad.doubleValue(), post - cant, post, concepto, usuario);
+                }
+            });
+        }
+    }
+
     private void descontarComponenteDeCombo(Producto comp, BigDecimal cantidad, String nombreCombo, String concepto, String usuario) {
         // 1) Maestro de productos
         if (comp.getStock() != null) {
@@ -757,7 +815,18 @@ public class PedidoService {
 
         // Reintegrar stock de productos simples, envases y sabores si se cancela
         for (DetallePedido detalle : pedido.getDetalles()) {
-            if (detalle.getTipoItem() == TipoItemPedido.PRODUCTO_SIMPLE && detalle.getProductoSimple() != null) {
+            Optional<Producto> comboCompuesto = (detalle.getTipoItem() == TipoItemPedido.PRODUCTO_SIMPLE && detalle.getProductoSimple() != null)
+                    ? resolverComboCompuesto(detalle.getProductoSimple()) : Optional.empty();
+            if (comboCompuesto.isPresent()) {
+                // Combo compuesto: la venta descontó cada componente, así que se devuelven los componentes
+                List<ComboComponente> componentes = new ArrayList<>(comboCompuesto.get().getComponentes());
+                componentes.sort(java.util.Comparator.comparing(cc -> cc.getComponente().getId()));
+                for (ComboComponente cc : componentes) {
+                    BigDecimal factor = cc.getCantidad() != null ? cc.getCantidad() : BigDecimal.ONE;
+                    reintegrarComponenteDeCombo(cc.getComponente(), factor.multiply(BigDecimal.valueOf(detalle.getCantidad())),
+                            detalleLog, usuarioCancelacion);
+                }
+            } else if (detalle.getTipoItem() == TipoItemPedido.PRODUCTO_SIMPLE && detalle.getProductoSimple() != null) {
                 ProductoSimple prod = detalle.getProductoSimple();
                 if (prod.getStock() != null) {
                     double stockAnt = prod.getStock().doubleValue();

@@ -28,4 +28,9 @@ public interface ProductoSimpleRepository extends JpaRepository<ProductoSimple, 
     @Modifying(flushAutomatically = true)
     @Query("update ProductoSimple p set p.stock = p.stock - :cantidad where p.id = :id and p.stock >= :cantidad")
     int descontarStock(@Param("id") Long id, @Param("cantidad") int cantidad);
+
+    /** Reintegro atómico (anulación de ventas). */
+    @Modifying(flushAutomatically = true)
+    @Query("update ProductoSimple p set p.stock = p.stock + :cantidad where p.id = :id and p.stock is not null")
+    int aumentarStock(@Param("id") Long id, @Param("cantidad") int cantidad);
 }

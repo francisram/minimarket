@@ -25,4 +25,9 @@ public interface SaborRepository extends JpaRepository<Sabor, Long> {
     @Modifying(flushAutomatically = true)
     @Query("update Sabor s set s.stockKilos = s.stockKilos - :kilos where s.id = :id and s.stockKilos >= :kilos")
     int descontarStockKilos(@Param("id") Long id, @Param("kilos") double kilos);
+
+    /** Reintegro atómico (anulación de ventas). */
+    @Modifying(flushAutomatically = true)
+    @Query("update Sabor s set s.stockKilos = s.stockKilos + :kilos where s.id = :id and s.stockKilos is not null")
+    int aumentarStockKilos(@Param("id") Long id, @Param("kilos") double kilos);
 }
