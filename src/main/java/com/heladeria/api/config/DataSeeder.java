@@ -36,6 +36,8 @@ public class DataSeeder implements CommandLineRunner {
 
     private final String defaultAdminPassword;
     private final String defaultOwnerPassword;
+    /** true con PostgreSQL: no se siembran usuarios con contraseñas conocidas. */
+    private final boolean produccion;
 
     public DataSeeder(PaginaRepository paginaRepository,
                       PlanLicenciaRepository planLicenciaRepository,
@@ -48,8 +50,10 @@ public class DataSeeder implements CommandLineRunner {
                       PuntoExpedicionRepository puntoExpedicionRepository,
                       ClienteRepository clienteRepository,
                       ProveedorRepository proveedorRepository,
-                      @Value("${app.security.default-admin-password:admin123}") String defaultAdminPassword,
-                      @Value("${app.security.default-owner-password:owner123}") String defaultOwnerPassword) {
+                      @Value("${app.security.default-admin-password:}") String defaultAdminPassword,
+                      @Value("${app.security.default-owner-password:}") String defaultOwnerPassword,
+                      @Value("${spring.datasource.url:}") String datasourceUrl) {
+        this.produccion = datasourceUrl != null && datasourceUrl.startsWith("jdbc:postgresql");
         this.paginaRepository = paginaRepository;
         this.planLicenciaRepository = planLicenciaRepository;
         this.licenciaRepository = licenciaRepository;
@@ -184,11 +188,11 @@ public class DataSeeder implements CommandLineRunner {
         if (usuarioRepository.findByUsername("admin").isEmpty()) {
             Usuario u = new Usuario();
             u.setUsername("admin");
-            u.setPasswordHash(passwordEncoder.encode(defaultAdminPassword));
+            u.setPasswordHash(passwordEncoder.encode(claveInicial("admin", defaultAdminPassword, "admin123")));
             u.setRol(admin);
             u.setEstado(true);
             u.setPasswordNuncaExpira(true);
-            u.setDebeCambiarPassword(false);
+            u.setDebeCambiarPassword(produccion);
             usuarioRepository.save(u);
             log.info("[SEED] Usuario de desarrollo 'admin' creado. Recuerde cambiar credenciales para producción.");
         }
@@ -196,14 +200,35 @@ public class DataSeeder implements CommandLineRunner {
         if (usuarioRepository.findByUsername("owner").isEmpty()) {
             Usuario u = new Usuario();
             u.setUsername("owner");
-            u.setPasswordHash(passwordEncoder.encode(defaultOwnerPassword));
+            u.setPasswordHash(passwordEncoder.encode(claveInicial("owner", defaultOwnerPassword, "owner123")));
             u.setRol(owner);
             u.setEstado(true);
             u.setPasswordNuncaExpira(true);
-            u.setDebeCambiarPassword(false);
+            u.setDebeCambiarPassword(produccion);
             usuarioRepository.save(u);
             log.info("[SEED] Usuario de desarrollo 'owner' creado. Recuerde cambiar credenciales para producción.");
         }
+    }
+
+    /**
+     * Contraseña inicial de un usuario sembrado. Configurada: se usa esa. Sin configurar: en desarrollo la clásica de
+     * demostración; en producción una aleatoria que se muestra UNA sola vez en el log (el usuario debe cambiarla al ingresar).
+     */
+    private String claveInicial(String usuario, String configurada, String claveDesarrollo) {
+        if (configurada != null && !configurada.isBlank()) {
+            return configurada;
+        }
+        if (!produccion) {
+            return claveDesarrollo;
+        }
+        String alfabeto = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+        java.security.SecureRandom azar = new java.security.SecureRandom();
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 16; i++) {
+            sb.append(alfabeto.charAt(azar.nextInt(alfabeto.length())));
+        }
+        log.warn("[SEED] Usuario '{}' creado con contraseña TEMPORAL: {}  (se muestra una sola vez; deberá cambiarla al ingresar)", usuario, sb);
+        return sb.toString();
     }
 
     private Set<Pagina> obtenerPaginasPorClaves(String... claves) {

@@ -39,3 +39,6 @@ release.properties
 .settings/
 .vscode/
 backups-externos/
+
+# Secretos locales
+.env

@@ -33,6 +33,10 @@ services:
       SPRING_DATASOURCE_PASSWORD: postgres
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
       SPRING_FLYWAY_ENABLED: "true"
+      # Secretos: se leen del archivo .env (ver .env.example). Sin APP_JWT_SECRET el compose no arranca.
+      APP_JWT_SECRET: "${APP_JWT_SECRET:?Defina APP_JWT_SECRET en el archivo .env - copie .env.example y genere uno con openssl rand -base64 48}"
+      APP_SECURITY_DEFAULT_ADMIN_PASSWORD: ${APP_SECURITY_DEFAULT_ADMIN_PASSWORD:-}
+      APP_SECURITY_DEFAULT_OWNER_PASSWORD: ${APP_SECURITY_DEFAULT_OWNER_PASSWORD:-}
       # Respaldos automáticos diarios (03:00). La copia externa solo se activa si se define BACKUP_EXTERNAL_DIR
       # (ruta del host: NAS, disco USB o montaje de red; debe ser escribible por el usuario de la API).
       APP_BACKUP_COPIA_EXTERNA_DIR: ${BACKUP_EXTERNAL_DIR:+/app/backups-externos}
