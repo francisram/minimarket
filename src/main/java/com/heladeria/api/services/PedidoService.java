@@ -19,6 +19,8 @@ import com.heladeria.api.exceptions.ReglaDeNegocioException;
 import com.heladeria.api.repositories.*;
 import com.heladeria.api.dto.CancelarPedidoRequestDTO;
 import com.heladeria.api.util.MonedaPyUtils;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -52,6 +54,9 @@ public class PedidoService {
     private final PasswordEncoder passwordEncoder;
     private final AuditoriaService auditoriaService;
     private final PuntoExpedicionRepository puntoExpedicionRepository;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public PedidoService(PedidoRepository pedidoRepository,
                          PresentacionRepository presentacionRepository,
@@ -295,14 +300,15 @@ public class PedidoService {
 
                 // Control de stock de envases/cucuruchos
                 if (presentacion.getStock() != null) {
-                    if (presentacion.getStock() < itemDto.getCantidad()) {
+                    int cant = itemDto.getCantidad();
+                    int afectadas = presentacionRepository.descontarStock(presentacion.getId(), cant);
+                    entityManager.refresh(presentacion);
+                    if (afectadas == 0) {
                         throw new ReglaDeNegocioException("Stock insuficiente de envases para '" + presentacion.getNombre() +
-                                "'. Disponible: " + presentacion.getStock() + ", Solicitado: " + itemDto.getCantidad());
+                                "'. Disponible: " + presentacion.getStock() + ", Solicitado: " + cant);
                     }
-                    double stockAnt = presentacion.getStock().doubleValue();
-                    double stockPost = stockAnt - itemDto.getCantidad();
-                    presentacion.setStock((int) Math.round(stockPost));
-                    presentacionRepository.save(presentacion);
+                    double stockPost = presentacion.getStock().doubleValue();
+                    double stockAnt = stockPost + cant;
                     inventarioService.registrarMovimientoInterno(
                             TipoItemStock.ENVASE,
                             presentacion.getId(),
@@ -314,7 +320,6 @@ public class PedidoService {
                             "Venta POS #" + (numeroFactura != null ? numeroFactura : trxId),
                             username
                     );
-                    presentacionRepository.save(presentacion);
                 }
 
                 // Validar sabores (opcionales para venta ágil en POS)
@@ -344,21 +349,21 @@ public class PedidoService {
                     double kilosPorSabor = Math.round((((double) presentacion.getPesoGramosAprox() * itemDto.getCantidad())
                             / (1000.0 * sabores.size())) * 1000.0) / 1000.0;
 
-                    // Validación previa de stock de cada sabor
-                    for (Sabor sabor : sabores) {
-                        if (sabor.getStockKilos() != null && sabor.getStockKilos() < kilosPorSabor) {
-                            throw new ReglaDeNegocioException(String.format(java.util.Locale.US,
-                                    "Stock insuficiente de helado para el sabor '%s'. Disponible: %.2f kg, Solicitado: %.2f kg",
-                                    sabor.getNombre(), sabor.getStockKilos(), kilosPorSabor));
-                        }
-                    }
-
-                    // Descuento atómico
-                    for (Sabor sabor : sabores) {
+                    // Descuento atómico por sabor, en orden de id para no provocar deadlocks entre ventas concurrentes.
+                    // Si algún sabor no alcanza se lanza excepción y la transacción completa hace rollback.
+                    List<Sabor> saboresOrdenados = new ArrayList<>(sabores);
+                    saboresOrdenados.sort(java.util.Comparator.comparing(Sabor::getId));
+                    for (Sabor sabor : saboresOrdenados) {
                         if (sabor.getStockKilos() != null) {
-                            double stockAnt = sabor.getStockKilos();
-                            double nuevoStock = Math.max(0.0, Math.round((sabor.getStockKilos() - kilosPorSabor) * 1000.0) / 1000.0);
-                            sabor.setStockKilos(nuevoStock);
+                            int afectadas = saborRepository.descontarStockKilos(sabor.getId(), kilosPorSabor);
+                            entityManager.refresh(sabor);
+                            if (afectadas == 0) {
+                                throw new ReglaDeNegocioException(String.format(java.util.Locale.US,
+                                        "Stock insuficiente de helado para el sabor '%s'. Disponible: %.2f kg, Solicitado: %.2f kg",
+                                        sabor.getNombre(), sabor.getStockKilos(), kilosPorSabor));
+                            }
+                            double nuevoStock = sabor.getStockKilos();
+                            double stockAnt = Math.round((nuevoStock + kilosPorSabor) * 1000.0) / 1000.0;
                             if (nuevoStock <= 0.001) {
                                 sabor.setDisponible(false);
                             }
@@ -528,16 +533,16 @@ public class PedidoService {
                     }
                 } else {
                     // Control de stock estandar (Combo simple o producto unitario)
-                    if (prod.getStock() != null && prod.getStock() < itemDto.getCantidad()) {
-                        throw new ReglaDeNegocioException("Stock insuficiente para '" + prod.getNombre() +
-                                "'. Disponible: " + prod.getStock() + ", Solicitado: " + itemDto.getCantidad());
-                    }
-
                     if (prod.getStock() != null) {
-                        double stockAnt = prod.getStock().doubleValue();
-                        double stockPost = stockAnt - itemDto.getCantidad();
-                        prod.setStock((int) Math.round(stockPost));
-                        productoSimpleRepository.save(prod);
+                        int cant = itemDto.getCantidad();
+                        int afectadas = productoSimpleRepository.descontarStock(prod.getId(), cant);
+                        entityManager.refresh(prod);
+                        if (afectadas == 0) {
+                            throw new ReglaDeNegocioException("Stock insuficiente para '" + prod.getNombre() +
+                                    "'. Disponible: " + prod.getStock() + ", Solicitado: " + cant);
+                        }
+                        double stockPost = prod.getStock().doubleValue();
+                        double stockAnt = stockPost + cant;
                         inventarioService.registrarMovimientoInterno(
                                 TipoItemStock.PRODUCTO,
                                 prod.getId(),
