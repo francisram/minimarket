@@ -15,6 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import com.heladeria.api.entities.enums.EstadoTomaInventario;
@@ -50,6 +52,9 @@ public class InventarioService {
         this.auditoriaService = auditoriaService;
     }
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
     @Transactional
     public MovimientoStockDTO registrarMovimientoManual(RegistrarMovimientoDTO dto, String usuario) {
         if (dto.getCantidad() == null || dto.getCantidad() <= 0) {
@@ -68,9 +73,15 @@ public class InventarioService {
             stockAnterior = prod.getStock() != null ? prod.getStock().doubleValue() : 0.0;
             unidad = "UNIDADES";
 
-            stockPosterior = calcularNuevoStock(stockAnterior, dto.getCantidad(), dto.getTipoMovimiento());
-            prod.setStock((int) Math.round(stockPosterior));
-            productoSimpleRepository.save(prod);
+            int cant = (int) Math.round(dto.getCantidad());
+            switch (dto.getTipoMovimiento()) {
+                case ENTRADA_COMPRA, ENTRADA_PRODUCCION, REINTEGRO_CANCELACION -> productoSimpleRepository.aumentarStock(prod.getId(), cant);
+                case SALIDA_VENTA, SALIDA_MERMA -> productoSimpleRepository.reducirStockHastaCero(prod.getId(), cant);
+                case AJUSTE_INVENTARIO -> { prod.setStock(cant); productoSimpleRepository.save(prod); }
+            }
+            entityManager.flush();
+            entityManager.refresh(prod);
+            stockPosterior = prod.getStock().doubleValue();
 
         } else if (dto.getTipoItem() == TipoItemStock.SABOR) {
             Sabor sabor = saborRepository.findById(dto.getItemId())
@@ -79,7 +90,14 @@ public class InventarioService {
             stockAnterior = sabor.getStockKilos() != null ? sabor.getStockKilos() : 0.0;
             unidad = "KG";
 
-            stockPosterior = Math.round(calcularNuevoStock(stockAnterior, dto.getCantidad(), dto.getTipoMovimiento()) * 1000.0) / 1000.0;
+            switch (dto.getTipoMovimiento()) {
+                case ENTRADA_COMPRA, ENTRADA_PRODUCCION, REINTEGRO_CANCELACION -> saborRepository.aumentarStockKilos(sabor.getId(), dto.getCantidad());
+                case SALIDA_VENTA, SALIDA_MERMA -> saborRepository.reducirStockKilosHastaCero(sabor.getId(), dto.getCantidad());
+                case AJUSTE_INVENTARIO -> { sabor.setStockKilos(dto.getCantidad()); saborRepository.save(sabor); }
+            }
+            entityManager.flush();
+            entityManager.refresh(sabor);
+            stockPosterior = Math.round(sabor.getStockKilos() * 1000.0) / 1000.0;
             sabor.setStockKilos(stockPosterior);
             sabor.setDisponible(stockPosterior > 0.001);
             saborRepository.save(sabor);
@@ -91,9 +109,15 @@ public class InventarioService {
             stockAnterior = pres.getStock() != null ? pres.getStock().doubleValue() : 0.0;
             unidad = "UNIDADES";
 
-            stockPosterior = calcularNuevoStock(stockAnterior, dto.getCantidad(), dto.getTipoMovimiento());
-            pres.setStock((int) Math.round(stockPosterior));
-            presentacionRepository.save(pres);
+            int cant = (int) Math.round(dto.getCantidad());
+            switch (dto.getTipoMovimiento()) {
+                case ENTRADA_COMPRA, ENTRADA_PRODUCCION, REINTEGRO_CANCELACION -> presentacionRepository.aumentarStock(pres.getId(), cant);
+                case SALIDA_VENTA, SALIDA_MERMA -> presentacionRepository.reducirStockHastaCero(pres.getId(), cant);
+                case AJUSTE_INVENTARIO -> { pres.setStock(cant); presentacionRepository.save(pres); }
+            }
+            entityManager.flush();
+            entityManager.refresh(pres);
+            stockPosterior = pres.getStock().doubleValue();
         }
 
         MovimientoStock movimiento = MovimientoStock.builder()
@@ -151,14 +175,6 @@ public class InventarioService {
         } catch (Exception e) {
             log.error("Error al registrar movimiento automático de Kardex: ", e);
         }
-    }
-
-    private double calcularNuevoStock(double actual, double cantidad, TipoMovimientoStock tipo) {
-        return switch (tipo) {
-            case ENTRADA_COMPRA, ENTRADA_PRODUCCION, REINTEGRO_CANCELACION -> actual + cantidad;
-            case SALIDA_VENTA, SALIDA_MERMA -> Math.max(0.0, actual - cantidad);
-            case AJUSTE_INVENTARIO -> cantidad;
-        };
     }
 
     @Transactional(readOnly = true)

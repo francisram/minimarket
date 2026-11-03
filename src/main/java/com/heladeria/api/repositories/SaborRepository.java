@@ -28,6 +28,11 @@ public interface SaborRepository extends JpaRepository<Sabor, Long> {
 
     /** Reintegro atómico (anulación de ventas). */
     @Modifying(flushAutomatically = true)
-    @Query("update Sabor s set s.stockKilos = s.stockKilos + :kilos where s.id = :id and s.stockKilos is not null")
+    @Query("update Sabor s set s.stockKilos = coalesce(s.stockKilos, 0.0) + :kilos where s.id = :id")
     int aumentarStockKilos(@Param("id") Long id, @Param("kilos") double kilos);
+
+    /** Descuento atómico que no baja de cero (mermas manuales). */
+    @Modifying(flushAutomatically = true)
+    @Query("update Sabor s set s.stockKilos = case when s.stockKilos >= :kilos then s.stockKilos - :kilos else 0.0 end where s.id = :id")
+    int reducirStockKilosHastaCero(@Param("id") Long id, @Param("kilos") double kilos);
 }

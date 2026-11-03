@@ -50,6 +50,11 @@ public interface ProductoRepository extends JpaRepository<Producto, Long> {
 
     /** Reintegro atómico al maestro de productos (anulación de ventas). */
     @Modifying(flushAutomatically = true)
-    @Query("update Producto p set p.stock = p.stock + :cantidad where p.id = :id and p.stock is not null")
+    @Query("update Producto p set p.stock = coalesce(p.stock, 0) + :cantidad where p.id = :id")
     int aumentarStock(@Param("id") Long id, @Param("cantidad") java.math.BigDecimal cantidad);
+
+    /** Descuento atómico que no baja de cero (mermas y anulaciones de compra). */
+    @Modifying(flushAutomatically = true)
+    @Query("update Producto p set p.stock = case when p.stock >= :cantidad then p.stock - :cantidad else 0 end where p.id = :id")
+    int reducirStockHastaCero(@Param("id") Long id, @Param("cantidad") java.math.BigDecimal cantidad);
 }

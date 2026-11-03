@@ -27,6 +27,9 @@ import java.util.stream.Collectors;
 @Service
 public class CompraService {
 
+    @jakarta.persistence.PersistenceContext
+    private jakarta.persistence.EntityManager entityManager;
+
     private static final Logger log = LoggerFactory.getLogger(CompraService.class);
 
     private final CompraRepository compraRepository;
@@ -174,10 +177,12 @@ public class CompraService {
             compra.agregarDetalle(detalle);
 
             // --- 1. IMPACTO EN EL STOCK DEL ARTÍCULO ---
-            double stockAnterior = producto.getStock() != null ? producto.getStock().doubleValue() : 0.0;
+            // Incremento atómico: una venta concurrente del mismo artículo no pisa este ingreso
             double cantDouble = cantidad.doubleValue();
-            double stockPosterior = stockAnterior + cantDouble;
-            producto.setStock(BigDecimal.valueOf(stockPosterior).setScale(2, RoundingMode.HALF_UP));
+            productoRepository.aumentarStock(producto.getId(), cantidad);
+            entityManager.refresh(producto);
+            double stockPosterior = producto.getStock().doubleValue();
+            double stockAnterior = stockPosterior - cantDouble;
 
             // Actualizar último costo de adquisición si es positivo
             if (costoUnitario.compareTo(BigDecimal.ZERO) > 0) {
@@ -260,9 +265,11 @@ public class CompraService {
             Producto producto = detalle.getProducto();
             if (producto != null) {
                 double stockAnterior = producto.getStock() != null ? producto.getStock().doubleValue() : 0.0;
-                double cantDouble = detalle.getCantidad() != null ? detalle.getCantidad().doubleValue() : 0.0;
-                double stockPosterior = Math.max(0.0, stockAnterior - cantDouble);
-                producto.setStock(BigDecimal.valueOf(stockPosterior).setScale(2, RoundingMode.HALF_UP));
+                BigDecimal cantRev = detalle.getCantidad() != null ? detalle.getCantidad() : BigDecimal.ZERO;
+                double cantDouble = cantRev.doubleValue();
+                productoRepository.reducirStockHastaCero(producto.getId(), cantRev);
+                entityManager.refresh(producto);
+                double stockPosterior = producto.getStock().doubleValue();
                 producto = productoRepository.save(producto);
                 productoService.sincronizarConCatalogoOperativo(producto);
 

@@ -829,10 +829,10 @@ public class PedidoService {
             } else if (detalle.getTipoItem() == TipoItemPedido.PRODUCTO_SIMPLE && detalle.getProductoSimple() != null) {
                 ProductoSimple prod = detalle.getProductoSimple();
                 if (prod.getStock() != null) {
-                    double stockAnt = prod.getStock().doubleValue();
-                    double stockPost = stockAnt + detalle.getCantidad();
-                    prod.setStock((int) Math.round(stockPost));
-                    productoSimpleRepository.save(prod);
+                    productoSimpleRepository.aumentarStock(prod.getId(), detalle.getCantidad());
+                    entityManager.refresh(prod);
+                    double stockPost = prod.getStock().doubleValue();
+                    double stockAnt = stockPost - detalle.getCantidad();
                     inventarioService.registrarMovimientoInterno(
                             TipoItemStock.PRODUCTO,
                             prod.getId(),
@@ -849,10 +849,10 @@ public class PedidoService {
                 // Reintegrar envases/cucuruchos
                 if (detalle.getPresentacion() != null && detalle.getPresentacion().getStock() != null) {
                     Presentacion pres = detalle.getPresentacion();
-                    double stockAnt = pres.getStock().doubleValue();
-                    double stockPost = stockAnt + detalle.getCantidad();
-                    pres.setStock((int) Math.round(stockPost));
-                    presentacionRepository.save(pres);
+                    presentacionRepository.aumentarStock(pres.getId(), detalle.getCantidad());
+                    entityManager.refresh(pres);
+                    double stockPost = pres.getStock().doubleValue();
+                    double stockAnt = stockPost - detalle.getCantidad();
                     inventarioService.registrarMovimientoInterno(
                             TipoItemStock.ENVASE,
                             pres.getId(),
@@ -875,13 +875,14 @@ public class PedidoService {
 
                     for (Sabor sabor : detalle.getSabores()) {
                         if (sabor.getStockKilos() != null) {
-                            double stockAnt = sabor.getStockKilos();
-                            double nuevoStock = Math.round((sabor.getStockKilos() + kilosPorSabor) * 1000.0) / 1000.0;
-                            sabor.setStockKilos(nuevoStock);
+                            saborRepository.aumentarStockKilos(sabor.getId(), kilosPorSabor);
+                            entityManager.refresh(sabor);
+                            double nuevoStock = Math.round(sabor.getStockKilos() * 1000.0) / 1000.0;
+                            double stockAnt = Math.round((nuevoStock - kilosPorSabor) * 1000.0) / 1000.0;
                             if (nuevoStock > 0.001 && !Boolean.TRUE.equals(sabor.getDisponible())) {
                                 sabor.setDisponible(true);
+                                saborRepository.save(sabor);
                             }
-                            saborRepository.save(sabor);
                             inventarioService.registrarMovimientoInterno(
                                     TipoItemStock.SABOR,
                                     sabor.getId(),
