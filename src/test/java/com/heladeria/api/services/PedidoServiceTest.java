@@ -419,6 +419,33 @@ class PedidoServiceTest {
     }
 
     @Test
+    @DisplayName("Tras 5 claves de supervisor incorrectas al anular, el cajero queda bloqueado temporalmente (429)")
+    void testAnularConClaveIncorrectaSeBloqueaTrasVariosIntentos() {
+        DetallePedidoRequestDTO item = new DetallePedidoRequestDTO();
+        item.setTipoItem(TipoItemPedido.HELADO);
+        item.setPresentacionId(poteMedioKg.getId());
+        item.setSaborIds(List.of(dulceDeLeche.getId()));
+        item.setCantidad(1);
+        PedidoRequestDTO request = new PedidoRequestDTO();
+        request.setMetodoPago(MetodoPago.EFECTIVO);
+        request.setTipoEntrega(TipoEntrega.MOSTRADOR);
+        request.setItems(List.of(item));
+        Pedido pedido = pedidoService.crearPedido(request);
+
+        // Cajero distinto al del resto de los tests para no compartir contador
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                "cajero_limite_" + System.nanoTime(), null, List.of(new SimpleGrantedAuthority("ROLE_CAJERO"))));
+        com.heladeria.api.dto.CancelarPedidoRequestDTO intento =
+                new com.heladeria.api.dto.CancelarPedidoRequestDTO("clave-incorrecta", null, "prueba");
+
+        for (int i = 0; i < 5; i++) {
+            assertThrows(ReglaDeNegocioException.class, () -> pedidoService.cancelarPedido(pedido.getId(), intento));
+        }
+        assertThrows(com.heladeria.api.exceptions.DemasiadosIntentosException.class,
+                () -> pedidoService.cancelarPedido(pedido.getId(), intento));
+    }
+
+    @Test
     @DisplayName("Debe fallar al crear un pedido si no existe una sesión de caja abierta")
     void testCrearPedidoSinCajaAbiertaFalla() {
         sesionCajaRepository.deleteAll();

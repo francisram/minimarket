@@ -46,6 +46,7 @@ public class PedidoService {
     private final ProductoSimpleRepository productoSimpleRepository;
     private final TicketPrinterService ticketPrinterService;
     private final TrabajoImpresionService trabajoImpresionService;
+    private final LimitadorIntentos limitadorIntentos;
     private final SesionCajaRepository sesionCajaRepository;
     private final InstitucionRepository institucionRepository;
     private final ClienteService clienteService;
@@ -66,6 +67,7 @@ public class PedidoService {
                          ProductoSimpleRepository productoSimpleRepository,
                          TicketPrinterService ticketPrinterService,
                          TrabajoImpresionService trabajoImpresionService,
+                         LimitadorIntentos limitadorIntentos,
                          SesionCajaRepository sesionCajaRepository,
                          InstitucionRepository institucionRepository,
                          ClienteService clienteService,
@@ -82,6 +84,7 @@ public class PedidoService {
         this.productoSimpleRepository = productoSimpleRepository;
         this.ticketPrinterService = ticketPrinterService;
         this.trabajoImpresionService = trabajoImpresionService;
+        this.limitadorIntentos = limitadorIntentos;
         this.sesionCajaRepository = sesionCajaRepository;
         this.institucionRepository = institucionRepository;
         this.clienteService = clienteService;
@@ -682,6 +685,11 @@ public class PedidoService {
 
         // Validar contraseña de administrador / supervisor
         if (dto != null && dto.getAdminPassword() != null && !dto.getAdminPassword().trim().isEmpty()) {
+            // Límite de intentos por quien opera (no por el admin objetivo): evita adivinar claves de supervisor
+            String quienIntenta = authUser != null && authUser.getName() != null ? authUser.getName() : "anonimo";
+            String claveLimite = "anular:" + quienIntenta;
+            limitadorIntentos.verificarNoBloqueado(claveLimite);
+
             List<Usuario> admins = usuarioRepository.findAll().stream()
                     .filter(u -> Boolean.TRUE.equals(u.getEstado()))
                     .filter(u -> u.getRol() != null && ("ADMIN".equalsIgnoreCase(u.getRol().getNombreRol()) || "OWNER".equalsIgnoreCase(u.getRol().getNombreRol())))
@@ -704,8 +712,12 @@ public class PedidoService {
             }
 
             if (adminAutorizante == null) {
+                boolean bloqueado = limitadorIntentos.registrarFallo(claveLimite);
+                auditoriaService.registrarLog(quienIntenta, "VENTAS", "ALERTA", pedido.getId(), "Pedido #" + pedido.getId(),
+                        "Clave de supervisor incorrecta al intentar anular el pedido" + (bloqueado ? " (usuario bloqueado temporalmente)" : "") + ".", null);
                 throw new ReglaDeNegocioException("Contraseña de Administrador incorrecta. Operación de cancelación rechazada.");
             }
+            limitadorIntentos.registrarExito(claveLimite);
 
             usuarioCancelacion = adminAutorizante.getUsername();
         } else if (esAdminLogueado) {

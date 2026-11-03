@@ -415,9 +415,12 @@ public class CajaService {
                 verificarAccesoSesion(sesion, username);
             }
         } else {
+            // Sin sesionId solo se opera sobre la caja propia: nunca se cae en la sesión abierta de otro cajero.
+            if (username == null || username.isBlank()) {
+                throw new ReglaDeNegocioException("Debe indicar la sesión de caja o estar autenticado para registrar movimientos.");
+            }
             sesion = sesionCajaRepository.findFirstByUsuarioApertura_UsernameAndEstadoOrderByFechaAperturaDesc(username, EstadoSesionCaja.ABIERTA)
-                    .orElseGet(() -> sesionCajaRepository.findFirstByEstadoOrderByFechaAperturaDesc(EstadoSesionCaja.ABIERTA)
-                            .orElseThrow(() -> new ReglaDeNegocioException("No existe ninguna sesión de caja abierta para registrar movimientos.")));
+                    .orElseThrow(() -> new ReglaDeNegocioException("No tiene una sesión de caja abierta para registrar movimientos. Abra su caja primero."));
         }
 
         if (sesion.getEstado() != EstadoSesionCaja.ABIERTA) {

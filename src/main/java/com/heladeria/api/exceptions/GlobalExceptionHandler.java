@@ -42,6 +42,16 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
     }
 
+    @ExceptionHandler(DemasiadosIntentosException.class)
+    public ResponseEntity<Map<String, Object>> handleDemasiadosIntentos(DemasiadosIntentosException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.TOO_MANY_REQUESTS.value());
+        body.put("error", "Demasiados intentos");
+        body.put("mensaje", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(body);
+    }
+
     @ExceptionHandler(ReglaDeNegocioException.class)
     public ResponseEntity<Map<String, Object>> handleReglaNegocio(ReglaDeNegocioException ex) {
         Map<String, Object> body = new HashMap<>();

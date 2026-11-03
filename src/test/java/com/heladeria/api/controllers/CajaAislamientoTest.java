@@ -100,6 +100,20 @@ class CajaAislamientoTest {
     }
 
     @Test
+    @DisplayName("Sin sesionId, B (sin caja propia) no puede registrar movimientos en la caja abierta de A")
+    void movimientoSinSesionIdNoCaeEnCajaAjena() throws Exception {
+        String body = "{\"tipo\":\"EGRESO\",\"categoria\":\"GASTO_MENOR\",\"concepto\":\"sin sesion\",\"monto\":5000}";
+        mockMvc.perform(post("/api/caja/movimientos").header("Authorization", "Bearer " + tokenB)
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje", containsString("sesión de caja abierta")));
+
+        mockMvc.perform(get("/api/caja/" + sesionIdA + "/movimientos").header("Authorization", "Bearer " + tokenA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+    }
+
+    @Test
     @DisplayName("B no puede cerrar la sesión de A, y la sesión sigue abierta")
     void cierreCruzadoProhibido() throws Exception {
         String body = "{\"sesionId\":" + sesionIdA + ",\"montoRealEfectivo\":100000,\"observaciones\":\"forzado\"}";
