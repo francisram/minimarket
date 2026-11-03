@@ -33,8 +33,9 @@ public class Impresora {
     @Column(length = 50)
     private String usuario;
 
-    /** Solo WINDOWS: contraseña de red de Windows (opcional) */
-    @Column(length = 100)
+    /** Solo WINDOWS: contraseña de red de Windows (opcional). Se guarda cifrada (AES-256-GCM). */
+    @Convert(converter = com.heladeria.api.security.SecretoCifradoConverter.class)
+    @Column(length = 512)
     private String password;
 
     public Impresora() {

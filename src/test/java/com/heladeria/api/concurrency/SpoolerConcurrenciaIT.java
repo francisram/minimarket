@@ -41,6 +41,9 @@ class SpoolerConcurrenciaIT {
         r.add("spring.datasource.username", postgres::getUsername);
         r.add("spring.datasource.password", postgres::getPassword);
         r.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
+        // Con PostgreSQL la validación es estricta: secreto JWT y clave de cifrado deben estar definidos
+        r.add("app.jwt.secret", () -> "q8F2xk0Lr9mZp3TvN7yB1cHs5WdE6gJaUoX4iKtRnMb2VfYe8ZlQwP0uSh3DjCaA");
+        r.add("app.seguridad.clave-cifrado", () -> "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=");
         r.add("spring.flyway.enabled", () -> "true");
         r.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
     }

@@ -295,13 +295,14 @@ public class ImpresionService {
             comando.add("smbclient");
             comando.add(service);
 
+            String passwordSmb = null;
             if (StringUtils.hasText(impresora.getUsuario())) {
-                String credencial = impresora.getUsuario();
-                if (StringUtils.hasText(impresora.getPassword())) {
-                    credencial += "%" + impresora.getPassword();
-                }
+                // La clave NO va en la línea de comandos (se vería con ps): smbclient la toma de la variable PASSWD
                 comando.add("-U");
-                comando.add(credencial);
+                comando.add(impresora.getUsuario());
+                if (StringUtils.hasText(impresora.getPassword())) {
+                    passwordSmb = impresora.getPassword();
+                }
             } else {
                 comando.add("-N");
             }
@@ -318,6 +319,9 @@ public class ImpresionService {
             comando.add("print " + tempFile.toAbsolutePath());
 
             ProcessBuilder pb = new ProcessBuilder(comando);
+            if (passwordSmb != null) {
+                pb.environment().put("PASSWD", passwordSmb);
+            }
             pb.redirectErrorStream(true);
 
             Process process;
