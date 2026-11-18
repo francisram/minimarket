@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,6 +43,10 @@ public class PedidoRequestDTO {
     private String numeroVoucher;
 
     private String trxId;
+
+    private BigDecimal montoRecibido;
+
+    private BigDecimal vuelto;
 
     public PedidoRequestDTO() {
     }
@@ -81,4 +86,10 @@ public class PedidoRequestDTO {
 
     public String getTrxId() { return trxId; }
     public void setTrxId(String trxId) { this.trxId = trxId; }
+
+    public BigDecimal getMontoRecibido() { return montoRecibido; }
+    public void setMontoRecibido(BigDecimal montoRecibido) { this.montoRecibido = montoRecibido; }
+
+    public BigDecimal getVuelto() { return vuelto; }
+    public void setVuelto(BigDecimal vuelto) { this.vuelto = vuelto; }
 }

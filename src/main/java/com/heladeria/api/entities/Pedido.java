@@ -91,6 +91,12 @@ public class Pedido {
     @Column(name = "trx_id", length = 64, unique = true)
     private String trxId;
 
+    @Column(name = "monto_recibido", precision = 12, scale = 0)
+    private BigDecimal montoRecibido;
+
+    @Column(name = "vuelto", precision = 12, scale = 0)
+    private BigDecimal vuelto;
+
     @Column(name = "total_exentas", nullable = false, precision = 12, scale = 0, columnDefinition = "numeric(12,0) default 0")
     private BigDecimal totalExentas = BigDecimal.ZERO;
 
@@ -330,6 +336,16 @@ public class Pedido {
         this.totalIva = totalIva != null ? totalIva.setScale(0, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO;
     }
 
+    public BigDecimal getMontoRecibido() { return montoRecibido; }
+    public void setMontoRecibido(BigDecimal montoRecibido) {
+        this.montoRecibido = montoRecibido != null ? montoRecibido.setScale(0, java.math.RoundingMode.HALF_UP) : null;
+    }
+
+    public BigDecimal getVuelto() { return vuelto; }
+    public void setVuelto(BigDecimal vuelto) {
+        this.vuelto = vuelto != null ? vuelto.setScale(0, java.math.RoundingMode.HALF_UP) : null;
+    }
+
     public static class PedidoBuilder {
         private Long id;
         private LocalDateTime fechaCreacion;
@@ -350,6 +366,8 @@ public class Pedido {
         private String numeroVoucher;
         private String trxId;
         private String timbrado;
+        private BigDecimal montoRecibido;
+        private BigDecimal vuelto;
         private BigDecimal totalExentas = BigDecimal.ZERO;
         private BigDecimal totalGravada5 = BigDecimal.ZERO;
         private BigDecimal totalGravada10 = BigDecimal.ZERO;
@@ -376,6 +394,8 @@ public class Pedido {
         public PedidoBuilder numeroVoucher(String numeroVoucher) { this.numeroVoucher = numeroVoucher; return this; }
         public PedidoBuilder trxId(String trxId) { this.trxId = trxId; return this; }
         public PedidoBuilder timbrado(String timbrado) { this.timbrado = timbrado; return this; }
+        public PedidoBuilder montoRecibido(BigDecimal montoRecibido) { this.montoRecibido = montoRecibido; return this; }
+        public PedidoBuilder vuelto(BigDecimal vuelto) { this.vuelto = vuelto; return this; }
         public PedidoBuilder totalExentas(BigDecimal totalExentas) { this.totalExentas = totalExentas; return this; }
         public PedidoBuilder totalGravada5(BigDecimal totalGravada5) { this.totalGravada5 = totalGravada5; return this; }
         public PedidoBuilder totalGravada10(BigDecimal totalGravada10) { this.totalGravada10 = totalGravada10; return this; }
@@ -390,6 +410,8 @@ public class Pedido {
             p.setTrxId(trxId);
             p.setTimbrado(timbrado);
             p.setPuntoExpedicion(puntoExpedicion);
+            p.setMontoRecibido(montoRecibido);
+            p.setVuelto(vuelto);
             return p;
         }
     }

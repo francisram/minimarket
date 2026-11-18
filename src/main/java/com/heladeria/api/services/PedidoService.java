@@ -561,6 +561,15 @@ public class PedidoService {
         pedido.setTotalIva10(totalIva10);
         pedido.setTotalIva(totalIva);
         pedido.setTotal(granTotal);
+        if (request.getMetodoPago() == MetodoPago.EFECTIVO && request.getMontoRecibido() != null) {
+            BigDecimal recibido = MonedaPyUtils.redondearGs(request.getMontoRecibido());
+            pedido.setMontoRecibido(recibido);
+            if (recibido.compareTo(granTotal) >= 0) {
+                pedido.setVuelto(recibido.subtract(granTotal));
+            } else {
+                pedido.setVuelto(BigDecimal.ZERO);
+            }
+        }
         if (tipoComprobante == TipoComprobante.FACTURA) {
             asignarNumeroFactura(pedido, puntoExpedicionAsignado);
         }

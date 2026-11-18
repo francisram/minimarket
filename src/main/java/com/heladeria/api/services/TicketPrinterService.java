@@ -3,6 +3,7 @@ package com.heladeria.api.services;
 import com.heladeria.api.dto.TicketEmitidoDTO;
 import com.heladeria.api.entities.*;
 import com.heladeria.api.entities.enums.CondicionVenta;
+import com.heladeria.api.entities.enums.MetodoPago;
 import com.heladeria.api.entities.enums.TipoComprobante;
 import com.heladeria.api.entities.enums.TipoItemPedido;
 import com.heladeria.api.exceptions.ImpresionException;
@@ -250,6 +251,11 @@ public class TicketPrinterService {
         out.writeBytes(NEGRITA_ON);
         escribirLinea(out, alinearDosColumnas("TOTAL:", MonedaPyUtils.formatearGs(pedido.getTotal())));
         out.writeBytes(NEGRITA_OFF);
+        if (!esFactura && pedido.getMetodoPago() == MetodoPago.EFECTIVO && pedido.getMontoRecibido() != null && pedido.getMontoRecibido().compareTo(BigDecimal.ZERO) > 0) {
+            escribirLinea(out, alinearDosColumnas("PAGO CON:", MonedaPyUtils.formatearGs(pedido.getMontoRecibido())));
+            BigDecimal vuelto = pedido.getVuelto() != null ? pedido.getVuelto() : BigDecimal.ZERO;
+            escribirLinea(out, alinearDosColumnas("SU VUELTO:", MonedaPyUtils.formatearGs(vuelto)));
+        }
         escribirLinea(out, "--------------------------------");
 
         BigDecimal total = pedido.getTotal() != null ? pedido.getTotal() : BigDecimal.ZERO;
